@@ -273,8 +273,16 @@ export default function LiveAuctionPage() {
             return setMessage({ type: 'error', text: 'Live feed is connecting... please wait a few seconds and try again.' });
         }
 
+        if (user.id === auction?.seller.id) {
+            return setMessage({ type: 'info', text: 'Sellers cannot bid on their own auctions!' });
+        }
+
         if (user.id === auction?.bids[0]?.bidderId) {
-            return setMessage({ type: 'info', text: 'You are already the highest bidder! You cannot bid on your own bid.' });
+            return setMessage({ type: 'info', text: 'You are already the leading bidder!' });
+        }
+
+        if (Number(user.trustScore || 5) < 2.0) {
+            return setMessage({ type: 'error', text: 'Your trust score is too low (below 2.0) to place bids.' });
         }
 
         if (availableBalance < bidAmount) {

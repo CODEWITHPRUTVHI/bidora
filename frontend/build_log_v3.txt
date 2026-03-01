@@ -1,0 +1,30 @@
+
+> frontend@0.1.0 build
+> next build
+
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Users\PRUTHVIRAJ\package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * C:\Users\PRUTHVIRAJ\Desktop\Bidora\frontend\package-lock.json
+
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 17.8s
+  Running TypeScript ...
+Failed to compile.
+
+./src/app/dashboard/page.tsx:304:56
+Type error: Cannot find name 'Tag'.
+
+[0m [90m 302 |[39m
+ [90m 303 |[39m                         [33m<[39m[33mspan[39m className[33m=[39m{[32m`flex items-center font-bold text-xs px-3 py-1.5 rounded-full border shadow-sm ${user.role === 'SELLER' ? 'text-blue-400 bg-blue-500/10 border-blue-500/20' : 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20'}`[39m}[33m>[39m
+[31m[1m>[22m[39m[90m 304 |[39m                             {user[33m.[39mrole [33m===[39m [32m'SELLER'[39m [33m?[39m [33m<[39m[33mTag[39m className[33m=[39m[32m"w-3.5 h-3.5 mr-1.5"[39m [35m/> : <ShoppingBag className="w-3.5 h-3.5 mr-1.5" /[39m[33m>[39m}
+ [90m     |[39m                                                        [31m[1m^[22m[39m
+ [90m 305 |[39m                             {user[33m.[39mrole}
+ [90m 306 |[39m                         [33m<[39m[33m/[39m[33mspan[39m[33m>[39m
+ [90m 307 |[39m[0m
+Next.js build worker exited with code: 1 and signal: null

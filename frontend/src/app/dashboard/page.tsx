@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Flame, ArrowRight, Wallet, Activity, Package,
     TrendingUp, Star, Bell, Shield, LogOut, Plus, BarChart3, PieChart, Filter,
-    ChevronLeft, ChevronRight, Trophy, Target, Zap, ShoppingBag,
+    ChevronLeft, ChevronRight, Trophy, Target, Zap, ShoppingBag, Tag,
     ArrowDownLeft, ArrowUpRight, CheckCircle2, XCircle, Clock, ArrowDownCircle, AlertTriangle
 } from 'lucide-react';
 import Link from 'next/link';
@@ -292,13 +292,19 @@ export default function DashboardPage() {
                     <h1 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tighter mb-1 break-words">
                         Hey, <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500 drop-shadow-[0_0_10px_rgba(250,204,21,0.3)]">{user.fullName?.split(' ')[0] || 'Bidder'}</span> 👋
                     </h1>
-                    <div className="flex items-center gap-3 mt-3">
-                        <span className="flex items-center text-yellow-400 text-sm bg-black/40 px-3 py-1.5 rounded-full border border-white/5">
+                    <div className="flex items-center flex-wrap gap-3 mt-3">
+                        <span className="flex items-center text-yellow-400 text-sm bg-black/40 px-3 py-1.5 rounded-full border border-white/5 shadow-inner">
                             {[...Array(5)].map((_, i) => (
-                                <Star key={i} className={`w-3.5 h-3.5 ${i < Math.round(user.trustScore) ? 'fill-yellow-400' : 'text-gray-600'}`} />
+                                <Star key={i} className={`w-3.5 h-3.5 ${i < Math.round(user.trustScore) ? 'fill-yellow-400 drop-shadow-[0_0_5px_rgba(250,204,21,0.5)]' : 'text-gray-600'}`} />
                             ))}
-                            <span className="ml-2 font-bold text-white">{user.trustScore}</span>
+                            <span className="ml-2 font-bold text-white">{Number(user.trustScore).toFixed(1)}</span>
                         </span>
+
+                        <span className={`flex items-center font-bold text-xs px-3 py-1.5 rounded-full border shadow-sm ${user.role === 'SELLER' ? 'text-blue-400 bg-blue-500/10 border-blue-500/20' : 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20'}`}>
+                            {user.role === 'SELLER' ? <Tag className="w-3.5 h-3.5 mr-1.5" /> : <ShoppingBag className="w-3.5 h-3.5 mr-1.5" />}
+                            {user.role}
+                        </span>
+
                         {user.verifiedStatus !== 'BASIC' && (
                             <span className="flex items-center font-bold text-blue-400 text-xs bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.2)]">
                                 <CheckCircle2 className="w-4 h-4 mr-1.5" /> Verified Seller

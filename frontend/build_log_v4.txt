@@ -1,0 +1,50 @@
+
+> frontend@0.1.0 build
+> next build
+
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Users\PRUTHVIRAJ\package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * C:\Users\PRUTHVIRAJ\Desktop\Bidora\frontend\package-lock.json
+
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 3.8s
+  Running TypeScript ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/16) ...
+  Generating static pages using 11 workers (4/16) 
+  Generating static pages using 11 workers (8/16) 
+  Generating static pages using 11 workers (12/16) 
+✓ Generating static pages using 11 workers (16/16) in 458.1ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /about
+├ ○ /admin
+├ ƒ /auctions/[id]
+├ ƒ /auctions/[id]/pay
+├ ○ /auth
+├ ○ /blog
+├ ƒ /blog/[slug]
+├ ○ /create-auction
+├ ○ /dashboard
+├ ○ /legal/privacy
+├ ○ /legal/terms
+├ ƒ /orders/[auctionId]
+├ ƒ /profile/[id]
+├ ○ /search
+├ ○ /support/bidding-guide
+├ ○ /support/escrow-protection
+└ ○ /support/seller-verification
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
