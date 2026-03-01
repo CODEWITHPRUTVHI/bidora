@@ -1,0 +1,1161 @@
+# 🏛️ Bidora — Live Auction Marketplace: Complete System Architecture
+
+> **Status:** Architecture Planning & Implementation Document · **Version:** 1.1 · **Date:** 2026-03-01
+>
+> **Current Stack:** Next.js (Frontend) · Node.js + Express + TypeScript (Backend) · Prisma ORM · PostgreSQL (prod ready) · Socket.IO · Stripe (Payments) · Gemini/AI (Listing Assist)
+
+
+---
+
+> [!NOTE]
+> This document is based on deep analysis of the **existing Bidora codebase**. You already have a solid foundation: [AuctionService](file:///c:/Users/PRUTHVIRAJ/Desktop/Bidora/backend/src/services/auctionService.ts#10-119), [EscrowService](file:///c:/Users/PRUTHVIRAJ/Desktop/Bidora/backend/src/services/escrowService.ts#4-187), [FraudService](file:///c:/Users/PRUTHVIRAJ/Desktop/Bidora/backend/src/services/fraudService.ts#6-52), `WebSocketService`, a cron engine, and a Prisma schema covering Users, Auctions, Bids, Escrow, Wallet, Shipping, Ratings, and Disputes. This plan **extends and formalizes** what exists rather than starting over.
+
+---
+
+## STEP 1 — System Decomposition
+
+### Overview: The 11 Core Modules
+
+```mermaid
+graph TD
+    A[Auth & User System] --> B[Auction Engine]
+    B --> C[Real-time Bidding System]
+    C --> D[Escrow & Payment System]
+    D --> E[Wallet System]
+    B --> F[Shipping Module]
+    A --> G[Rating & Trust System]
+    C --> H[Fraud Detection Layer]
+    D --> I[Notification System]
+    B --> J[Admin Dashboard]
+    H --> K[AI Features Layer]
+    G --> K
+```
+
+---
+
+### Module 1: Authentication & User System
+
+| Attribute | Detail |
+|-----------|--------|
+| **Purpose** | Verify identity, manage sessions, enforce role-based access, handle KYC/verification tiers |
+| **Inputs** | Email, password, phone, optional KYC documents |
+| **Outputs** | JWT access token, refresh token, user profile object |
+| **Depends On** | Nothing (base layer) |
+
+**Database Tables Required:**
+- `users` — core entity
+- `refresh_tokens` — token rotation table *(missing, needs to be added)*
+- `kyc_verifications` — document verification records *(missing)*
+- `user_sessions` — device tracking for fraud *(missing)*
+
+**Failure Points:**
+- Token theft / replay attacks → mitigate with token rotation + short TTL
+- Brute force on login → rate limiting (already in [rateLimiter.ts](file:///c:/Users/PRUTHVIRAJ/Desktop/Bidora/backend/src/middlewares/rateLimiter.ts)) ✅
+- SQLite has no `ENUM` type → your current schema uses `String` with manual validation; PostgreSQL migration will add proper enums
+
+---
+
+### Module 2: Auction Engine
+
+| Attribute | Detail |
+|-----------|--------|
+| **Purpose** | Create, schedule, manage, and finalize auctions; own the state machine |
+| **Inputs** | Seller info, item data, pricing, start/end time, images |
+| **Outputs** | Auction record, state change events, winner declaration |
+| **Depends On** | Auth, Escrow Service, Fraud Service |
+
+**Database Tables Required:**
+- `auctions` ✅ (exists)
+- `categories` ✅ (exists)
+- `auction_images` — dedicated table for CDN image URLs *(currently a JSON string in SQLite)*
+- `auction_views` — analytics table for view counts *(missing)*
+
+**Failure Points:**
+- Cron job missing an expired auction window → your current 30-second poll is acceptable for MVP; in production, use BullMQ delayed jobs for precision
+- Race condition on finalization → your `prisma.$transaction` wrapper mitigates this ✅
+- Reserve price not met but escrow was initialized → your [finalizeAuction](file:///c:/Users/PRUTHVIRAJ/Desktop/Bidora/backend/src/services/auctionService.ts#71-118) handles the `reserveMet` check correctly ✅
+
+---
+
+### Module 3: Real-time Bidding System
+
+| Attribute | Detail |
+|-----------|--------|
+| **Purpose** | Handle live bid events with sub-second latency, anti-snipe logic, and room-based broadcasting |
+| **Inputs** | WebSocket message: `{ auctionId, amount }` + JWT auth token |
+| **Outputs** | `new_bid` broadcast, `time_extended` broadcast, `bid_error` to requester |
+| **Depends On** | Auth, Auction Engine, Fraud Service |
+
+**Database Tables Required:**
+- `bids` ✅ (exists)
+
+**Failure Points:**
+- Concurrent bids from multiple clients → `prisma.$transaction` provides serializable isolation ✅
+- WebSocket connection loss mid-bid → client must receive an `ack` before assuming bid succeeded
+- Single Socket.IO server is a bottleneck at scale → requires Redis Adapter for multi-node support *(not yet implemented)*
+
+---
+
+### Module 4: Escrow & Payment System
+
+| Attribute | Detail |
+|-----------|--------|
+| **Purpose** | Hold buyer funds in trust from auction end until confirmed delivery; manage commission; handle disputes and refunds |
+| **Inputs** | Auction winner + amount from Auction Engine |
+| **Outputs** | `HELD` → `RELEASED`/`REFUNDED`/`DISPUTED` escrow state; wallet credit/debit events |
+| **Depends On** | Auction Engine, Wallet System |
+
+**Database Tables Required:**
+- `escrow_payments` ✅ (exists)
+- `payment_gateway_logs` — external payment processor webhooks *(missing; needed when integrating Razorpay/Stripe)*
+
+**Failure Points:**
+- Double-initialization of escrow for same auction → `@unique` constraint on `auctionId` in `EscrowPayment` prevents this ✅
+- Auto-release race condition when dispute is raised simultaneously → `DISPUTED` status freeze must be atomic with dispute creation ✅
+
+---
+
+### Module 5: Wallet System
+
+| Attribute | Detail |
+|-----------|--------|
+| **Purpose** | Manage user's internal wallet balance; track all money movement as immutable ledger entries |
+| **Inputs** | Deposit request, withdrawal request, escrow events, commission deductions |
+| **Outputs** | Updated balance, transaction history |
+| **Depends On** | Auth, Escrow |
+
+**Database Tables Required:**
+- `wallet_transactions` ✅ (exists)
+- `wallet_withdrawals` — separate table for withdrawal requests + bank details *(missing)*
+
+**Failure Points:**
+- Balance going negative due to race on concurrent bids → `pendingFunds` field partially handles this; needs atomic `SELECT FOR UPDATE`
+- User withdrawing while escrow is being processed → withdrawal must check `pendingFunds` ✅ (partially implemented)
+
+---
+
+### Module 6: Shipping Module
+
+| Attribute | Detail |
+|-----------|--------|
+| **Purpose** | Track physical delivery of auctioned items; trigger escrow release on delivery confirmation |
+| **Inputs** | Seller provides courier + tracking number; optional webhook from courier API |
+| **Outputs** | Shipping status updates, triggers escrow release on `DELIVERED` |
+| **Depends On** | Auction Engine, Escrow |
+
+**Database Tables Required:**
+- `shipping_details` ✅ (exists)
+- `shipping_address` — buyer's delivery address *(missing)*
+
+**Failure Points:**
+- Seller marks shipped but never actually ships → buyer can open dispute
+- Courier API not integrated → auto-release relies on buyer confirmation or 14-day timeout
+
+---
+
+### Module 7: Rating & Trust System
+
+| Attribute | Detail |
+|-----------|--------|
+| **Purpose** | Build platform trust through post-transaction ratings; influence `trustScore` which gates bidding eligibility |
+| **Inputs** | Completed auction, reviewer userId, score (1-5), comment |
+| **Outputs** | Updated `trustScore` on User, public rating record |
+| **Depends On** | Auction Engine (must be `COMPLETED` to rate) |
+
+**Database Tables Required:**
+- `ratings` ✅ (exists)
+
+**Failure Points:**
+- Rating manipulation — users creating fake accounts to boost scores → Fraud module must detect correlated rating patterns
+- Rating a user without completing a transaction → must gate on `COMPLETED` status
+
+---
+
+### Module 8: Fraud Detection Layer
+
+| Attribute | Detail |
+|-----------|--------|
+| **Purpose** | Protect platform integrity by detecting bid manipulation, account farming, shill bidding, and abnormal patterns |
+| **Inputs** | Bid events, user session data, IP/device info, rating events |
+| **Outputs** | `suspiciousFlags` increments, bid blocking, user suspension signals |
+| **Depends On** | Auth, Bidding System, Rating System |
+
+**Database Tables Required:**
+- `fraud_events` — structured log of all suspicious activity *(missing)*
+- `ip_logs` — IP + device fingerprint per session *(missing)*
+
+**Failure Points:**
+- Over-blocking legitimate power users → flag system needs calibrated thresholds + human review queue
+- False negatives on sophisticated fraud → rule-based is baseline; AI layer augments it
+
+---
+
+### Module 9: Notification System
+
+| Attribute | Detail |
+|-----------|--------|
+| **Purpose** | Deliver real-time and async notifications for bids, wins, payments, disputes, and shipping |
+| **Inputs** | System events from all modules |
+| **Outputs** | In-app notifications (WebSocket), push notifications, email, SMS |
+| **Depends On** | Auth, ALL other modules (subscriber) |
+
+**Database Tables Required:**
+- `notifications` — persistent notification records *(missing)*
+- `notification_preferences` — user-level opt-in settings *(missing)*
+
+**Failure Points:**
+- Notification storm on high-bid auctions → debounce + batching for non-critical events
+- Email/SMS failure → must have retry queue (BullMQ or SQS)
+
+---
+
+### Module 10: Admin Dashboard
+
+| Attribute | Detail |
+|-----------|--------|
+| **Purpose** | Provide platform operators with visibility and control over auctions, users, disputes, financials, and fraud alerts |
+| **Inputs** | Admin JWT (role = `ADMIN`), dispute IDs, user IDs, auction IDs |
+| **Outputs** | Reports, dispute resolutions, user bans, manual auction overrides |
+| **Depends On** | ALL modules |
+
+**Database Tables Required:**
+- `admin_action_logs` — audit trail of all admin operations *(missing)*
+
+**Failure Points:**
+- Unauthorized access → strict `ADMIN` role check middleware (your [authMiddleware.ts](file:///c:/Users/PRUTHVIRAJ/Desktop/Bidora/backend/src/middlewares/authMiddleware.ts) covers this structure)
+- Admin resolving dispute incorrectly → all decisions must be logged with `adminNotes` ✅
+
+---
+
+### Module 11: AI Features Layer
+
+| Attribute | Detail |
+|-----------|--------|
+| **Purpose** | Augment rule-based systems with ML-powered fraud detection, price suggestions, and personalized recommendations |
+| **Inputs** | Historical bid patterns, user behavior, item descriptions |
+| **Outputs** | Fraud risk scores, recommended starting prices, personalized auction feeds |
+| **Depends On** | ALL modules (read-only consumer) |
+
+**Failure Points:**
+- Model drift over time → requires retraining pipeline
+- Over-spending on inference → use lightweight models or rule+ML hybrid
+
+---
+
+## STEP 2 — Database Architecture Planning
+
+> **Migration Path:** Your current schema uses SQLite for development. The design below targets **PostgreSQL** for production. Key differences: proper `ENUM` types, `ARRAY` columns, `TEXT[]`, `JSONB`, full-text search, `SELECT FOR UPDATE`, and advisory locks.
+
+---
+
+### Critical Tables Schema
+
+#### `users`
+```sql
+CREATE TYPE user_role AS ENUM ('BUYER', 'SELLER', 'ADMIN');
+CREATE TYPE verified_status AS ENUM ('BASIC', 'VERIFIED', 'PREMIUM');
+
+CREATE TABLE users (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email           TEXT UNIQUE NOT NULL,
+    phone           TEXT UNIQUE,
+    password_hash   TEXT NOT NULL,
+    role            user_role NOT NULL DEFAULT 'BUYER',
+    verified_status verified_status NOT NULL DEFAULT 'BASIC',
+    full_name       TEXT,
+    avatar_url      TEXT,
+    wallet_balance  DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    pending_funds   DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    trust_score     DECIMAL(3,1) NOT NULL DEFAULT 5.0,
+    suspicious_flags INT NOT NULL DEFAULT 0,
+    is_suspended    BOOLEAN NOT NULL DEFAULT FALSE,
+    last_login_at   TIMESTAMPTZ,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Indexes
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_role ON users(role);
+CREATE INDEX idx_users_trust_score ON users(trust_score);
+CREATE INDEX idx_users_suspended ON users(is_suspended) WHERE is_suspended = TRUE;
+```
+
+**Relationships:** 1-to-many with `auctions`, `bids`, `wallet_transactions`, `ratings`, `escrow_payments`
+
+---
+
+#### `refresh_tokens` *(NEW — missing from codebase)*
+```sql
+CREATE TABLE refresh_tokens (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash  TEXT UNIQUE NOT NULL,
+    device_info TEXT,
+    ip_address  INET,
+    expires_at  TIMESTAMPTZ NOT NULL,
+    revoked     BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_refresh_tokens_user ON refresh_tokens(user_id);
+CREATE INDEX idx_refresh_tokens_token ON refresh_tokens(token_hash);
+```
+
+---
+
+#### `auctions`
+```sql
+CREATE TYPE auction_status AS ENUM (
+    'DRAFT', 'SCHEDULED', 'LIVE', 'ENDED',
+    'PAYMENT_PENDING', 'PAID', 'SHIPPED', 'DELIVERED',
+    'COMPLETED', 'DISPUTED', 'CANCELLED'
+);
+
+CREATE TABLE auctions (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    seller_id           UUID NOT NULL REFERENCES users(id),
+    title               TEXT NOT NULL,
+    description         TEXT NOT NULL,
+    category_id         INT NOT NULL REFERENCES categories(id),
+    image_urls          TEXT[] NOT NULL DEFAULT '{}',
+    starting_price      DECIMAL(12,2) NOT NULL,
+    reserve_price       DECIMAL(12,2),
+    current_highest_bid DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    bid_increment       DECIMAL(12,2) NOT NULL DEFAULT 1.00,   -- min bid step
+    start_time          TIMESTAMPTZ NOT NULL,
+    end_time            TIMESTAMPTZ NOT NULL,
+    status              auction_status NOT NULL DEFAULT 'DRAFT',
+    commission_rate     DECIMAL(4,2) NOT NULL DEFAULT 7.00,
+    shipping_cost       DECIMAL(8,2) NOT NULL DEFAULT 0.00,
+    view_count          INT NOT NULL DEFAULT 0,
+    bid_count           INT NOT NULL DEFAULT 0,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Indexes (Critical for performance)
+CREATE INDEX idx_auctions_status ON auctions(status);
+CREATE INDEX idx_auctions_end_time ON auctions(end_time);
+CREATE INDEX idx_auctions_seller ON auctions(seller_id);
+CREATE INDEX idx_auctions_category ON auctions(category_id);
+-- Compound: powers the "Find live auctions ending soon" query
+CREATE INDEX idx_auctions_live_end ON auctions(status, end_time) WHERE status = 'LIVE';
+```
+
+**Relationships:** Many-to-1 with `users` (seller), 1-to-many with `bids`, 1-to-1 with `escrow_payments`, `shipping_details`
+
+---
+
+#### `bids`
+```sql
+CREATE TABLE bids (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    auction_id  UUID NOT NULL REFERENCES auctions(id),
+    bidder_id   UUID NOT NULL REFERENCES users(id),
+    amount      DECIMAL(12,2) NOT NULL,
+    is_winning  BOOLEAN NOT NULL DEFAULT FALSE,
+    is_auto_bid BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Critical indexes for bidding engine
+CREATE INDEX idx_bids_auction ON bids(auction_id);
+CREATE INDEX idx_bids_bidder ON bids(bidder_id);
+-- Powers "get highest bid" validation
+CREATE INDEX idx_bids_auction_amount ON bids(auction_id, amount DESC);
+-- Powers "get winning bid" lookup
+CREATE INDEX idx_bids_winning ON bids(auction_id) WHERE is_winning = TRUE;
+```
+
+**Relationships:** Many-to-1 with `auctions`, Many-to-1 with `users`
+
+---
+
+#### `auto_bids` *(NEW — Auto-bidding feature)*
+```sql
+CREATE TABLE auto_bids (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    auction_id  UUID NOT NULL REFERENCES auctions(id),
+    bidder_id   UUID NOT NULL REFERENCES users(id),
+    max_amount  DECIMAL(12,2) NOT NULL,
+    is_active   BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(auction_id, bidder_id)
+);
+
+CREATE INDEX idx_auto_bids_auction ON auto_bids(auction_id) WHERE is_active = TRUE;
+```
+
+---
+
+#### `escrow_payments`
+```sql
+CREATE TYPE escrow_status AS ENUM ('HELD', 'RELEASED', 'REFUNDED', 'DISPUTED', 'CANCELLED');
+
+CREATE TABLE escrow_payments (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    auction_id      UUID UNIQUE NOT NULL REFERENCES auctions(id),
+    buyer_id        UUID NOT NULL REFERENCES users(id),
+    seller_id       UUID NOT NULL REFERENCES users(id),
+    amount          DECIMAL(12,2) NOT NULL,
+    platform_fee    DECIMAL(12,2) NOT NULL,
+    payout_amount   DECIMAL(12,2) GENERATED ALWAYS AS (amount - platform_fee) STORED,
+    status          escrow_status NOT NULL DEFAULT 'HELD',
+    auto_release_at TIMESTAMPTZ,     -- 14 days after SHIPPED, if no dispute
+    released_at     TIMESTAMPTZ,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_escrow_status ON escrow_payments(status);
+-- Powers the cron: "Find escrows eligible for auto-release"
+CREATE INDEX idx_escrow_auto_release ON escrow_payments(auto_release_at)
+    WHERE status = 'HELD' AND auto_release_at IS NOT NULL;
+```
+
+---
+
+#### `wallet_transactions`
+```sql
+CREATE TYPE wallet_tx_type AS ENUM (
+    'DEPOSIT', 'WITHDRAWAL', 'ESCROW_HELD', 'ESCROW_RELEASED',
+    'COMMISSION', 'REFUND', 'ADJUSTMENT', 'PAYMENT'
+);
+CREATE TYPE wallet_tx_status AS ENUM ('PENDING', 'COMPLETED', 'FAILED', 'REVERSED');
+
+CREATE TABLE wallet_transactions (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES users(id),
+    amount      DECIMAL(12,2) NOT NULL,  -- positive = credit, negative = debit
+    type        wallet_tx_type NOT NULL,
+    status      wallet_tx_status NOT NULL DEFAULT 'COMPLETED',
+    reference_id UUID,       -- links to escrow_id, dispute_id, etc.
+    description TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_wallet_tx_user ON wallet_transactions(user_id);
+CREATE INDEX idx_wallet_tx_type ON wallet_transactions(type);
+CREATE INDEX idx_wallet_tx_created ON wallet_transactions(created_at DESC);
+```
+
+> [!IMPORTANT]
+> `wallet_transactions` is an **append-only ledger**. Never UPDATE or DELETE rows. Balance is always derived by summing all transactions for a user.
+
+---
+
+#### `shipping_details`
+```sql
+CREATE TYPE shipping_status AS ENUM ('PENDING', 'LABEL_CREATED', 'IN_TRANSIT', 'DELIVERED', 'RETURNED');
+
+CREATE TABLE shipping_details (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    auction_id      UUID UNIQUE NOT NULL REFERENCES auctions(id),
+    buyer_address_id UUID REFERENCES shipping_addresses(id),
+    tracking_number TEXT,
+    courier         TEXT,
+    status          shipping_status NOT NULL DEFAULT 'PENDING',
+    shipped_at      TIMESTAMPTZ,
+    delivered_at    TIMESTAMPTZ,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+---
+
+#### `shipping_addresses` *(NEW)*
+```sql
+CREATE TABLE shipping_addresses (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES users(id),
+    full_name   TEXT NOT NULL,
+    line1       TEXT NOT NULL,
+    line2       TEXT,
+    city        TEXT NOT NULL,
+    state       TEXT NOT NULL,
+    pincode     TEXT NOT NULL,
+    country     TEXT NOT NULL DEFAULT 'IN',
+    phone       TEXT,
+    is_default  BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_shipping_addr_user ON shipping_addresses(user_id);
+```
+
+---
+
+#### `ratings`
+```sql
+CREATE TABLE ratings (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    from_user_id UUID NOT NULL REFERENCES users(id),
+    to_user_id  UUID NOT NULL REFERENCES users(id),
+    auction_id  UUID NOT NULL REFERENCES auctions(id),
+    score       SMALLINT NOT NULL CHECK (score BETWEEN 1 AND 5),
+    comment     TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(from_user_id, auction_id)    -- one rating per transaction
+);
+
+CREATE INDEX idx_ratings_to_user ON ratings(to_user_id);
+CREATE INDEX idx_ratings_auction ON ratings(auction_id);
+```
+
+---
+
+#### `disputes`
+```sql
+CREATE TYPE dispute_status AS ENUM (
+    'OPEN', 'UNDER_REVIEW', 'RESOLVED_REFUND_BUYER',
+    'RESOLVED_RELEASE_SELLER', 'CLOSED'
+);
+
+CREATE TABLE disputes (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    auction_id  UUID NOT NULL REFERENCES auctions(id),
+    buyer_id    UUID NOT NULL REFERENCES users(id),
+    reason      TEXT NOT NULL,
+    evidence_urls TEXT[] DEFAULT '{}',
+    status      dispute_status NOT NULL DEFAULT 'OPEN',
+    admin_notes TEXT,
+    resolved_by UUID REFERENCES users(id),
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_disputes_status ON disputes(status);
+CREATE INDEX idx_disputes_auction ON disputes(auction_id);
+```
+
+---
+
+#### `fraud_events` *(NEW)*
+```sql
+CREATE TYPE fraud_event_type AS ENUM (
+    'RAPID_BIDDING', 'LOW_BALANCE_BID', 'MULTIPLE_ACCOUNTS',
+    'SHILL_BID_PATTERN', 'SUSPICIOUS_RATING', 'IP_ANOMALY'
+);
+
+CREATE TABLE fraud_events (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES users(id),
+    event_type  fraud_event_type NOT NULL,
+    auction_id  UUID REFERENCES auctions(id),
+    metadata    JSONB,           -- flexible: { ipAddress, bidAmount, patternScore }
+    risk_score  DECIMAL(4,2),
+    resolved    BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_fraud_events_user ON fraud_events(user_id);
+CREATE INDEX idx_fraud_events_type ON fraud_events(event_type);
+CREATE INDEX idx_fraud_events_unresolved ON fraud_events(resolved) WHERE resolved = FALSE;
+```
+
+---
+
+#### `notifications` *(NEW)*
+```sql
+CREATE TYPE notification_type AS ENUM (
+    'BID_PLACED', 'OUTBID', 'AUCTION_WON', 'AUCTION_ENDED',
+    'PAYMENT_REQUIRED', 'PAYMENT_RECEIVED', 'ITEM_SHIPPED',
+    'ITEM_DELIVERED', 'DISPUTE_OPENED', 'DISPUTE_RESOLVED', 'SYSTEM'
+);
+
+CREATE TABLE notifications (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES users(id),
+    type        notification_type NOT NULL,
+    title       TEXT NOT NULL,
+    body        TEXT NOT NULL,
+    reference_id UUID,           -- auction_id, dispute_id, etc.
+    is_read     BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_notifications_user_unread ON notifications(user_id, is_read)
+    WHERE is_read = FALSE;
+CREATE INDEX idx_notifications_user_created ON notifications(user_id, created_at DESC);
+```
+
+---
+
+### Scaling & Caching Strategy
+
+| Layer | What to Cache in Redis | TTL |
+|-------|----------------------|-----|
+| Live Auction State | `auction:{id}:currentBid`, `auction:{id}:endTime`, `auction:{id}:bidCount` | Until auction ends |
+| Active Bidders Count | `auction:{id}:watchers` | 60s |
+| User Session | JWT validation result | 5 min |
+| User Balance Eligibility | `user:{id}:canBid` flag | 30s |
+| Category List | Full category tree | 1 hour |
+| Leaderboard/Feed | Top 10 active auctions | 30s |
+
+**Critical for Scaling:**
+1. `auctions(status, end_time)` compound index → powers the live feed
+2. `bids(auction_id, amount DESC)` → powers bid validation
+3. `wallet_transactions(user_id)` → heavy read; balance must be cached
+4. `notifications(user_id, is_read=FALSE)` → partial index prevents full-table scans
+
+---
+
+## STEP 3 — Auction State Machine Design
+
+```mermaid
+stateDiagram-v2
+    [*] --> DRAFT : Seller creates listing
+    DRAFT --> SCHEDULED : Seller publishes + sets future start time
+    DRAFT --> CANCELLED : Seller cancels before publishing
+    SCHEDULED --> LIVE : Cron/Timer triggers at startTime
+    SCHEDULED --> CANCELLED : Seller cancels before going live
+    LIVE --> ENDED : No bids placed when endTime reached
+    LIVE --> PAYMENT_PENDING : Winning bid exists & reserve met at endTime
+    LIVE --> DISPUTED : Admin/system intervention
+    PAYMENT_PENDING --> PAID : Buyer completes payment (wallet deduction + escrow init)
+    PAYMENT_PENDING --> CANCELLED : Payment timeout (48h) exceeded
+    PAID --> SHIPPED : Seller provides tracking number
+    SHIPPED --> DELIVERED : Buyer confirms delivery OR auto-release after 14 days
+    SHIPPED --> DISPUTED : Buyer opens dispute before delivery confirmed
+    DELIVERED --> COMPLETED : Escrow auto-released, ratings unlocked
+    DELIVERED --> DISPUTED : Buyer disputes within 48h of delivery confirmation
+    DISPUTED --> COMPLETED : Admin resolves → RELEASE_SELLER
+    DISPUTED --> ENDED : Admin resolves → REFUND_BUYER
+    COMPLETED --> [*]
+    CANCELLED --> [*]
+    ENDED --> [*]
+```
+
+### State Transition Rules
+
+| From → To | Trigger | Who Can Trigger | Automation |
+|-----------|---------|-----------------|------------|
+| `DRAFT → SCHEDULED` | Seller publishes listing | Seller | Manual |
+| `SCHEDULED → LIVE` | `startTime` reached | **Cron Job** | ✅ Automated every 30s |
+| `LIVE → PAYMENT_PENDING` | `endTime` reached + bids exist + reserve met | **Cron Job** | ✅ Automated every 30s |
+| `LIVE → ENDED` | `endTime` reached + no valid bids | **Cron Job** | ✅ Automated |
+| `PAYMENT_PENDING → PAID` | Buyer pays via wallet | Buyer | Manual + 48h timeout |
+| `PAYMENT_PENDING → CANCELLED` | 48h payment timeout | **Cron Job** | ✅ Automated |
+| `PAID → SHIPPED` | Seller submits tracking | Seller | Manual |
+| `SHIPPED → DELIVERED` | Buyer confirms OR 14-day auto-release | Buyer / **Cron Job** | Hybrid |
+| `DELIVERED → COMPLETED` | Escrow released | **System** | ✅ Automated |
+| `ANY → DISPUTED` | Buyer raises dispute | Buyer | Manual |
+| `DISPUTED → COMPLETED` | Admin resolves → Seller | Admin | Manual |
+| `DISPUTED → ENDED` | Admin resolves → Buyer refund | Admin | Manual |
+
+### Error Handling Logic
+
+- **Double transition prevention:** All state changes use `prisma.$transaction` with a `WHERE status = 'EXPECTED_STATUS'` guard. If the row has already transitioned, the update affects 0 rows and the transaction rolls back.
+- **Cron idempotency:** [finalizeAuction](file:///c:/Users/PRUTHVIRAJ/Desktop/Bidora/backend/src/services/auctionService.ts#71-118) checks `status !== 'LIVE'` at the start — safe to call multiple times.
+- **Payment timeout:** A separate cron (every 1 hour) scans for `PAYMENT_PENDING` auctions older than 48h and cancels them + refunds if escrow was partially initialized.
+
+---
+
+## STEP 4 — Real-Time Bidding Engine Breakdown
+
+### Architecture Overview
+
+```
+Client Browser
+    │
+    │ WebSocket (Socket.IO)
+    ▼
+[WebSocket Gateway] ←── JWT Auth Middleware
+    │
+    │ place_bid event
+    ▼
+[Bid Validator] ─── Checks: status=LIVE, endTime, amount > currentBid, seller≠bidder
+    │
+    │ Valid
+    ▼
+[Fraud Checker] ─── Checks: suspiciousFlags < 5, trustScore > 2.0, balanceEligibility
+    │
+    │ Cleared
+    ▼
+[Atomic Transaction] ─── PostgreSQL serializable transaction
+    │ 1. Lock auction row (SELECT FOR UPDATE)
+    │ 2. Re-validate bid (double-check under lock)
+    │ 3. Anti-snipe check
+    │ 4. Update auction.currentHighestBid + endTime
+    │ 5. Create bid record
+    │ 6. Trigger auto-bid cascade
+    ▼
+[Event Broadcaster] ─── io.to(auctionId).emit('new_bid', {...})
+    │
+    ▼
+[Redis Cache Update] ─── Update auction:{id}:currentBid
+```
+
+### Component Breakdown
+
+#### 1. WebSocket Connection Setup
+- Socket.IO room per auction: `socket.join(auctionId)`
+- JWT verified on handshake (existing [websocketService.ts](file:///c:/Users/PRUTHVIRAJ/Desktop/Bidora/backend/src/services/websocketService.ts) ✅)
+- **Missing:** Heartbeat/ping-pong to detect stale connections
+- **Missing:** Redis Adapter for multi-server scaling (`socket.io-redis`)
+
+#### 2. Bid Validation Rules (ordered by cheapness)
+```
+1. Is auction status === 'LIVE'?              → O(1) cache check
+2. Is current time < endTime?                 → O(1) comparison
+3. Is bidder !== seller?                      → O(1) comparison
+4. Is amount > currentHighestBid?             → O(1) comparison
+5. Is amount >= currentHighestBid + bidIncrement? → O(1) comparison
+6. Is user not suspended?                     → Redis cache (5 min TTL)
+7. Does user meet balance minimum?            → DB query or cache
+```
+
+#### 3. Minimum Increment Logic
+```typescript
+// Tiered increment — prevents penny bidding on high-value items
+function getMinIncrement(currentBid: number): number {
+    if (currentBid < 100)    return 1;
+    if (currentBid < 1000)   return 10;
+    if (currentBid < 10000)  return 50;
+    if (currentBid < 100000) return 500;
+    return 1000;
+}
+```
+
+#### 4. Anti-Sniping Logic ✅ (Already implemented)
+- If bid placed within last **10 seconds** of auction → extend `endTime` by **10 seconds**
+- Broadcast `time_extended` event to all room clients
+- This prevents last-second sniping and keeps the auction fair
+
+#### 5. Auto-Bid System *(Not yet implemented)*
+```
+When a new bid is placed:
+1. Query active auto_bids for this auction WHERE bidder_id != current_bidder
+2. Find highest max_amount among active auto-bids
+3. If max_amount > new_bid → automatically place a counter-bid
+   (capped at max_amount, with minimum increment)
+4. Recurse until no auto-bid can outbid, or max amounts are exhausted
+5. Broadcast all auto-bids as regular bid events
+```
+
+#### 6. Concurrency Control & Race Condition Prevention
+```sql
+-- Inside prisma.$transaction with serializable isolation:
+SELECT id, current_highest_bid, end_time, status
+FROM auctions
+WHERE id = $auctionId
+FOR UPDATE;  -- Row-level lock prevents concurrent bid processing
+```
+
+- **Optimistic locking alternative:** use a `version` counter on auction row; reject bids where version mismatch
+- For MVP: `prisma.$transaction` with `Serializable` isolation level is sufficient
+
+#### 7. Scaling to 10,000 Concurrent Bidders
+
+| Layer | Solution |
+|-------|----------|
+| WebSocket Connections | Redis Pub/Sub Adapter (`@socket.io/redis-adapter`) |
+| Bid Processing | BullMQ job queue — bids enter queue, processed sequentially per auction |
+| DB Write Bottleneck | PostgreSQL connection pooling via PgBouncer (pool_mode=transaction) |
+| Read Scaling | Replica reads for bid history; write only to primary |
+| Cache Hot Path | Redis stores `currentBid` + `endTime`; DB writes are async (best-effort with retry) |
+| Horizontal Scaling | Stateless backend nodes behind a load balancer |
+
+---
+
+## STEP 5 — Escrow & Wallet Logic Breakdown
+
+### Escrow Lifecycle
+
+```
+Auction Ends (winner found)
+    │
+    ▼
+HELD ──── Buyer pays within 48h ────► PAID (auction status)
+    │                                    │
+    │                                    ▼
+    │                                Seller ships
+    │                                    │
+    │                                    ▼
+    │                            SHIPPED → DELIVERED
+    │                                    │
+    ├── Buyer disputes ──────────► DISPUTED (frozen)
+    │                                    │
+    │                          Admin resolves
+    │                         ┌──────────┴──────────┐
+    │                         ▼                      ▼
+    │                    RELEASED                 REFUNDED
+    │
+    └── Auto-release (14 days after SHIPPED, no dispute) → RELEASED
+```
+
+### Commission Deduction Logic
+```
+Sale Amount:     ₹10,000
+Commission (7%): ₹700
+Payout to Seller: ₹9,300
+
+Wallet Transactions created:
+  - Buyer:    -₹10,000  (ESCROW_HELD)
+  - Seller:   +₹9,300   (ESCROW_RELEASED)
+  - Platform: +₹700     (COMMISSION → platform admin account)
+```
+
+### Refund Logic
+```
+If decision = REFUND_BUYER:
+  - Buyer wallet: +₹10,000 (REFUND)
+  - Seller wallet: no change
+  - Platform: 0 commission (dispute costs)
+
+If decision = RELEASE_SELLER:
+  - Seller wallet: +₹9,300 (ESCROW_RELEASED)
+  - Platform: +₹700 (COMMISSION)
+  - Buyer: no refund
+```
+
+### Wallet Ledger Structure (Double-Entry Recommended)
+
+> [!TIP]
+> For MVP, your current single-entry append-only ledger is acceptable. For production financial compliance, migrate to double-entry (every transaction has a debit and credit row).
+
+```
+Current (Single-Entry):
+  user_id | amount | type
+  user_A  | -1000  | ESCROW_HELD
+
+Double-Entry (Future):
+  debit_account  | credit_account | amount | description
+  user_A_wallet  | escrow_pool    | 1000   | Escrow hold for auction X
+  escrow_pool    | user_B_wallet  | 930    | Escrow release (seller)
+  escrow_pool    | platform       | 70     | Commission
+```
+
+### Edge Cases
+1. **What if buyer's wallet balance drops between bid win and payment?** → At bid win, immediately soft-lock `pendingFunds += winningBidAmount`
+2. **What if escrow release fails mid-transaction?** → Full rollback; escrow stays HELD; retry with idempotency key
+3. **What if seller and buyer both dispute simultaneously?** → First dispute creation wins; second fails with "dispute already open" error
+4. **What if admin never resolves a dispute?** → Auto-escalation alert after 7 days; SLA enforcement
+
+---
+
+## STEP 6 — Fraud & Risk System
+
+### System Architecture
+
+```
+All Events (Bids, Logins, Ratings, Payouts)
+    │
+    ▼
+[Event Capture Layer] ─── Logs every action with metadata:
+                           { userId, ipAddress, deviceFingerprint, timestamp, action }
+    │
+    ▼
+[Rule Engine] ─── Fast heuristics (fired synchronously on bid path):
+    ├── suspiciousFlags >= 5 → BLOCK
+    ├── trustScore < 2.0 → BLOCK
+    ├── bidAmount > 10x historical average → FLAG
+    ├── Same IP bidding against self (shill) → FLAG
+    └── > 10 bids in 60 seconds → RATE LIMIT
+    │
+    ▼
+[Pattern Analyzer] ─── Async analysis (fired post-event via BullMQ):
+    ├── Bid clustering (many bids just under winning bid)
+    ├── New account + high-value bid within 24h of registration
+    ├── Multiple accounts sharing same device fingerprint
+    └── Rating manipulation (account X always rates account Y 5 stars)
+    │
+    ▼
+[Risk Scorer] ─── Aggregates rule hits → assigns risk_score (0.0–1.0)
+    │
+    ├── risk_score > 0.7 → Auto-suspend + notify admin
+    ├── risk_score 0.4–0.7 → Flag + add to review queue
+    └── risk_score < 0.4 → Log only
+```
+
+### Specific Fraud Vectors & Mitigations
+
+| Threat | Detection | Mitigation |
+|--------|-----------|------------|
+| **Shill bidding** | Seller's IP or device matches bidder | Block + flag both accounts |
+| **Bid manipulation** | Bid pattern: many small bids escalating with no intention to pay | Suspend + escrow forfeiture |
+| **Fake accounts** | Same device fingerprint, email pattern, IP block | Merge/ban accounts |
+| **Payment ghosting** | Win auction, never pay | 3-strike rule → permanent ban; listing fee forfeiture |
+| **Feedback bombing** | Mass negative ratings from coordinated accounts | Rate-limit ratings; require completed transaction |
+| **Rapid outlier bids** | Bid > 5x current highest bid | Require extra confirmation step |
+
+### Where AI Assists Fraud Detection
+- **Anomaly detection:** ML model scores bid patterns against baseline; flags deviations > 2σ
+- **Device fingerprint clustering:** ML groups devices that look similar despite different IPs
+- **For MVP:** Rule-based is sufficient. Add ML in Phase 3.
+
+---
+
+## STEP 7 — AI Feature Planning
+
+### Honest Assessment: Where AI Adds Real Value vs. Where Rules Work Fine
+
+| Feature | AI or Rules? | Reasoning |
+|---------|-------------|-----------|
+| Bid increment validation | **Rules** | Simple math, deterministic |
+| Anti-sniping timer | **Rules** | Deterministic time logic |
+| Basic fraud flags | **Rules** | Threshold-based, explainable |
+| Reserve price suggestion | **AI** ✅ | Requires market context |
+| Anomaly detection in bids | **AI** ✅ | Pattern recognition at scale |
+| Category auto-tagging | **AI** ✅ | NLP on item descriptions |
+| Personalized auction feed | **AI** ✅ | Collaborative filtering |
+| Price trend prediction | **AI** ✅ | Time-series ML |
+| Dispute outcome prediction | **Rules + AI** | Hybrid for admin assist |
+
+### Recommended First AI Feature: **Suggested Starting Price**
+
+**Why?**
+- Highest seller pain point: "_What price should I start my auction at?_"
+- Low infrastructure cost: one ML model, called once per listing
+- High value: directly impacts seller success rate and platform liquidity
+- Feasible with small dataset: train on completed auction history
+
+**Implementation Plan:**
+```
+Input:  { category, title_keywords, condition, image_embeddings }
+Model:  Gradient Boosted Trees (XGBoost) — lightweight, interpretable
+Output: suggested_starting_price ± confidence_range
+Where:  Called from "Create Listing" flow; optional, not blocking
+Cost:   Trivially low — one inference per listing, no real-time requirement
+```
+
+### AI Stack Recommendation
+- **Model training:** Python + scikit-learn / XGBoost (separate microservice)
+- **Serving:** FastAPI + model pickle (simple, cheap)
+- **Integration:** REST call from Node backend to AI microservice
+- **For MVP:** Skip AI entirely. Build it in Phase 4.
+
+> [!WARNING]
+> Do NOT integrate LLMs (GPT-4, Gemini) into the hot bid path. The latency (200-500ms) and cost are incompatible with real-time bidding requirements.
+
+---
+
+## STEP 8 — UX Planning (Mobile-First)
+
+### Core Screen: Live Auction View
+
+```
+┌─────────────────────────────┐
+│  ← Back     LIVE  🔴  ⏱ 2:47 │  ← Sticky header
+│─────────────────────────────│
+│  [Product Image Carousel]   │
+│                             │
+│  Vintage Rolex Datejust     │  ← Title (h1)
+│  ⭐⭐⭐⭐⭐ Seller: @jayesh    │  ← Trust badge
+│─────────────────────────────│
+│  Current Bid: ₹24,500       │  ← Animates on new bid
+│  👥 47 watching             │
+│─────────────────────────────│
+│  [ ₹500 ] [ ₹1000 ] [ ₹2500 ] │  ← Quick increment chips
+│  [ Custom Amount _________ ] │
+│─────────────────────────────│
+│  ┌──────────────────────┐   │
+│  │  SWIPE TO BID →      │   │  ← Sticky swipe button
+│  └──────────────────────┘   │
+│─────────────────────────────│
+│  Bid History (live updates) │
+│  ₹24,500 — @user123 — 12s  │
+│  ₹23,000 — @anon_** — 54s  │
+└─────────────────────────────┘
+```
+
+### UI Component Breakdown
+
+| Component | Purpose | Key UX Detail |
+|-----------|---------|---------------|
+| `AuctionHero` | Image carousel + title | Swipeable, lazy-loaded images |
+| `LiveBidTicker` | Current highest bid display | Number counter animation on update |
+| `CountdownTimer` | Time remaining | Red flash when < 30 seconds |
+| `QuickBidChips` | ₹+500, ₹+1000, ₹+5000 chips | Tap to select, highlights active |
+| `CustomBidInput` | Number pad / text input | Validates min increment in real-time |
+| `SwipeToBidButton` | Swipe-to-confirm gesture | Prevents accidental bids |
+| `BidHistoryFeed` | Live scrolling bid list | New bids slide in from top |
+| `SellerTrustBadge` | Rating, verification level | ✅ VERIFIED, ⭐ 4.8 |
+| `DisputeIndicator` | Shows if item has open dispute | Amber warning banner |
+| `AntiSnipeToast` | "⏰ Time extended!" notification | Auto-dismisses after 3s |
+| `WalletWidget` | Balance display in bid flow | Shows available balance inline |
+
+### Micro-Animations
+- **Bid placed:** Current bid number animates up (counter roll)
+- **Outbid:** Screen vibrates subtly + red flash "You've been outbid!"
+- **Won auction:** Confetti particle burst + green glow
+- **Time extended:** Timer pulses orange
+- **Connection lost:** Banner slides down: "Reconnecting…"
+
+---
+
+## STEP 9 — Build Order Plan (Phased Implementation Roadmap)
+
+### Phase 1 — Core Foundation (Weeks 1–4)
+**Goal:** A working end-to-end auction with payment
+
+| Module | Tasks |
+|--------|-------|
+| Auth | Refresh token table, email verification, role guards |
+| Auction Engine | DRAFT → LIVE state machine, image upload to CDN |
+| Bidding System | WebSocket bidding (already exists ✅), anti-snipe ✅, bid increment |
+| Escrow | Basic HELD → RELEASED flow (already exists ✅) |
+| Wallet | Deposit, escrow hold, payout (partially exists ✅) |
+| Database | Migrate SQLite → PostgreSQL, add all missing tables |
+| Frontend | Live auction screen, basic bid flow |
+
+**Why first?** Without core auction + payment working, nothing else matters. Trust and money are the heart of the platform.
+
+---
+
+### Phase 2 — Trust & Usability (Weeks 5–8)
+**Goal:** Users trust the platform; sellers and buyers feel safe
+
+| Module | Tasks |
+|--------|-------|
+| Shipping | Shipping address CRUD, tracking number submission, delivery confirmation |
+| Ratings | Post-auction rating flow, trust score recalculation |
+| Notifications | In-app notifications via WebSocket, email notifications |
+| Disputes | Buyer dispute flow, admin resolution UI |
+| Admin Dashboard | Dispute queue, user management, auction oversight |
+| UX Polish | Swipe-to-bid, quick increments, micro-animations |
+
+**Why second?** Ratings and shipping are table stakes for marketplace trust. Without them, no repeat usage.
+
+---
+
+### Phase 3 — Fraud & Security Hardening (Weeks 9–12)
+**Goal:** Platform integrity; prevent bad actors at scale
+
+| Module | Tasks |
+|--------|-------|
+| Fraud Detection | `fraud_events` table, rule engine, rate limiting by IP |
+| Device Fingerprinting | `ip_logs`, device tracking on login/bid |
+| Auto-Bid System | `auto_bids` table, cascade logic |
+| Redis Integration | Live bid state caching, session caching |
+| Multi-node WebSocket | Redis Adapter for Socket.IO |
+
+**Why third?** You need real users and real data before fraud patterns are meaningful. Build fraud detection with real signals.
+
+---
+
+### Phase 4 — AI & Personalization (Weeks 13–18)
+**Goal:** Intelligent platform that grows with use
+
+| Module | Tasks |
+|--------|-------|
+| AI Price Suggestions | Train on completed auction data; serve via FastAPI |
+| AI Fraud Scoring | Upgrade rule engine with ML anomaly scores |
+| Personalized Feed | Collaborative filtering on bid/view history |
+| Category Auto-tagging | NLP on listing descriptions |
+
+**Why fourth?** You need sufficient data volume (1000+ completed auctions) before ML adds reliable signal over rules.
+
+---
+
+### Phase 5 — Scale & UX Excellence (Weeks 19–24)
+**Goal:** Handle 10x traffic; delight users
+
+| Module | Tasks |
+|--------|-------|
+| BullMQ Job Queue | Replace cron with queued jobs for auction finalization |
+| PgBouncer | Connection pooling for PostgreSQL |
+| CDN & Image Optimization | Lazy loading, WebP conversion, image resizing |
+| PWA | Offline support, push notifications |
+| Analytics Dashboard | Seller analytics: views, bid velocity, conversion rate |
+| A/B Testing | Test swipe-to-bid vs tap-to-bid conversion |
+
+**Why fifth?** Premature optimization is the enemy of shipping. Optimize for the traffic you actually have, not imaginary traffic.
+
+---
+
+## Summary: What You Have vs. What You Need
+
+| Module | Current State | Next Step |
+|--------|--------------|-----------|
+| Auth | ✅ Login/Register + JWT | ❌ Add email verification |
+| Auction Engine | ✅ LIVE state machine | ❌ Precision cron scaling |
+| Bidding (WebSocket) | ✅ Working + anti-snipe | ❌ Auto-bid logic |
+| Escrow | ✅ Hold/Release/Dispute | ✅ Payment timeout integration |
+| Wallet | ✅ Ledger + Withdrawal UI | ✅ Bank Payout automation |
+| Shipping | ✅ Table exists | ❌ Buyer delivery confirm trigger |
+| Ratings | ✅ Restricted (Buyer->Seller) | ❌ Reciprocal ratings |
+| Fraud | ✅ Basic flag check | ❌ Pattern analyzer |
+| Notifications | ✅ In-app (Bell) + WS + Email | ✅ Real-time push |
+| Admin Dashboard | ✅ Financial Moderation | ❌ Bulk user management |
+| AI Layer | ✅ Listing Assist + Ask AI | ❌ Price suggestion model |
+| SEO | ✅ Blog System (Prerendered) | ❌ Dynamic RSS feed |
+| Infrastructure | ✅ Stripe Integrated | 🔴 Verification of Webhooks |
+
+---
+
+## 🚀 MIGRATION & HANDOVER GUIDE (Read this first!)
+
+If you are moving this project to a new Antigravity instance, here is the exact state of the world as of **March 1, 2026**:
+
+### 1. Financial Core (Stripe)
+- **Status:** Integrated. Wallet `Payments` tab allows ₹100+ deposits.
+- **Backend:** `paymentRoutes.ts` handles intent creation and verification.
+- **Critical:** Ensure `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are set in `backend/.env`.
+
+### 2. Live Notifications
+- **Status:** Completed. Navbar has a functional **Bell Popup** with glassmorphism.
+- **WebSocket:** New notifications (`AUCTION_WON`, `OUTBID`, `WITHDRAWAL`) push automatically without refresh.
+- **Service:** `NotificationService.ts` is the central hub for all alerts.
+
+### 3. Dashboard Refresh
+- **New Tab: Ledger (tx):** Full transaction history with filters (Deposit, Withdrawal, etc.).
+- **New Tab: Insights (analytics):** Seller-specific stats (Earnings, Potential, Velocity) with animated charts.
+
+### 4. Admin Control
+- **Location:** `/admin`.
+- **Features:** Moderation of withdrawals, dispute management, and platform-wide statistics.
+
+### 5. SEO / Blog
+- **Location:** `/blog`.
+- **Status:** Prerendered SEO listing page is live. `BlogPost` Prisma model is added for future CMS integration.
+
+### What should Antigravity do next?
+1. **Verify Webhooks:** Test the Stripe Webhook locally to ensure auto-payouts to wallet work on successful payment.
+2. **Auto-Bidding:** Implement the `auto_bids` module to allow users to set max budgets.
+3. **Reciprocal Ratings:** Allow sellers to rate buyers to complete the trust loop.
+
+---
+
+## 🗺️ Future Feature Roadmap
+
+To scale Bidora into a global leader, the following features are planned for future phases:
+
+### 1. Advanced Bidding (Proxy & Bulk)
+- **Status:** Architecture ready in `auto_bids` table.
+- **Logic:** Users set a "Max Bid". The system automatically counter-bids with the minimum increment whenever they are outbid, up to their limit.
+
+### 2. Promoted & Featured Listings
+- **Concept:** Sellers pay a small fee to have their auction appear at the top of search results or on the homepage with a "FEATURED" badge.
+- **Monetization:** Additional revenue stream for the platform beyond commission.
+
+### 3. Live Streaming / Video Previews
+- **Concept:** Allow sellers to upload short video previews or host "Live Drop" events where they showcase the item via a specialized WebSocket stream.
+
+### 4. Shipping Carrier Integration
+- **Concept:** Direct API integration with Shiprocket, Delhivery, or FedEx.
+- **Goal:** Automatically generate labels and update `shipping_details` status via webhooks.
+
+### 5. Advanced AI Authenticity Guard
+- **Concept:** Use Computer Vision to analyze uploaded luxury images (watches, sneakers) against known counterfeit patterns to flag high-risk listings for manual review.
+
+### 6. Mobile App (Native)
+- **Stack:** React Native or Expo.
+- **Goal:** Reuse the backend API to provide a high-performance native experience with push notifications.
+
+---
+
+> [!IMPORTANT]
+> **Environment Checklist for New Account:**
+> - `DATABASE_URL`: Ensure your database is accessible.
+> - `STRIPE_SECRET_KEY`: Get from Stripe Dashboard.
+> - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`: (Frontend) for Elements.
+> - `GEMINI_API_KEY`: For AI Listing features.
+
+
+---
+
+> [!TIP]
+> This document is your technical "source of truth". Provide it to Antigravity on your next session to ensure zero data loss during account migration.
+
