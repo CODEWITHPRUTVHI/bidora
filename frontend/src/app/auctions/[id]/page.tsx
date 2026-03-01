@@ -475,19 +475,28 @@ export default function LiveAuctionPage() {
                             </div>
                         )}
                         <div className="absolute top-6 right-6 flex gap-3">
-                            <button
+                            <motion.button
+                                whileHover={{ scale: 1.15, backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
+                                whileTap={{ scale: 0.9 }}
                                 onClick={handleShare}
-                                className="p-3 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 hover:bg-white/20 hover:border-white/30 transition-all hover:scale-105 shadow-lg group"
+                                className="p-3 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 hover:border-white/30 transition-all shadow-lg group"
                             >
                                 <Share2 className="w-5 h-5 text-gray-300 group-hover:text-white" />
-                            </button>
-                            <button
+                            </motion.button>
+                            <motion.button
+                                whileHover={{ scale: 1.15 }}
+                                whileTap={{ scale: 0.9 }}
                                 onClick={toggleWatch}
                                 disabled={isWatchingLoading}
-                                className={`p-3 rounded-2xl backdrop-blur-xl border transition-all hover:scale-105 shadow-lg group ${isWatched ? 'bg-red-500/20 border-red-500/40' : 'bg-black/60 border-white/10 hover:bg-white/20'}`}
+                                className={`p-3 rounded-2xl backdrop-blur-xl border transition-all shadow-lg group ${isWatched ? 'bg-red-500/20 border-red-500/40' : 'bg-black/60 border-white/10 hover:bg-white/20'}`}
                             >
-                                <Heart className={`w-5 h-5 transition-colors ${isWatched ? 'text-red-500 fill-red-500' : 'text-gray-300 group-hover:text-red-400'}`} />
-                            </button>
+                                <motion.div
+                                    animate={isWatched ? { scale: [1, 1.4, 1] } : {}}
+                                    transition={{ duration: 0.3 }}
+                                >
+                                    <Heart className={`w-5 h-5 transition-colors ${isWatched ? 'text-red-500 fill-red-500' : 'text-gray-300 group-hover:text-red-400'}`} />
+                                </motion.div>
+                            </motion.button>
                         </div>
                     </div>
 

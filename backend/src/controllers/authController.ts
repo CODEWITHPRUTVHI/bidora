@@ -43,7 +43,7 @@ export const register = async (req: Request, res: Response) => {
         }
 
         const passwordHash = await bcrypt.hash(password, 12);
-        const userRole = role === 'SELLER' ? 'SELLER' : 'BUYER';
+        const userRole = (role === 'SELLER' || role === 'BUYER') ? role : 'BUYER';
 
         const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
         const verificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
@@ -52,7 +52,7 @@ export const register = async (req: Request, res: Response) => {
             data: {
                 email,
                 passwordHash,
-                role: 'BUYER',
+                role: userRole,
                 verifiedStatus: 'BASIC',
                 fullName: fullName || null,
                 isEmailVerified: false,
