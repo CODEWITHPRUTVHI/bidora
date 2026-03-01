@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Lock, Mail, User as UserIcon, ShoppingBag, Tag, Eye, EyeOff, Flame } from 'lucide-react';
 import Link from 'next/link';
@@ -19,7 +19,13 @@ export default function AuthPage() {
     const [error, setError] = useState('');
 
     const router = useRouter();
-    const { login } = useAuth();
+    const { login, user, loading: authLoading } = useAuth();
+
+    React.useEffect(() => {
+        if (!authLoading && user) {
+            router.push('/dashboard');
+        }
+    }, [user, authLoading, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

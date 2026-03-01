@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import api from '../lib/axios';
 
 export interface User {
@@ -19,6 +19,7 @@ interface AuthContextType {
     user: User | null;
     token: string | null;
     loading: boolean;
+    hydrated: boolean;
     login: (token: string, user: User) => void;
     logout: () => Promise<void>;
     refreshUser: () => Promise<void>;
@@ -30,9 +31,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const [hydrated, setHydrated] = useState(false);
 
-    // ── Hydrate on mount ──────────────────────────────────────────────
-    useEffect(() => {
+    // ── Hydrate synchronously on mount ──
+    useLayoutEffect(() => {
         const storedToken = localStorage.getItem('token');
         const storedUser = localStorage.getItem('bidora_user');
 
@@ -40,31 +42,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setToken(storedToken);
             try {
                 setUser(JSON.parse(storedUser));
-            } catch (_) { }
+            } catch (_) {
+                localStorage.removeItem('bidora_user');
+            }
         }
+        setHydrated(true);
+    }, []);
 
-        // Silent background validation
-        api.get('/auth/me')
-            .then(res => {
+    // ── Background Validation ──
+    useEffect(() => {
+        if (!hydrated) return;
+
+        const validate = async () => {
+            if (!token) {
+                setLoading(false);
+                return;
+            }
+
+            try {
+                const res = await api.get('/auth/me');
                 setUser(res.data);
                 localStorage.setItem('bidora_user', JSON.stringify(res.data));
-            })
-            .catch((err) => {
-                if (err?.response?.status === 401) {
+            } catch (err: any) {
+                // Only clear on definitive 401/403. Network errors should keep local state.
+                if (err?.response?.status === 401 || err?.response?.status === 403) {
                     localStorage.removeItem('token');
                     localStorage.removeItem('bidora_user');
                     setToken(null);
                     setUser(null);
                 }
-            })
-            .finally(() => setLoading(false));
-    }, []);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        validate();
+    }, [hydrated, token]);
 
     const login = (newToken: string, newUser: User) => {
         setToken(newToken);
         setUser(newUser);
         localStorage.setItem('token', newToken);
         localStorage.setItem('bidora_user', JSON.stringify(newUser));
+        setLoading(false);
     };
 
     const logout = async () => {
@@ -84,7 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, []);
 
     return (
-        <AuthContext.Provider value={{ user, token, loading, login, logout, refreshUser }}>
+        <AuthContext.Provider value={{ user, token, loading, hydrated, login, logout, refreshUser }}>
             {children}
         </AuthContext.Provider>
     );
