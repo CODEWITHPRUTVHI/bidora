@@ -6,7 +6,7 @@ import { Bell, X, Trophy, AlertCircle, CheckCircle2, Package, CreditCard } from 
 import { useAuth } from '@/store/AuthContext';
 import Link from 'next/link';
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:5000';
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'https://bidora-api-production.up.railway.app';
 
 interface ToastNotif {
     id: string;

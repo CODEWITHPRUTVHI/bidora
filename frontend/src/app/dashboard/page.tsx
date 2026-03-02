@@ -442,7 +442,7 @@ export default function DashboardPage() {
                         <div className="space-y-6">
                             <div className="grid md:grid-cols-2 gap-6">
                                 {/* Deposit Card */}
-                                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-5 sm:p-8 relative overflow-hidden shadow-[0_15px_40px_-15px_rgba(0,0,0,0.5)]">
+                                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-4 sm:p-8 relative overflow-hidden shadow-[0_15px_40px_-15px_rgba(0,0,0,0.5)]">
                                     <div className="absolute top-0 right-0 w-48 h-48 bg-yellow-400/10 blur-[80px] rounded-full pointer-events-none" />
                                     <Wallet className="w-8 h-8 text-yellow-400 mb-5 drop-shadow-md" />
                                     <p className="text-gray-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1">Available Balance</p>
@@ -450,27 +450,27 @@ export default function DashboardPage() {
                                     <p className="text-gray-500 text-[10px] sm:text-sm font-medium mb-6 sm:mb-8">Pending Escrow: ₹{(wallet?.pendingFunds || 0).toLocaleString()}</p>
 
                                     <p className="text-gray-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-3">Deposit Funds</p>
-                                    <div className="flex flex-col sm:flex-row gap-3">
+                                    <div className="flex items-center gap-2">
                                         <input
                                             type="number" placeholder="Min ₹100"
                                             value={depositAmount} onChange={e => setDepositAmount(e.target.value)}
-                                            className="flex-1 bg-zinc-950/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-semibold outline-none focus:border-yellow-400/50 focus:bg-zinc-950 transition-colors placeholder:text-gray-600 w-full"
+                                            className="flex-1 bg-zinc-950/50 border border-white/10 rounded-xl px-3 py-3 text-white text-sm font-bold outline-none focus:border-yellow-400/50 transition-all placeholder:text-gray-600 min-w-0"
                                         />
                                         <button onClick={handleDepositRequest} disabled={depositing}
-                                            className="px-6 py-3 bg-yellow-400 text-black font-black rounded-xl hover:bg-yellow-300 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(250,204,21,0.2)] w-full sm:w-auto">
-                                            {depositing ? <span className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <Plus className="w-5 h-5" />}
+                                            className="shrink-0 px-4 py-3 bg-yellow-400 text-black font-black rounded-xl hover:bg-yellow-300 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-lg text-xs sm:text-sm whitespace-nowrap">
+                                            {depositing ? <span className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <Plus className="w-4 h-4" />}
                                             Deposit
                                         </button>
                                     </div>
                                     {depositMsg && (
-                                        <p className={`mt-4 text-xs sm:text-sm font-bold px-4 py-3 rounded-xl transition-colors ${depositMsg.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                                        <p className={`mt-4 text-[11px] sm:text-sm font-bold px-4 py-3 rounded-xl transition-colors ${depositMsg.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
                                             {depositMsg.text}
                                         </p>
                                     )}
                                 </div>
 
                                 {/* Withdraw Card */}
-                                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-5 sm:p-8 relative overflow-hidden shadow-[0_15px_40px_-15px_rgba(0,0,0,0.5)]">
+                                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-4 sm:p-8 relative overflow-hidden shadow-[0_15px_40px_-15px_rgba(0,0,0,0.5)]">
                                     <div className="absolute top-0 right-0 w-48 h-48 bg-blue-400/10 blur-[80px] rounded-full pointer-events-none" />
                                     <ArrowDownCircle className="w-8 h-8 text-blue-400 mb-5 drop-shadow-md" />
                                     <p className="text-gray-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1">Withdraw Balance</p>
@@ -478,20 +478,20 @@ export default function DashboardPage() {
                                     <p className="text-gray-500 text-[10px] sm:text-sm font-medium mb-6 sm:mb-8">Credited in 2-3 business days</p>
 
                                     <p className="text-gray-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-3">Withdraw Amount</p>
-                                    <div className="flex flex-col sm:flex-row gap-3 mb-3">
+                                    <div className="flex items-center gap-2 mb-3">
                                         <input
                                             type="number" placeholder="Min ₹100"
                                             value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)}
-                                            className="flex-1 bg-zinc-950/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-semibold outline-none focus:border-blue-400/50 focus:bg-zinc-950 transition-colors placeholder:text-gray-600 w-full"
+                                            className="flex-1 bg-zinc-950/50 border border-white/10 rounded-xl px-3 py-3 text-white text-sm font-bold outline-none focus:border-blue-400/50 transition-all placeholder:text-gray-600 min-w-0"
                                         />
                                         <button onClick={handleWithdraw} disabled={withdrawing}
-                                            className="px-6 py-3 bg-white text-black font-black rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.2)] w-full sm:w-auto">
-                                            {withdrawing ? <span className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <ArrowDownCircle className="w-5 h-5" />}
+                                            className="shrink-0 px-4 py-3 bg-white text-black font-black rounded-xl hover:bg-gray-200 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-lg text-xs sm:text-sm whitespace-nowrap">
+                                            {withdrawing ? <span className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <ArrowDownCircle className="w-4 h-4" />}
                                             Withdraw
                                         </button>
                                     </div>
                                     {withdrawMsg && (
-                                        <p className={`mt-4 text-xs sm:text-sm font-bold px-4 py-3 rounded-xl transition-colors ${withdrawMsg.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                                        <p className={`mt-4 text-[11px] sm:text-sm font-bold px-4 py-3 rounded-xl transition-colors ${withdrawMsg.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
                                             {withdrawMsg.text}
                                         </p>
                                     )}

@@ -4,17 +4,22 @@ import { createClient } from 'redis';
 
 // Create a redis client for rate limiting
 const redisClient = createClient({ url: process.env.REDIS_URL || 'redis://localhost:6379/0' });
-redisClient.connect().catch(console.error);
+if (process.env.REDIS_URL) {
+    redisClient.connect().catch(console.error);
+}
 
-// General API rate limiter with Redis store for multi-server scaling
+// General API rate limiter
+// Falls back to memory store if Redis is not configured
 export const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10000, // Increased for dev
-    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-    store: new RedisStore({
-        sendCommand: (...args: string[]) => redisClient.sendCommand(args),
-    }),
+    windowMs: 15 * 60 * 1000,
+    max: 10000,
+    standardHeaders: true,
+    legacyHeaders: false,
+    store: process.env.REDIS_URL
+        ? new RedisStore({
+            sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+        })
+        : undefined, // undefined uses memory store
     message: { error: 'Too many requests from this IP, please try again after 15 minutes' }
 });
 

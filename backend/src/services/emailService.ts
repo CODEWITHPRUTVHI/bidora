@@ -117,7 +117,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<voi
 // ─────────────────────────────────────────────
 // Typed Email Factories
 // ─────────────────────────────────────────────
-const APP_URL = process.env.CLIENT_URL || 'http://localhost:3000';
+const APP_URL = process.env.CLIENT_URL || 'https://frontend-ecru-three-43.vercel.app';
 
 export const EmailService = {
 

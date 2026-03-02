@@ -39,7 +39,7 @@ export default function Navbar() {
         const token = localStorage.getItem('token');
         if (!token) return;
         const { io: socketIO } = require('socket.io-client');
-        const socket = socketIO(process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:5000', {
+        const socket = socketIO(process.env.NEXT_PUBLIC_WS_URL || 'https://bidora-api-production.up.railway.app', {
             auth: { token }, transports: ['websocket', 'polling']
         });
 

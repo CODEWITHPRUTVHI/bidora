@@ -12,8 +12,8 @@ const nextConfig: NextConfig = {
   },
   // Expose backend URL to client-side
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1',
-    NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:5000',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://bidora-api-production.up.railway.app/api/v1',
+    NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL || 'https://bidora-api-production.up.railway.app',
   },
 };
 

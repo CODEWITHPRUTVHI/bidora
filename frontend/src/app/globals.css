@@ -76,8 +76,7 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
-    antialiased: true;
-    @apply selection:bg-primary/30 selection:text-foreground;
+    @apply antialiased selection:bg-primary/30 selection:text-foreground;
   }
 }
 

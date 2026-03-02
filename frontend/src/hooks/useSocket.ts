@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:5000';
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'https://bidora-api-production.up.railway.app';
 
 // Singleton socket instance shared across the app
 let globalSocket: Socket | null = null;
