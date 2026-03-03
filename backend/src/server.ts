@@ -17,7 +17,7 @@ import disputeRoutes from './routes/disputeRoutes';
 import adminRoutes from './routes/adminRoutes';
 import uploadRoutes from './routes/uploadRoutes';
 import watchlistRoutes from './routes/watchlistRoutes';
-import paymentRoutes, { stripeWebhookRouter } from './routes/paymentRoutes';
+import paymentRoutes from './routes/paymentRoutes';
 
 // Services & Utils
 import { initWebSocket } from './services/websocketService';
@@ -42,8 +42,7 @@ app.use(cors({
     credentials: true    // Required for httpOnly cookie (refresh token)
 }));
 
-// Stripe Webhook MUST be routed before express.json() because Stripe needs the raw unparsed body to verify the cryptographic signature.
-app.use('/api/v1/payments/webhook', stripeWebhookRouter);
+// General JSON body parsing (webhook parsing is handled in the route if needed)
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));

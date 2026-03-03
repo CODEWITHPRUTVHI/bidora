@@ -13,19 +13,17 @@ import { useAuth } from '@/store/AuthContext';
 import api from '@/lib/axios';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Elements } from '@stripe/react-stripe-js';
-import { loadStripe } from '@stripe/stripe-js';
-import StripeCheckoutForm from '@/components/StripeCheckoutForm';
 import { Skeleton } from '@/components/ui/Skeleton';
+// @ts-ignore
+import { load } from '@cashfreepayments/cashfree-js';
 
-// Stripe is lazy-loaded only when we have a valid publishable key at runtime
-// This prevents the "payment Element loader error {}" crash
-let stripePromise: ReturnType<typeof loadStripe> | null = null;
-const getStripePromise = () => {
-    const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-    if (!key || key === 'pk_test_mock' || !key.startsWith('pk_')) return null;
-    if (!stripePromise) stripePromise = loadStripe(key);
-    return stripePromise;
+// Cashfree is lazy loaded but we need the instance initialized
+let cashfree: any = null;
+const initCashfree = async () => {
+    if (!cashfree) {
+        cashfree = await load({ mode: process.env.NEXT_PUBLIC_CASHFREE_ENVIRONMENT === 'PRODUCTION' ? 'production' : 'sandbox' });
+    }
+    return cashfree;
 };
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -69,7 +67,7 @@ export default function DashboardPage() {
     const [depositAmount, setDepositAmount] = useState('');
     const [depositing, setDepositing] = useState(false);
     const [depositMsg, setDepositMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-    const [clientSecret, setClientSecret] = useState('');
+    const [paymentSessionId, setPaymentSessionId] = useState('');
     const [withdrawAmount, setWithdrawAmount] = useState('');
     const [withdrawing, setWithdrawing] = useState(false);
     const [withdrawMsg, setWithdrawMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -125,22 +123,47 @@ export default function DashboardPage() {
         setDepositing(true);
         setDepositMsg(null);
         try {
-            const res = await api.post('/payments/create-intent', { amount: Number(depositAmount) });
-            setClientSecret(res.data.clientSecret);
+            // 1. Get Payment Session ID from our backend
+            const res = await api.post('/payments/create-order', { amount: Number(depositAmount) });
+            const sessionId = res.data.payment_session_id;
+            const orderId = res.data.order_id;
+
+            // 2. Initialize Cashfree Web SDK Dropin
+            const cf = await initCashfree();
+            let checkoutOptions = {
+                paymentSessionId: sessionId,
+                redirectTarget: "_modal",
+            };
+
+            // 3. Open Cashfree UI
+            cf.checkout(checkoutOptions).then((result: any) => {
+                if (result.error) {
+                    setDepositMsg({ type: 'error', text: result.error.message || 'Payment failed or cancelled' });
+                    setDepositing(false);
+                }
+                if (result.redirect) {
+                    console.log('Payment will be redirected');
+                }
+                if (result.paymentDetails) {
+                    // 4. Verify payment via backend
+                    api.post('/payments/verify', { order_id: orderId }).then(() => {
+                        setDepositMsg({ type: 'success', text: 'Deposit successful!' });
+                        setDepositAmount('');
+                        api.get('/wallet').then(res => setWallet(res.data));
+                        api.get('/wallet/transactions?limit=10').then(res => setTransactions(res.data.transactions));
+                        refreshUser();
+                        setDepositing(false);
+                    }).catch(err => {
+                        setDepositMsg({ type: 'error', text: 'Payment verification failed.' });
+                        setDepositing(false);
+                    });
+                }
+            });
+
         } catch (e: any) {
             setDepositMsg({ type: 'error', text: e.response?.data?.error || 'Failed to initialize payment' });
-        } finally {
             setDepositing(false);
         }
-    };
-
-    const handlePaymentSuccess = async () => {
-        setClientSecret('');
-        setDepositAmount('');
-        // Refresh wallet
-        api.get('/wallet').then(res => setWallet(res.data));
-        api.get('/wallet/transactions?limit=10').then(res => setTransactions(res.data.transactions));
-        refreshUser();
     };
 
     const handleWithdraw = async () => {
@@ -239,50 +262,7 @@ export default function DashboardPage() {
         <div className="container mx-auto px-3 sm:px-4 md:px-8 py-16 sm:py-24 max-w-7xl relative min-h-screen">
             <div className="absolute top-0 left-1/4 w-[40vw] h-[40vw] bg-yellow-500/5 blur-[150px] rounded-full pointer-events-none -z-10" />
 
-            {/* Stripe Modal Overlay */}
-            {clientSecret && (() => {
-                const sp = getStripePromise();
-                return (
-                    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                        <div className="bg-[#111] p-8 rounded-3xl border border-white/10 w-full max-w-md shadow-2xl">
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="w-10 h-10 bg-yellow-400/10 rounded-xl flex items-center justify-center">
-                                    <Wallet className="w-5 h-5 text-yellow-400" />
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-black text-white">Complete Deposit</h3>
-                                    <p className="text-gray-500 text-xs">Funds added instantly to your wallet</p>
-                                </div>
-                            </div>
-                            {!sp ? (
-                                <div className="text-center py-6 space-y-3">
-                                    <p className="text-red-400 font-semibold">Stripe key not configured</p>
-                                    <p className="text-gray-500 text-sm">Add your <code className="text-yellow-400">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> to <code className="text-yellow-400">frontend/.env.local</code> and restart the dev server.</p>
-                                    <button onClick={() => setClientSecret('')} className="px-6 py-2 border border-white/20 rounded-xl text-gray-300 hover:bg-white/5 transition text-sm mt-2">Close</button>
-                                </div>
-                            ) : (
-                                <Elements
-                                    stripe={sp}
-                                    options={{
-                                        clientSecret,
-                                        appearance: {
-                                            theme: 'night',
-                                            variables: { colorPrimary: '#facc15', borderRadius: '12px', colorBackground: '#111111' }
-                                        }
-                                    }}
-                                >
-                                    <StripeCheckoutForm
-                                        clientSecret={clientSecret}
-                                        amount={Number(depositAmount)}
-                                        onSuccess={handlePaymentSuccess}
-                                        onCancel={() => setClientSecret('')}
-                                    />
-                                </Elements>
-                            )}
-                        </div>
-                    </div>
-                );
-            })()}
+
 
 
             {/* Header */}

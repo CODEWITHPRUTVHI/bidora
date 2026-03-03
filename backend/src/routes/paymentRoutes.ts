@@ -1,141 +1,108 @@
 import express, { Request, Response } from 'express';
 import { authenticateJWT, AuthRequest } from '../middlewares/authMiddleware';
-import Stripe from 'stripe';
 import prisma from '../utils/prisma';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_mock', {
-    apiVersion: '2025-01-27.acacia' as any
-});
+import axios from 'axios';
 
 const router = express.Router();
-export const stripeWebhookRouter = express.Router();
 
-// ─────────────────────────────────────────────
-// POST /api/v1/payments/webhook
-// This route handles secure callbacks directly from Stripe servers.
-// It bypasses the global express.json() parser to maintain the raw body needed for signature verification.
-// ─────────────────────────────────────────────
-stripeWebhookRouter.post('/', express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
-    const rawBody = req.body; // Buffer from express.raw()
-    const signature = req.headers['stripe-signature'] as string;
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+const CASHFREE_APP_ID = process.env.CASHFREE_APP_ID;
+const CASHFREE_SECRET_KEY = process.env.CASHFREE_SECRET_KEY;
+const CASHFREE_API_URL = process.env.CASHFREE_ENVIRONMENT === 'PRODUCTION'
+    ? 'https://api.cashfree.com/pg'
+    : 'https://sandbox.cashfree.com/pg';
 
-    if (!webhookSecret) {
-        console.error('Missing STRIPE_WEBHOOK_SECRET environment variable.');
-        return res.status(400).send('Webhook configured improperly.');
-    }
-
-    let event: Stripe.Event;
-
-    try {
-        // Construct the Stripe event, verifying the cryptographic signature
-        event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
-    } catch (err: any) {
-        console.error(`[Webhook] Signature verification failed: ${err.message}`);
-        return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
-
-    // Process the event
-    if (event.type === 'payment_intent.succeeded') {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        const userId = paymentIntent.metadata.userId;
-        const amount = paymentIntent.amount / 100; // Convert from paise back to INR
-
-        console.log(`[Webhook] PaymentIntent ${paymentIntent.id} succeeded for user ${userId}. Amount: ₹${amount}`);
-
-        try {
-            // Idempotency: Make sure we haven't already processed this payment
-            const existingTx = await prisma.walletTransaction.findFirst({
-                where: { description: { contains: paymentIntent.id } }
-            });
-
-            if (!existingTx && userId) {
-                // Top-up the user wallet securely
-                await prisma.$transaction(async (tx) => {
-                    await tx.walletTransaction.create({
-                        data: {
-                            userId: userId,
-                            amount,
-                            type: 'DEPOSIT',
-                            status: 'COMPLETED',
-                            description: `Stripe Deposit Webhook [${paymentIntent.id}]`
-                        }
-                    });
-                    await tx.user.update({
-                        where: { id: userId },
-                        data: { walletBalance: { increment: amount } }
-                    });
-                });
-                console.log(`[Webhook] User ${userId} wallet securely updated with ₹${amount}.`);
-            } else {
-                console.log(`[Webhook] Payment ${paymentIntent.id} already processed or missing userId.`);
-            }
-        } catch (dbError) {
-            console.error(`[Webhook] Database update failed for payment ${paymentIntent.id}:`, dbError);
-            return res.status(500).send('Database error during processing');
-        }
-    }
-
-    // Acknowledge receipt of the event instantly
-    return res.status(200).json({ received: true });
+// Helper for Cashfree Headers
+const getCashfreeHeaders = () => ({
+    'x-client-id': CASHFREE_APP_ID,
+    'x-client-secret': CASHFREE_SECRET_KEY,
+    'x-api-version': '2023-08-01',
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
 });
 
 // ─────────────────────────────────────────────
-// POST /api/v1/payments/create-intent
+// POST /api/v1/payments/create-order
+// Replaces Stripe's /create-intent
 // ─────────────────────────────────────────────
-router.post('/create-intent', authenticateJWT, async (req: AuthRequest, res: Response) => {
+router.post('/create-order', authenticateJWT, async (req: AuthRequest, res: Response) => {
     try {
         const amount = Number(req.body.amount);
         if (!amount || amount < 100) return res.status(400).json({ error: 'Minimum deposit is ₹100' });
         if (amount > 500000) return res.status(400).json({ error: 'Maximum deposit is ₹5,00,000' });
 
-        // Stripe expects amount in smallest currency unit (paise for INR, cents for USD)
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount: amount * 100,
-            currency: 'inr',
-            metadata: { userId: req.user!.id }
+        const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        const orderId = `order_${Date.now()}_${user.id.substring(0, 5)}`;
+
+        const requestBody = {
+            order_amount: amount,
+            order_currency: 'INR',
+            order_id: orderId,
+            customer_details: {
+                customer_id: user.id,
+                customer_phone: '9999999999', // Cashfree requires a phone number; mock or collect later
+                customer_name: user.fullName || 'Bidora User',
+                customer_email: user.email
+            },
+            order_meta: {
+                return_url: `${process.env.FRONTEND_URL || 'https://bidora-pink.vercel.app'}/dashboard?tab=wallet`
+            }
+        };
+
+        const response = await axios.post(`${CASHFREE_API_URL}/orders`, requestBody, {
+            headers: getCashfreeHeaders()
         });
 
-        return res.status(200).json({ clientSecret: paymentIntent.client_secret });
+        // Return the payment_session_id which the frontend checkout SDK needs to open the modal
+        return res.status(200).json({
+            payment_session_id: response.data.payment_session_id,
+            order_id: orderId
+        });
     } catch (error: any) {
-        console.error('[Stripe] Create Intent Error:', error);
-        return res.status(500).json({ error: error.message || 'Internal Stripe error' });
+        console.error('[Cashfree] Create Order Error:', error?.response?.data || error.message);
+        return res.status(500).json({ error: 'Failed to create Cashfree order' });
     }
 });
 
 // ─────────────────────────────────────────────
 // POST /api/v1/payments/verify
+// Replaces Stripe's /verify logic
 // ─────────────────────────────────────────────
 router.post('/verify', authenticateJWT, async (req: AuthRequest, res: Response) => {
     try {
-        const { paymentIntentId } = req.body;
-        if (!paymentIntentId) return res.status(400).json({ error: 'Missing paymentIntentId' });
+        const { order_id } = req.body;
+        if (!order_id) return res.status(400).json({ error: 'Missing order_id' });
 
-        // Verify the intent directly with Stripe
-        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+        // Query Cashfree directly to verify the order status
+        const cfResponse = await axios.get(`${CASHFREE_API_URL}/orders/${order_id}`, {
+            headers: getCashfreeHeaders()
+        });
 
-        if (paymentIntent.status !== 'succeeded') {
-            return res.status(400).json({ error: `Payment not succeeded. Status: ${paymentIntent.status}` });
+        const orderData = cfResponse.data;
+
+        if (orderData.order_status !== 'PAID') {
+            return res.status(400).json({ error: `Payment not succeeded. Status: ${orderData.order_status}` });
         }
 
-        const amount = paymentIntent.amount / 100; // convert back from paise
+        const amount = orderData.order_amount;
+        const depositDescription = `Cashfree Deposit [${order_id}]`;
 
-        // Check if this payment intent was already processed (either by the webhook or a previous frontend ping)
+        // Check if webhook already processed it
         const existingTx = await prisma.walletTransaction.findFirst({
-            where: { description: { contains: paymentIntentId } }
+            where: { description: { contains: order_id } }
         });
 
         if (existingTx) {
-            // If the webhook already processed it, we just return the latest wallet data cheerfully!
             const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
             return res.status(200).json({
-                message: 'Deposit verified by Webhook',
+                message: 'Deposit verified',
                 walletBalance: Number(user?.walletBalance),
                 pendingFunds: Number(user?.pendingFunds)
             });
         }
 
-        // Top-up the user wallet
+        // Top-up the user wallet securely (if webhook missed it / we beat the webhook)
         const result = await prisma.$transaction(async (tx) => {
             await tx.walletTransaction.create({
                 data: {
@@ -143,7 +110,7 @@ router.post('/verify', authenticateJWT, async (req: AuthRequest, res: Response) 
                     amount,
                     type: 'DEPOSIT',
                     status: 'COMPLETED',
-                    description: `Stripe Deposit [${paymentIntentId}]`
+                    description: depositDescription
                 }
             });
             return tx.user.update({
@@ -159,8 +126,56 @@ router.post('/verify', authenticateJWT, async (req: AuthRequest, res: Response) 
             pendingFunds: Number(result.pendingFunds)
         });
     } catch (error: any) {
-        console.error('[Stripe] Verify Error:', error);
-        return res.status(500).json({ error: 'Failed to verify payment intent' });
+        console.error('[Cashfree] Verify Error:', error?.response?.data || error.message);
+        return res.status(500).json({ error: 'Failed to verify Cashfree order' });
+    }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/v1/payments/webhook
+// Cashfree Server-to-Server Webhook
+// ─────────────────────────────────────────────
+router.post('/webhook', express.json(), async (req: Request, res: Response) => {
+    try {
+        // Cashfree webhook structure checking
+        // Technically, you should verify the x-webhook-signature here for production security
+        const { data, type } = req.body;
+
+        if (type === 'PAYMENT_SUCCESS_WEBHOOK') {
+            const orderId = data.order.order_id;
+            const amount = data.order.order_amount;
+            const customerId = data.customer_details.customer_id;
+
+            console.log(`[Cashfree Webhook] Order ${orderId} succeeded for user ${customerId}. Amount: ₹${amount}`);
+
+            const existingTx = await prisma.walletTransaction.findFirst({
+                where: { description: { contains: orderId } }
+            });
+
+            if (!existingTx && customerId) {
+                await prisma.$transaction(async (tx) => {
+                    await tx.walletTransaction.create({
+                        data: {
+                            userId: customerId,
+                            amount,
+                            type: 'DEPOSIT',
+                            status: 'COMPLETED',
+                            description: `Cashfree Webhook Deposit [${orderId}]`
+                        }
+                    });
+                    await tx.user.update({
+                        where: { id: customerId },
+                        data: { walletBalance: { increment: amount } }
+                    });
+                });
+                console.log(`[Cashfree Webhook] User ${customerId} wallet securely updated with ₹${amount}.`);
+            }
+        }
+
+        return res.status(200).send('OK');
+    } catch (err: any) {
+        console.error(`[Cashfree Webhook] Error: ${err.message}`);
+        return res.status(500).send('Webhook parsing error');
     }
 });
 

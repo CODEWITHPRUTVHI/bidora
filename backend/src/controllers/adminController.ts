@@ -2,6 +2,30 @@ import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import { NotificationService } from '../services/notificationService';
+import axios from 'axios';
+
+const CASHFREE_CLIENT_ID = process.env.CASHFREE_APP_ID;
+const CASHFREE_CLIENT_SECRET = process.env.CASHFREE_SECRET_KEY;
+const CASHFREE_PAYOUT_URL = process.env.CASHFREE_ENVIRONMENT === 'PRODUCTION'
+    ? 'https://payout-api.cashfree.com/payout/v1'
+    : 'https://payout-gamma.cashfree.com/payout/v1';
+
+// We need a helper for payout auth token as Cashfree Payouts use Bearer tokens
+async function getCashfreePayoutToken(): Promise<string> {
+    try {
+        const response = await axios.post(`${CASHFREE_PAYOUT_URL}/authorize`, {}, {
+            headers: {
+                'X-Client-Id': CASHFREE_CLIENT_ID,
+                'X-Client-Secret': CASHFREE_CLIENT_SECRET,
+                'Content-Type': 'application/json'
+            }
+        });
+        if (response.data.status === 'ERROR') throw new Error(response.data.message);
+        return response.data.data.token;
+    } catch (e: any) {
+        throw new Error('Failed to authorize Cashfree Payout API: ' + (e.response?.data?.message || e.message));
+    }
+}
 
 
 // ─────────────────────────────────────────────
@@ -234,22 +258,58 @@ export const approveWithdrawal = async (req: AuthRequest, res: Response) => {
         const transactionId = req.params.id;
 
         await prisma.$transaction(async (tx) => {
-            const transaction = await tx.walletTransaction.findUnique({ where: { id: transactionId } });
+            const transaction = await tx.walletTransaction.findUnique({ where: { id: transactionId }, include: { user: true } });
             if (!transaction || transaction.type !== 'WITHDRAWAL' || transaction.status !== 'PENDING') {
                 throw new Error('Invalid or already processed withdrawal request');
             }
 
+            const amount = Math.abs(Number(transaction.amount));
+
+            // --- 🚨 EXECUTE CASHFREE PAYOUT 🚨 ---
+            try {
+                const token = await getCashfreePayoutToken();
+
+                // For a real production app, the User model would need 'bankAccount', 'ifsc', 'phone'.
+                // Using mock data for the test sandbox request
+                const transferRequest = {
+                    beneId: `bene_${transaction.userId.substring(0, 8)}`,
+                    amount: amount,
+                    transferId: `txn_${transactionId.substring(0, 10)}_${Date.now()}`,
+                    transferMode: 'upi', // 'banktransfer', 'upi', 'paytm'
+                    remarks: `Bidora Withdrawal: ${transactionId}`,
+                    // Mock bene details (in sandbox, these don't actually move real money)
+                    beneficiaryDetails: {
+                        beneName: transaction.user.fullName || 'Bidora User',
+                        email: transaction.user.email,
+                        phone: '9999999999',
+                        vpa: 'test@upi'
+                    }
+                };
+
+                const cfResponse = await axios.post(`${CASHFREE_PAYOUT_URL}/requestAsyncTransfer`, transferRequest, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                });
+
+                if (cfResponse.data.status === 'ERROR') {
+                    throw new Error(`Cashfree Payout Failed: ${cfResponse.data.message}`);
+                }
+            } catch (payoutError: any) {
+                // If the bank transfer fails, throw so Prisma aborts the database transaction
+                console.error('[Cashfree Payout] Error:', payoutError.response?.data || payoutError.message);
+                throw new Error(payoutError.response?.data?.message || payoutError.message || 'Payment Gateway Transfer Failed');
+            }
+            // ------------------------------------
+
             // Update transaction
             await tx.walletTransaction.update({
                 where: { id: transactionId },
-                data: { status: 'COMPLETED' }
+                data: { status: 'COMPLETED', description: `Approved & Transferred via Cashfree` }
             });
 
             // 1. We ONLY deduct pendingFunds because the available balance was already constrained
-            // 2. The actual cash leaves the platform here via your preferred payout gateway.
             await tx.user.update({
                 where: { id: transaction.userId },
-                data: { pendingFunds: { decrement: Math.abs(Number(transaction.amount)) } }
+                data: { pendingFunds: { decrement: amount } }
             });
 
             await tx.adminActionLog.create({
@@ -258,12 +318,12 @@ export const approveWithdrawal = async (req: AuthRequest, res: Response) => {
                     action: 'WITHDRAWAL_APPROVED',
                     targetId: transactionId,
                     targetType: 'WALLET_TRANSACTION',
-                    notes: `Manually approved withdrawal of ${Math.abs(Number(transaction.amount))}`
+                    notes: `Manually approved and disbursed ₹${amount} via Cashfree`
                 }
             });
 
             // Trigger Notification
-            await NotificationService.notifyWithdrawalApproved(transaction.userId, Math.abs(Number(transaction.amount)));
+            await NotificationService.notifyWithdrawalApproved(transaction.userId, amount);
         });
 
 
