@@ -83,7 +83,9 @@ export const register = async (req: Request, res: Response) => {
         });
 
         // Send welcome email (fire-and-forget — non-blocking)
-        EmailService.sendWelcome(user.email, user.fullName || '').catch(() => { });
+        if (user.email) {
+            EmailService.sendWelcome(user.email, user.fullName || '').catch(() => { });
+        }
 
         return res.status(201).json({ accessToken, user });
     } catch (error) {
@@ -111,7 +113,7 @@ export const login = async (req: Request, res: Response) => {
             }
         });
 
-        if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+        if (!user || !user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 

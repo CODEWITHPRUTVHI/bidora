@@ -24,7 +24,9 @@ async function getUserContact(userId: string): Promise<{ email: string; name: st
             select: { email: true, fullName: true }
         });
         if (!user) return null;
-        return { email: user.email, name: user.fullName || '' };
+        const { email, fullName } = user;
+        if (!email) return null;
+        return { email, name: fullName || '' };
     } catch {
         return null;
     }
