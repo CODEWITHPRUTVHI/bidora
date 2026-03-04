@@ -6,15 +6,19 @@ import prisma from '../utils/prisma';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import { EmailService } from '../services/emailService';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
-const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
+// Environment variables should be read inside handlers or lazily to ensure dotenv has loaded.
+const getJWTConfig = () => ({
+    secret: process.env.JWT_SECRET || 'fallback_secret',
+    accessTokenExpiresIn: process.env.JWT_EXPIRES_IN || '15m',
+    refreshTokenExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d'
+});
 
 /**
  * Generates a short-lived access token and a long-lived refresh token.
  */
 function generateTokens(userId: string, role: string) {
-    const accessToken = jwt.sign({ userId, role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as any);
+    const { secret, accessTokenExpiresIn } = getJWTConfig();
+    const accessToken = jwt.sign({ userId, role }, secret, { expiresIn: accessTokenExpiresIn } as any);
 
     const refreshTokenRaw = crypto.randomBytes(64).toString('hex');
     const refreshTokenHash = crypto.createHash('sha256').update(refreshTokenRaw).digest('hex');
@@ -88,9 +92,12 @@ export const register = async (req: Request, res: Response) => {
         }
 
         return res.status(201).json({ accessToken, user });
-    } catch (error) {
+    } catch (error: any) {
         console.error('[Auth] Registration error:', error);
-        return res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({
+            error: 'Internal server error',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 };
 
@@ -144,9 +151,12 @@ export const login = async (req: Request, res: Response) => {
 
         const { passwordHash: _, ...safeUser } = user;
         return res.status(200).json({ accessToken, user: safeUser });
-    } catch (error) {
+    } catch (error: any) {
         console.error('[Auth] Login error:', error);
-        return res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({
+            error: 'Internal server error',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 };
 
@@ -198,9 +208,12 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
         });
 
         return res.status(200).json({ accessToken });
-    } catch (error) {
+    } catch (error: any) {
         console.error('[Auth] Token refresh error:', error);
-        return res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({
+            error: 'Internal server error',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 };
 

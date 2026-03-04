@@ -5,9 +5,17 @@ import crypto from 'crypto';
 import prisma from '../utils/prisma';
 import * as admin from 'firebase-admin';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
+// Environment variables should be read inside handlers or lazily to ensure dotenv has loaded.
+const getJWTConfig = () => ({
+    secret: process.env.JWT_SECRET || 'fallback_secret',
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d'
+});
+
+const getGoogleConfig = () => {
+    const id = process.env.GOOGLE_CLIENT_ID;
+    if (!id) console.warn('[OAuth] GOOGLE_CLIENT_ID is not defined in environment variables');
+    return id;
+};
 
 // ── Init Firebase Admin (lazy singleton) ──
 function getFirebaseAdmin() {
@@ -21,7 +29,8 @@ function getFirebaseAdmin() {
 
 // ── Shared: Generate tokens (mirrors authController exactly) ──
 function generateTokens(userId: string, role: string) {
-    const accessToken = jwt.sign({ userId, role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as any);
+    const { secret, expiresIn } = getJWTConfig();
+    const accessToken = jwt.sign({ userId, role }, secret, { expiresIn: expiresIn } as any);
     const refreshTokenRaw = crypto.randomBytes(64).toString('hex');
     const refreshTokenHash = crypto.createHash('sha256').update(refreshTokenRaw).digest('hex');
     const refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -47,6 +56,12 @@ export const googleLogin = async (req: Request, res: Response) => {
         const { googleToken } = req.body;
         if (!googleToken) return res.status(400).json({ error: 'Google token is required.' });
 
+        const GOOGLE_CLIENT_ID = getGoogleConfig();
+        if (!GOOGLE_CLIENT_ID) {
+            console.error('[OAuth] Google Login failed: Missing GOOGLE_CLIENT_ID');
+            return res.status(500).json({ error: 'OAuth configuration error. Please check server logs.' });
+        }
+
         const oauthClient = new OAuth2Client(GOOGLE_CLIENT_ID);
         let email: string, name: string, picture: string, googleId: string;
         try {
@@ -56,7 +71,8 @@ export const googleLogin = async (req: Request, res: Response) => {
             name = p.name || '';
             picture = p.picture || '';
             googleId = p.sub;
-        } catch {
+        } catch (err: any) {
+            console.error('[OAuth] Google Token Verification failed:', err.message);
             return res.status(401).json({ error: 'Invalid Google token. Please try again.' });
         }
 
@@ -108,9 +124,12 @@ export const googleLogin = async (req: Request, res: Response) => {
                 isEmailVerified: user.isEmailVerified,
             }
         });
-    } catch (error) {
-        console.error('[OAuth] Google login error:', error);
-        return res.status(500).json({ error: 'Internal server error' });
+    } catch (error: any) {
+        console.error('[OAuth] Google login CRITICAL error:', error);
+        return res.status(500).json({
+            error: 'Internal server error',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 };
 
@@ -127,7 +146,8 @@ export const phoneLogin = async (req: Request, res: Response) => {
             const firebaseAuth = getFirebaseAdmin();
             const decoded = await firebaseAuth.verifyIdToken(idToken);
             phone = decoded.phone_number || '';
-        } catch {
+        } catch (err: any) {
+            console.error('[OAuth] Firebase Phone verification failed:', err.message);
             return res.status(401).json({ error: 'Invalid or expired phone verification. Please try again.' });
         }
 
@@ -166,8 +186,11 @@ export const phoneLogin = async (req: Request, res: Response) => {
                 isEmailVerified: user.isEmailVerified,
             }
         });
-    } catch (error) {
-        console.error('[OAuth] Phone login error:', error);
-        return res.status(500).json({ error: 'Internal server error' });
+    } catch (error: any) {
+        console.error('[OAuth] Phone login CRITICAL error:', error);
+        return res.status(500).json({
+            error: 'Internal server error',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 };

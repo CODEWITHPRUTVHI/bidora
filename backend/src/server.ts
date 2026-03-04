@@ -1,6 +1,4 @@
-import dotenv from 'dotenv';
-dotenv.config();
-
+import './utils/loadEnv';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -24,8 +22,6 @@ import verificationRoutes from './routes/verificationRoutes';
 import { initWebSocket } from './services/websocketService';
 import { initCronJobs } from './utils/cron';
 import { apiLimiter } from './middlewares/rateLimiter';
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;

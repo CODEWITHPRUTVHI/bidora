@@ -32,7 +32,7 @@ export default function GoogleButton({ onError }: GoogleButtonProps) {
 
         setLoading(true);
 
-        window.google.accounts.id.initialize({
+        window.google?.accounts.id.initialize({
             client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
             callback: async (response: { credential: string }) => {
                 try {
@@ -50,10 +50,10 @@ export default function GoogleButton({ onError }: GoogleButtonProps) {
             ux_mode: 'popup',
         });
 
-        window.google.accounts.id.prompt((notification: any) => {
+        window.google?.accounts.id.prompt((notification: any) => {
             if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
                 // Fallback: render a button and click it
-                window.google.accounts.id.renderButton(
+                window.google?.accounts.id.renderButton(
                     document.getElementById('google-button-fallback')!,
                     { type: 'standard', size: 'large', width: 400 }
                 );
