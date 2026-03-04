@@ -1,0 +1,49 @@
+Starting Container
+
+🚀 Bidora Server   → http://localhost:5000
+📡 WebSocket Engine → initialized
+> node dist/server.js
+
+[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+❌ Failed to load .env file: ENOENT: no such file or directory, open '/app/.env'
+💎 Prisma Client → initialized
+[Shipping] WARNING: SHIPPO_API_TOKEN is not defined in environment variables.
+npm warn config production Use `--omit=dev` instead.
+
+> backend@1.0.0 start
+⏰ All 4 cron jobs initialized
+⏰ Cron Jobs       → 4 jobs active
+
+📋 Active routes:
+   POST   /api/v1/auth/login
+   POST   /api/v1/shipping/:auctionId/ship
+   POST   /api/v1/auth/register
+   POST   /api/v1/auth/logout
+   POST   /api/v1/auth/refresh
+   POST   /api/v1/shipping/:auctionId/confirm
+   GET    /api/v1/auth/me
+   GET    /api/v1/auctions
+   GET    /api/v1/notifications
+   POST   /api/v1/auctions
+
+   GET    /api/v1/auctions/:id
+✅ Ready.
+   GET    /api/v1/wallet
+
+   POST   /api/v1/wallet/deposit
+   POST   /api/v1/wallet/pay/:auctionId
+📡 Redis Adapter → initialized (Scalable WS mode)
+  meta: { modelName: 'User', column: 'User.googleId' }
+}
+[Auth] Prisma Error Code: P2022 Meta: { modelName: 'User', column: 'User.googleId' }
+[Auth] Login error: PrismaClientKnownRequestError: 
+Invalid `prisma.user.update()` invocation:
+
+
+The column `User.googleId` does not exist in the current database.
+    at $n.handleRequestError (/app/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/app/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/app/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at async l (/app/node_modules/@prisma/client/runtime/library.js:130:9633) {
+  code: 'P2022',
+  clientVersion: '5.22.0',

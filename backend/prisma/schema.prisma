@@ -27,7 +27,6 @@ model User {
   lastLoginAt           DateTime?
   createdAt             DateTime                    @default(now())
   updatedAt             DateTime                    @updatedAt
-  googleId              String?                     @unique
   adminActions          AdminActionLog[]
   auctionsAsSeller      Auction[]                   @relation("SellerAuctions")
   autoBids              AutoBid[]
