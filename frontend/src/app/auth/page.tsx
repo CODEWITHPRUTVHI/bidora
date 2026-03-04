@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/store/AuthContext';
 import api from '@/lib/axios';
+import GoogleButton from '@/components/auth/GoogleButton';
+import PhoneOTPForm from '@/components/auth/PhoneOTPForm';
 
 export default function AuthPage() {
     const [isLogin, setIsLogin] = useState(true);
@@ -101,6 +103,16 @@ export default function AuthPage() {
                         {isLogin ? 'Sign in to access your bids and wallet.' : 'Join thousands of buyers and sellers on Bidora.'}
                     </p>
 
+                    {/* ── Google OAuth ── */}
+                    <GoogleButton onError={setError} />
+
+                    {/* ── Divider ── */}
+                    <div className="flex items-center gap-3 my-5">
+                        <div className="flex-1 h-px bg-white/10" />
+                        <span className="text-gray-600 text-xs font-semibold uppercase tracking-widest">or with email</span>
+                        <div className="flex-1 h-px bg-white/10" />
+                    </div>
+
                     {/* Role Selector — only on register */}
                     <AnimatePresence>
                         {!isLogin && (
@@ -189,6 +201,16 @@ export default function AuthPage() {
                             {isLogin ? 'Sign Up Free' : 'Sign In'}
                         </button>
                     </p>
+
+                    {/* ── Divider ── */}
+                    <div className="flex items-center gap-3 my-5">
+                        <div className="flex-1 h-px bg-white/10" />
+                        <span className="text-gray-600 text-xs font-semibold uppercase tracking-widest">or with phone</span>
+                        <div className="flex-1 h-px bg-white/10" />
+                    </div>
+
+                    {/* ── Phone OTP Login ── */}
+                    <PhoneOTPForm onError={setError} />
                 </div>
             </motion.div>
         </div>
