@@ -3,7 +3,12 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../utils/prisma';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
+// Environment variables should be read inside handlers or lazily to ensure dotenv has loaded.
+const getJWTSecret = () => {
+    const secret = process.env.JWT_SECRET || 'fallback_secret';
+    if (secret === 'fallback_secret') console.warn(' [33m[Auth Middleware] [39m Using fallback_secret. Check your .env file.');
+    return secret;
+};
 
 export interface AuthRequest extends Request {
     user?: {
@@ -20,7 +25,7 @@ export const authenticateJWT = async (req: AuthRequest, res: Response, next: Nex
         const token = authHeader.split(' ')[1];
 
         try {
-            const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
+            const decoded = jwt.verify(token, getJWTSecret()) as { userId: string; role: string };
 
             // Basic fraud safeguard: check if user is blocked or has too many suspicious flags
             const user = await prisma.user.findUnique({

@@ -1,3 +1,10 @@
 import dotenv from 'dotenv';
-dotenv.config();
-console.log('✅ Environment variables loaded');
+import path from 'path';
+
+const result = dotenv.config();
+
+if (result.error) {
+    console.error('❌ Failed to load .env file:', result.error.message);
+} else {
+    console.log('✅ Environment variables loaded from:', path.resolve('.env'));
+}

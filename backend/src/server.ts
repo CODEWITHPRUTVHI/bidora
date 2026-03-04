@@ -91,6 +91,17 @@ app.use((_req: Request, res: Response) => {
 });
 
 // ─────────────────────────────────────────────
+// Global Error Handler
+// ─────────────────────────────────────────────
+app.use((err: any, _req: Request, res: Response, _next: any) => {
+    console.error(' [31m[Global Error Handler] [39m', err);
+    res.status(500).json({
+        error: 'Internal server error',
+        details: process.env.NODE_ENV === 'development' ? err.message : 'An unexpected error occurred'
+    });
+});
+
+// ─────────────────────────────────────────────
 // Boot Sequence
 // ─────────────────────────────────────────────
 httpServer.listen(PORT, () => {

@@ -153,9 +153,20 @@ export const login = async (req: Request, res: Response) => {
         return res.status(200).json({ accessToken, user: safeUser });
     } catch (error: any) {
         console.error('[Auth] Login error:', error);
+
+        // Handle bcrypt errors (e.g. invalid hash in DB)
+        if (error.message && error.message.includes('bcrypt')) {
+            console.error('[Auth] Bcrypt Error: Likely an invalid hash format in the database.');
+            return res.status(500).json({ error: 'Internal server error', details: 'Authentication provider error' });
+        }
+
+        if (error.code && error.code.startsWith('P')) {
+            console.error('[Auth] Prisma Error Code:', error.code, 'Meta:', error.meta);
+        }
+
         return res.status(500).json({
             error: 'Internal server error',
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            details: process.env.NODE_ENV === 'development' ? error.message : 'Database or authentication error'
         });
     }
 };
