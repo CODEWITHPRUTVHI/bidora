@@ -18,6 +18,7 @@ import adminRoutes from './routes/adminRoutes';
 import uploadRoutes from './routes/uploadRoutes';
 import watchlistRoutes from './routes/watchlistRoutes';
 import paymentRoutes from './routes/paymentRoutes';
+import verificationRoutes from './routes/verificationRoutes';
 
 // Services & Utils
 import { initWebSocket } from './services/websocketService';
@@ -72,6 +73,7 @@ app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/upload', uploadRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/watchlist', watchlistRoutes);
+app.use('/api/v1/verification', verificationRoutes);
 
 // ─────────────────────────────────────────────
 // Health Check

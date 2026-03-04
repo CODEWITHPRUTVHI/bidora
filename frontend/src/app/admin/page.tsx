@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Users, Package, AlertTriangle, BarChart3, CheckCircle2,
-    XCircle, Search, Shield, TrendingUp, Clock, Eye, Wallet
+    XCircle, Search, Shield, TrendingUp, Clock, Eye, Wallet, BadgeCheck
 } from 'lucide-react';
 import { useAuth } from '@/store/AuthContext';
 import api from '@/lib/axios';
@@ -17,9 +17,15 @@ interface User { id: string; fullName: string; email: string; role: string; veri
 interface Dispute { id: string; auctionId: string; buyerId: string; reason: string; status: string; createdAt: string; auction: { id: string; title: string; currentHighestBid: number; sellerId: string }; buyer: { fullName: string; email: string; trustScore: number }; evidenceUrls?: string[]; adminNotes?: string | null; resolvedById?: string | null }
 interface AdminAuction { id: string; title: string; currentHighestBid: number; startingPrice: number; status: string; createdAt: string; endTime: string; seller: { id: string; fullName: string; email: string }; category: { name: string }; _count: { bids: number }; }
 interface AdminWithdrawal { id: string; userId: string; amount: number; description: string; createdAt: string; user: { fullName: string; email: string; trustScore: number; suspiciousFlags: number; verifiedStatus: string } }
+interface VerificationReq {
+    id: string; fullLegalName: string; businessType: string; panNumber?: string; aadhaarLast4?: string;
+    description: string; documentUrls: string[]; assetUrls: string[]; status: string; createdAt: string;
+    user: { id: string; fullName: string; email: string; role: string; trustScore: number; createdAt: string; _count: { auctionsAsSeller: number; bidsPlaced: number } };
+}
 
 const tabList = [
     { id: 'stats', label: 'Dashboard', icon: BarChart3 },
+    { id: 'verifications', label: 'Verifications', icon: BadgeCheck },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'disputes', label: 'Disputes', icon: AlertTriangle },
     { id: 'withdrawals', label: 'Withdrawals', icon: Wallet },
@@ -35,6 +41,8 @@ export default function AdminPage() {
     const [disputes, setDisputes] = useState<Dispute[]>([]);
     const [auctions, setAuctions] = useState<AdminAuction[]>([]);
     const [withdrawals, setWithdrawals] = useState<AdminWithdrawal[]>([]);
+    const [verifications, setVerifications] = useState<VerificationReq[]>([]);
+    const [verificationFilter, setVerificationFilter] = useState<'PENDING' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED'>('PENDING');
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [resolving, setResolving] = useState<string | null>(null);
@@ -49,13 +57,15 @@ export default function AdminPage() {
             api.get('/admin/users?limit=50'),
             api.get('/disputes/admin'),
             api.get('/admin/auctions?limit=50'),
-            api.get('/admin/withdrawals')
-        ]).then(([s, u, d, a, w]) => {
+            api.get('/admin/withdrawals'),
+            api.get('/verification/admin/pending?status=PENDING')
+        ]).then(([s, u, d, a, w, v]) => {
             setStats({ ...s.data, pendingWithdrawals: w.data.withdrawals.length });
             setUsers(u.data.users);
             setDisputes(d.data.disputes);
             setAuctions(a.data.auctions);
             setWithdrawals(w.data.withdrawals);
+            setVerifications(v.data.requests);
         }).catch(console.error).finally(() => setLoading(false));
     }, [user]);
 
@@ -67,6 +77,18 @@ export default function AdminPage() {
     const handleVerify = async (userId: string, verifiedStatus: string) => {
         await api.patch(`/admin/users/${userId}/verify`, { verifiedStatus });
         setUsers(prev => prev.map(u => u.id === userId ? { ...u, verifiedStatus } : u));
+    };
+
+    const handleVerificationReview = async (id: string, decision: 'APPROVED' | 'REJECTED', adminNotes?: string) => {
+        setResolving(id);
+        try {
+            await api.patch(`/verification/admin/${id}/review`, { decision, adminNotes });
+            setVerifications(prev => prev.filter(v => v.id !== id));
+        } catch (e: any) {
+            alert(e.response?.data?.error || 'Failed to review verification');
+        } finally {
+            setResolving(null);
+        }
     };
 
     const resolveDispute = async (disputeId: string, decision: string) => {
@@ -149,6 +171,9 @@ export default function AdminPage() {
                             {t.id === 'withdrawals' && withdrawals.length > 0 && (
                                 <span className="bg-blue-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold">{withdrawals.length}</span>
                             )}
+                            {t.id === 'verifications' && verifications.length > 0 && (
+                                <span className="bg-yellow-500 text-black text-xs rounded-full px-1.5 py-0.5 font-bold">{verifications.length}</span>
+                            )}
                         </button>
                     );
                 })}
@@ -190,6 +215,9 @@ export default function AdminPage() {
                                         <button onClick={() => setTab('withdrawals')} className="w-full text-left px-4 py-3 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-xl hover:bg-blue-500/20 transition-colors text-sm font-semibold">
                                             💸 Process {stats.pendingWithdrawals} pending payouts
                                         </button>
+                                        <button onClick={() => setTab('verifications')} className="w-full text-left px-4 py-3 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 rounded-xl hover:bg-yellow-500/20 transition-colors text-sm font-semibold">
+                                            🏅 Review {verifications.length} seller verification requests
+                                        </button>
                                     </div>
                                 </div>
                                 <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
@@ -208,6 +236,103 @@ export default function AdminPage() {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    )}
+
+                    {/* ── Seller Verifications ──────────────────── */}
+                    {tab === 'verifications' && (
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between flex-wrap gap-3">
+                                <h2 className="text-xl font-bold flex items-center gap-2">
+                                    <BadgeCheck className="w-5 h-5 text-yellow-400" /> Seller Verification Requests
+                                    {verifications.length > 0 && <span className="ml-2 bg-yellow-500 text-black text-xs px-2 py-0.5 rounded-full font-black">{verifications.length}</span>}
+                                </h2>
+                                <div className="flex bg-white/5 border border-white/10 rounded-lg overflow-hidden">
+                                    {(['PENDING', 'UNDER_REVIEW', 'APPROVED', 'REJECTED'] as const).map(s => (
+                                        <button key={s} onClick={async () => {
+                                            setVerificationFilter(s);
+                                            const res = await api.get(`/verification/admin/pending?status=${s}`);
+                                            setVerifications(res.data.requests);
+                                        }} className={`px-3 py-1.5 text-xs font-bold transition-colors ${verificationFilter === s ? 'bg-yellow-400 text-black' : 'text-gray-400 hover:bg-white/5'}`}>{s.replace('_', ' ')}</button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {verifications.length === 0 && (
+                                <div className="text-center py-16 bg-white/5 border border-white/10 rounded-2xl">
+                                    <BadgeCheck className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                                    <p className="text-gray-500">No {verificationFilter.toLowerCase().replace('_', ' ')} verification requests.</p>
+                                </div>
+                            )}
+
+                            {verifications.map(v => (
+                                <div key={v.id} className="bg-yellow-500/5 border border-yellow-500/20 rounded-2xl p-6">
+                                    <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-3 flex-wrap">
+                                                <span className="text-xs px-2 py-1 rounded-full font-bold border bg-yellow-500/10 text-yellow-400 border-yellow-500/30">{v.status.replace('_', ' ')}</span>
+                                                <span className="text-gray-500 text-xs">{new Date(v.createdAt).toLocaleString()}</span>
+                                            </div>
+                                            <div className="grid sm:grid-cols-2 gap-4 mb-4">
+                                                <div>
+                                                    <p className="text-xs font-black uppercase tracking-widest text-gray-500 mb-1">Applicant</p>
+                                                    <p className="font-bold text-white">{v.user.fullName}</p>
+                                                    <p className="text-gray-400 text-sm">{v.user.email}</p>
+                                                    <p className="text-gray-500 text-xs mt-1">⭐ {Number(v.user.trustScore).toFixed(1)} · {v.user._count.bidsPlaced} bids · {v.user._count.auctionsAsSeller} listings</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-black uppercase tracking-widest text-gray-500 mb-1">Application Details</p>
+                                                    <p className="text-white font-semibold">{v.fullLegalName}</p>
+                                                    <p className="text-gray-400 text-sm capitalize">{v.businessType} seller</p>
+                                                    {v.panNumber && <p className="text-gray-500 text-xs font-mono mt-1">PAN: {v.panNumber}</p>}
+                                                    {v.aadhaarLast4 && <p className="text-gray-500 text-xs font-mono">Aadhaar: XXXX XXXX XXXX {v.aadhaarLast4}</p>}
+                                                </div>
+                                            </div>
+                                            <div className="bg-black/20 rounded-xl p-3 border border-white/5 mb-4">
+                                                <p className="text-xs font-black uppercase tracking-widest text-gray-500 mb-1">Plans to Sell</p>
+                                                <p className="text-gray-300 text-sm leading-relaxed">{v.description}</p>
+                                            </div>
+                                            {(v.documentUrls.length > 0 || v.assetUrls.length > 0) && (
+                                                <div className="grid sm:grid-cols-2 gap-3">
+                                                    {v.documentUrls.length > 0 && (
+                                                        <div>
+                                                            <p className="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">ID Documents</p>
+                                                            {v.documentUrls.map((url, i) => (
+                                                                <a key={i} href={url} target="_blank" rel="noopener" className="block text-xs text-blue-400 hover:text-blue-300 underline truncate mb-1">📎 Document {i + 1}</a>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    {v.assetUrls.length > 0 && (
+                                                        <div>
+                                                            <p className="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Asset Proof</p>
+                                                            {v.assetUrls.map((url, i) => (
+                                                                <a key={i} href={url} target="_blank" rel="noopener" className="block text-xs text-blue-400 hover:text-blue-300 underline truncate mb-1">🖼️ Asset {i + 1}</a>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                        {(v.status === 'PENDING' || v.status === 'UNDER_REVIEW') ? (
+                                            <div className="flex flex-col gap-2 flex-shrink-0 lg:w-48">
+                                                <button disabled={resolving === v.id} onClick={() => handleVerificationReview(v.id, 'APPROVED')}
+                                                    className="w-full px-4 py-3 bg-green-500 text-black font-black rounded-xl hover:bg-green-400 transition-all shadow-[0_0_15px_rgba(74,222,128,0.3)] disabled:opacity-50 flex items-center justify-center gap-2">
+                                                    <CheckCircle2 className="w-4 h-4" /> Approve
+                                                </button>
+                                                <button disabled={resolving === v.id} onClick={() => {
+                                                    const reason = prompt('Reason for rejection (shown to user):');
+                                                    if (reason !== null) handleVerificationReview(v.id, 'REJECTED', reason);
+                                                }}
+                                                    className="w-full px-4 py-3 bg-red-500/10 border border-red-500/20 text-red-400 font-bold rounded-xl hover:bg-red-500/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                                                    <XCircle className="w-4 h-4" /> Reject
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <span className={`px-4 py-2 rounded-full text-xs font-black border self-start ${v.status === 'APPROVED' ? 'bg-green-500/10 text-green-400 border-green-500/30' : 'bg-red-500/10 text-red-400 border-red-500/30'}`}>{v.status}</span>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     )}
 

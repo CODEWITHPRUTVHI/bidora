@@ -6,7 +6,8 @@ import {
     Flame, ArrowRight, Wallet, Activity, Package,
     TrendingUp, Star, Bell, Shield, LogOut, Plus, BarChart3, PieChart, Filter,
     ChevronLeft, ChevronRight, Trophy, Target, Zap, ShoppingBag, Tag,
-    ArrowDownLeft, ArrowUpRight, CheckCircle2, XCircle, Clock, ArrowDownCircle, AlertTriangle
+    ArrowDownLeft, ArrowUpRight, CheckCircle2, XCircle, Clock, ArrowDownCircle, AlertTriangle,
+    FileText, Upload, UserCheck, BadgeCheck
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/store/AuthContext';
@@ -40,6 +41,15 @@ interface Tx {
 }
 interface Notification {
     id: string; title: string; body: string; isRead: boolean; type: string; createdAt: string;
+}
+interface VerificationRequest {
+    id: string;
+    status: 'PENDING' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED';
+    fullLegalName: string;
+    businessType: string;
+    description: string;
+    adminNotes?: string;
+    createdAt: string;
 }
 
 const statusColor: Record<string, string> = {
@@ -81,6 +91,18 @@ export default function DashboardPage() {
     const [analytics, setAnalytics] = useState<{ totalSales: number; activeBidsReceiving: number; revenuePotential: number; recentSales: number } | null>(null);
     const [wonOrders, setWonOrders] = useState<any[]>([]);
     const [soldOrders, setSoldOrders] = useState<any[]>([]);
+    const [verificationRequest, setVerificationRequest] = useState<VerificationRequest | null>(null);
+    const [verificationForm, setVerificationForm] = useState({
+        fullLegalName: '',
+        businessType: 'individual',
+        panNumber: '',
+        aadhaarLast4: '',
+        description: '',
+        documentUrls: '',
+        assetUrls: ''
+    });
+    const [submittingVerification, setSubmittingVerification] = useState(false);
+    const [verificationMsg, setVerificationMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
 
 
@@ -108,6 +130,8 @@ export default function DashboardPage() {
             setWonOrders(ordersRes.data.wonAuctions);
             setSoldOrders(ordersRes.data.soldAuctions);
             setAnalytics(analyticsRes.data);
+            // Fetch verification status separately
+            api.get('/verification/my-status').then(r => setVerificationRequest(r.data.request)).catch(() => { });
         }).catch((err) => {
             console.error(err);
             setPageError('Connection lost. Please check your internet or try again later.');
@@ -195,13 +219,31 @@ export default function DashboardPage() {
     };
 
     const handleVerifySeller = async () => {
+        // Redirect to the verification tab
+        setActiveTab('verify');
+    };
+
+    const handleSubmitVerification = async () => {
+        if (!verificationForm.fullLegalName.trim() || !verificationForm.description.trim()) {
+            setVerificationMsg({ type: 'error', text: 'Full legal name and description are required.' });
+            return;
+        }
+        setSubmittingVerification(true);
+        setVerificationMsg(null);
         try {
-            await api.patch('/auth/me/verify-seller');
-            refreshUser();
-            alert('Successfully verified as a seller!');
-        } catch (error) {
-            console.error(error);
-            alert('Failed to verify as a seller. Please try again.');
+            const docUrls = verificationForm.documentUrls.split('\n').map(u => u.trim()).filter(Boolean);
+            const assetUrls = verificationForm.assetUrls.split('\n').map(u => u.trim()).filter(Boolean);
+            const res = await api.post('/verification/apply', {
+                ...verificationForm,
+                documentUrls: docUrls,
+                assetUrls: assetUrls
+            });
+            setVerificationRequest(res.data.request);
+            setVerificationMsg({ type: 'success', text: 'Application submitted! An admin will review it within 24-48 hours.' });
+        } catch (e: any) {
+            setVerificationMsg({ type: 'error', text: e.response?.data?.error || 'Failed to submit application.' });
+        } finally {
+            setSubmittingVerification(false);
         }
     };
 
@@ -251,6 +293,7 @@ export default function DashboardPage() {
         { id: 'orders', label: 'Wins', icon: Trophy },
         { id: 'listings', label: 'Sales', icon: Package },
         { id: 'analytics', label: 'Stats', icon: BarChart3 },
+        { id: 'verify', label: user.verifiedStatus !== 'BASIC' ? 'Verified ✓' : 'Get Verified', icon: BadgeCheck },
         { id: 'notifs', label: `Alerts${unreadCount > 0 ? ` (${unreadCount})` : ''}`, icon: Bell }
     ].filter(t => {
         if (t.id === 'analytics' && user.verifiedStatus === 'BASIC' && user.role !== 'SELLER') return false;
@@ -290,9 +333,19 @@ export default function DashboardPage() {
                                 <CheckCircle2 className="w-4 h-4 mr-1.5" /> Verified Seller
                             </span>
                         )}
-                        {user.verifiedStatus === 'BASIC' && (
+                        {user.verifiedStatus === 'BASIC' && verificationRequest?.status === 'PENDING' && (
+                            <span className="flex items-center font-bold text-orange-400 text-xs bg-orange-500/10 border border-orange-500/20 px-3 py-1.5 rounded-full">
+                                <Clock className="w-3.5 h-3.5 mr-1.5" /> Verification Pending
+                            </span>
+                        )}
+                        {user.verifiedStatus === 'BASIC' && verificationRequest?.status === 'UNDER_REVIEW' && (
+                            <span className="flex items-center font-bold text-blue-400 text-xs bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-full">
+                                <Shield className="w-3.5 h-3.5 mr-1.5" /> Under Review
+                            </span>
+                        )}
+                        {user.verifiedStatus === 'BASIC' && (!verificationRequest || verificationRequest.status === 'REJECTED') && (
                             <button onClick={handleVerifySeller} className="flex items-center font-bold text-blue-400 text-xs bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 px-3 py-1.5 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.2)] transition-colors">
-                                <Shield className="w-4 h-4 mr-1.5" /> Get Verified Seller Status
+                                <Shield className="w-4 h-4 mr-1.5" /> {verificationRequest?.status === 'REJECTED' ? 'Reapply for Verification' : 'Get Verified Seller Status'}
                             </button>
                         )}
                     </div>
@@ -803,6 +856,178 @@ export default function DashboardPage() {
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    )}
+
+                    {/* ── Seller Verification ─────────────────────── */}
+                    {activeTab === 'verify' && (
+                        <div className="space-y-6">
+                            <h2 className="text-2xl font-black flex items-center"><BadgeCheck className="w-6 h-6 mr-3 text-yellow-400" /> Seller Verification</h2>
+
+                            {/* Already verified */}
+                            {user.verifiedStatus !== 'BASIC' && (
+                                <div className="bg-gradient-to-br from-green-500/10 to-blue-500/10 border border-green-500/20 rounded-3xl p-8 text-center">
+                                    <CheckCircle2 className="w-16 h-16 text-green-400 mx-auto mb-4" />
+                                    <h3 className="text-2xl font-black text-white mb-2">You are a {user.verifiedStatus === 'PREMIUM' ? '⭐ Premium' : '✅ Verified'} Seller!</h3>
+                                    <p className="text-gray-400">You can create and list auctions. Your buyer trust score is actively tracked.</p>
+                                </div>
+                            )}
+
+                            {/* Pending / Under Review */}
+                            {user.verifiedStatus === 'BASIC' && verificationRequest && verificationRequest.status !== 'REJECTED' && (
+                                <div className={`border rounded-3xl p-8 text-center ${verificationRequest.status === 'UNDER_REVIEW'
+                                        ? 'bg-blue-500/5 border-blue-500/20'
+                                        : 'bg-orange-500/5 border-orange-500/20'
+                                    }`}>
+                                    <div className="text-5xl mb-4">{verificationRequest.status === 'UNDER_REVIEW' ? '🔍' : '⏳'}</div>
+                                    <h3 className="text-2xl font-black text-white mb-2">
+                                        {verificationRequest.status === 'UNDER_REVIEW' ? 'Under Admin Review' : 'Application Pending'}
+                                    </h3>
+                                    <p className="text-gray-400 mb-4">Your application was submitted on {new Date(verificationRequest.createdAt).toLocaleDateString()}. Our team reviews within 24–48 hours.</p>
+                                    <div className="flex items-center justify-center gap-3 text-sm">
+                                        <span className={`px-4 py-2 rounded-full font-bold border ${verificationRequest.status === 'UNDER_REVIEW'
+                                                ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                                                : 'bg-orange-500/10 text-orange-400 border-orange-500/30'
+                                            }`}>{verificationRequest.status.replace('_', ' ')}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Rejected - show reason then allow reapply */}
+                            {user.verifiedStatus === 'BASIC' && verificationRequest?.status === 'REJECTED' && (
+                                <div className="bg-red-500/5 border border-red-500/20 rounded-3xl p-6 mb-4">
+                                    <div className="flex items-start gap-4">
+                                        <XCircle className="w-8 h-8 text-red-400 flex-shrink-0" />
+                                        <div>
+                                            <h4 className="font-black text-white mb-1">Previous Application Rejected</h4>
+                                            <p className="text-red-300 text-sm">{verificationRequest.adminNotes || 'Your application did not meet our requirements.'}</p>
+                                            <p className="text-gray-500 text-xs mt-2">You can reapply with better documentation below.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Application Form */}
+                            {user.verifiedStatus === 'BASIC' && (!verificationRequest || verificationRequest.status === 'REJECTED') && (
+                                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8 space-y-6">
+                                    <div>
+                                        <h3 className="font-black text-xl text-white mb-1">Apply for Seller Verification</h3>
+                                        <p className="text-gray-400 text-sm">Complete this form to request seller access. Our admin team will review your documents within 24–48 hours.</p>
+                                    </div>
+
+                                    <div className="grid sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Full Legal Name *</label>
+                                            <input
+                                                type="text" placeholder="As shown on your ID"
+                                                value={verificationForm.fullLegalName}
+                                                onChange={e => setVerificationForm(p => ({ ...p, fullLegalName: e.target.value }))}
+                                                className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-yellow-400/50 transition-all"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Account Type *</label>
+                                            <select
+                                                value={verificationForm.businessType}
+                                                onChange={e => setVerificationForm(p => ({ ...p, businessType: e.target.value }))}
+                                                className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-yellow-400/50 transition-all"
+                                            >
+                                                <option value="individual">Individual Seller</option>
+                                                <option value="business">Registered Business</option>
+                                                <option value="dealer">Antique / Art Dealer</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">PAN Number</label>
+                                            <input
+                                                type="text" placeholder="ABCDE1234F"
+                                                value={verificationForm.panNumber}
+                                                onChange={e => setVerificationForm(p => ({ ...p, panNumber: e.target.value.toUpperCase() }))}
+                                                className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-yellow-400/50 transition-all font-mono"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Aadhaar Last 4 Digits</label>
+                                            <input
+                                                type="text" placeholder="XXXX" maxLength={4}
+                                                value={verificationForm.aadhaarLast4}
+                                                onChange={e => setVerificationForm(p => ({ ...p, aadhaarLast4: e.target.value.replace(/\D/g, '') }))}
+                                                className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-yellow-400/50 transition-all font-mono"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">What do you plan to sell? *</label>
+                                        <textarea
+                                            rows={3} placeholder="Describe the types of items you plan to list (e.g., vintage watches, rare books, artwork)…"
+                                            value={verificationForm.description}
+                                            onChange={e => setVerificationForm(p => ({ ...p, description: e.target.value }))}
+                                            className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-yellow-400/50 transition-all resize-none"
+                                        />
+                                    </div>
+
+                                    <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4">
+                                        <p className="text-blue-400 text-xs font-black uppercase tracking-widest mb-3">📎 Document Upload Instructions</p>
+                                        <p className="text-gray-400 text-sm leading-relaxed mb-3">
+                                            Please upload your documents to any file hosting service (Google Drive, Dropbox, imgur, etc.) and paste the <strong className="text-white">public shareable links</strong> below — one link per line.
+                                        </p>
+                                        <div className="grid sm:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">ID Proof Links (Aadhaar / PAN / Passport)</label>
+                                                <textarea
+                                                    rows={3} placeholder="https://drive.google.com/...\nhttps://drive.google.com/..."
+                                                    value={verificationForm.documentUrls}
+                                                    onChange={e => setVerificationForm(p => ({ ...p, documentUrls: e.target.value }))}
+                                                    className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs outline-none focus:border-blue-400/50 transition-all resize-none font-mono"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Asset / Ownership Proof Links</label>
+                                                <textarea
+                                                    rows={3} placeholder="https://drive.google.com/...\nhttps://drive.google.com/..."
+                                                    value={verificationForm.assetUrls}
+                                                    onChange={e => setVerificationForm(p => ({ ...p, assetUrls: e.target.value }))}
+                                                    className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs outline-none focus:border-blue-400/50 transition-all resize-none font-mono"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {verificationMsg && (
+                                        <p className={`text-sm font-bold px-4 py-3 rounded-xl border ${verificationMsg.type === 'success'
+                                                ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                                                : 'bg-red-500/10 text-red-400 border-red-500/20'
+                                            }`}>{verificationMsg.text}</p>
+                                    )}
+
+                                    <button
+                                        onClick={handleSubmitVerification}
+                                        disabled={submittingVerification}
+                                        className="w-full py-4 bg-gradient-to-b from-yellow-400 to-yellow-500 text-zinc-950 font-black rounded-2xl hover:-translate-y-0.5 transition-all duration-300 shadow-[0_10px_20px_-10px_rgba(250,204,21,0.5)] disabled:opacity-50 disabled:hover:translate-y-0 flex items-center justify-center gap-2 text-base"
+                                    >
+                                        {submittingVerification
+                                            ? <><span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> Submitting…</>
+                                            : <><BadgeCheck className="w-5 h-5" /> Submit Verification Application</>
+                                        }
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Info cards */}
+                            <div className="grid sm:grid-cols-3 gap-4">
+                                {[
+                                    { icon: '🔒', title: 'Secure KYC', desc: 'Your documents are reviewed only by our verified admin team and are never shared.' },
+                                    { icon: '⚡', title: '24-48 Hours', desc: 'Fast review process. Most applications are reviewed by the next business day.' },
+                                    { icon: '🏆', title: 'Unlock Selling', desc: 'Once verified, you can list unlimited auctions and receive payouts directly to your bank.' }
+                                ].map((item, i) => (
+                                    <div key={i} className="bg-zinc-900/40 border border-white/10 rounded-2xl p-5">
+                                        <p className="text-3xl mb-3">{item.icon}</p>
+                                        <p className="font-black text-white mb-1">{item.title}</p>
+                                        <p className="text-gray-500 text-xs leading-relaxed">{item.desc}</p>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
 

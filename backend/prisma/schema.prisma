@@ -43,6 +43,7 @@ model User {
   walletTransactions WalletTransaction[]
   watchlist          Watchlist[]
   blogPosts          BlogPost[]  @relation("AuthorPosts")
+  verificationRequests SellerVerificationRequest[]
 
   @@index([role])
   @@index([trustScore])
@@ -310,6 +311,27 @@ model AdminActionLog {
   @@index([targetId])
 }
 
+model SellerVerificationRequest {
+  id              String                    @id @default(uuid())
+  userId          String
+  fullLegalName   String
+  businessType    String                    // e.g., 'individual', 'business'
+  panNumber       String?                   // PAN card for India
+  aadhaarLast4    String?                   // Last 4 digits of Aadhaar
+  documentUrls    String[]                  @default([]) // ID proof images
+  assetUrls       String[]                  @default([]) // Proof of asset ownership
+  description     String                    // Brief description of items they plan to sell
+  status          VerificationRequestStatus @default(PENDING)
+  adminNotes      String?
+  reviewedById    String?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  user            User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([userId])
+}
+
 model Watchlist {
   id        String   @id @default(uuid())
   userId    String
@@ -333,6 +355,13 @@ enum VerifiedStatus {
   BASIC
   VERIFIED
   PREMIUM
+}
+
+enum VerificationRequestStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
 }
 
 enum AuctionStatus {
