@@ -230,6 +230,33 @@ export default function DashboardPage() {
         setActiveTab('verify');
     };
 
+    const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'documentUrls' | 'assetUrls') => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        setSubmittingVerification(true);
+        try {
+            const formData = new FormData();
+            files.forEach(f => formData.append('images', f));
+
+            const res = await api.post('/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            if (res.data.urls) {
+                setVerificationForm(p => ({
+                    ...p,
+                    [fieldName]: p[fieldName] ? p[fieldName] + '\n' + res.data.urls.join('\n') : res.data.urls.join('\n')
+                }));
+            }
+        } catch (err) {
+            console.error(err);
+            window.alert("Failed to upload document.");
+        } finally {
+            setSubmittingVerification(false);
+        }
+    };
+
     const handleSubmitVerification = async () => {
         if (!verificationForm.fullLegalName.trim() || !verificationForm.description.trim()) {
             setVerificationMsg({ type: 'error', text: 'Full legal name and description are required.' });
@@ -1071,22 +1098,32 @@ export default function DashboardPage() {
                                     <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4">
                                         <p className="text-blue-400 text-xs font-black uppercase tracking-widest mb-3">📎 Document Upload Instructions</p>
                                         <p className="text-gray-400 text-sm leading-relaxed mb-3">
-                                            Please upload your documents to any file hosting service (Google Drive, Dropbox, imgur, etc.) and paste the <strong className="text-white">public shareable links</strong> below — one link per line.
+                                            Upload your ID proofs and asset ownership documents below. You can select multiple images to upload.
                                         </p>
                                         <div className="grid sm:grid-cols-2 gap-4">
                                             <div>
-                                                <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">ID Proof Links (Aadhaar / PAN / Passport)</label>
+                                                <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">ID Proofs (Aadhaar / PAN / Passport)</label>
+                                                <input
+                                                    type="file" multiple accept="image/*"
+                                                    onChange={e => handleDocumentUpload(e, 'documentUrls')}
+                                                    className="w-full text-xs text-white bg-zinc-950/60 border border-white/10 rounded-xl px-3 py-2 cursor-pointer font-mono mb-2"
+                                                />
                                                 <textarea
-                                                    rows={3} placeholder="https://drive.google.com/...\nhttps://drive.google.com/..."
+                                                    rows={3} placeholder="Uploaded links will appear here..."
                                                     value={verificationForm.documentUrls}
                                                     onChange={e => setVerificationForm(p => ({ ...p, documentUrls: e.target.value }))}
                                                     className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs outline-none focus:border-blue-400/50 transition-all resize-none font-mono"
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Asset / Ownership Proof Links</label>
+                                                <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Asset / Ownership Proofs</label>
+                                                <input
+                                                    type="file" multiple accept="image/*"
+                                                    onChange={e => handleDocumentUpload(e, 'assetUrls')}
+                                                    className="w-full text-xs text-white bg-zinc-950/60 border border-white/10 rounded-xl px-3 py-2 cursor-pointer font-mono mb-2"
+                                                />
                                                 <textarea
-                                                    rows={3} placeholder="https://drive.google.com/...\nhttps://drive.google.com/..."
+                                                    rows={3} placeholder="Uploaded links will appear here..."
                                                     value={verificationForm.assetUrls}
                                                     onChange={e => setVerificationForm(p => ({ ...p, assetUrls: e.target.value }))}
                                                     className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs outline-none focus:border-blue-400/50 transition-all resize-none font-mono"

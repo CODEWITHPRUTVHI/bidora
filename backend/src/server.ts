@@ -47,6 +47,10 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());  // Parse refresh token from httpOnly cookie
 
+// Serve static uploaded files locally
+import path from 'path';
+app.use('/uploads', express.static(path.join(process.cwd(), 'public/uploads')));
+
 // ─────────────────────────────────────────────
 // HTTP Server
 // ─────────────────────────────────────────────
