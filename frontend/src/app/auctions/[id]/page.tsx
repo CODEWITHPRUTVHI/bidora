@@ -4,21 +4,23 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    CheckCircle2, Shield, Timer, ArrowLeft, Heart, Share2,
-    Activity, Zap, TrendingUp, AlertTriangle, Package, Star
+    ArrowLeft, Share2, Heart, ShieldCheck as Shield, Clock as Timer, TrendingUp,
+    CheckCircle2, AlertTriangle, Package, Zap, Activity, Info, Sparkles, Loader2, MessageSquare, Star, Clock
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { io, Socket } from 'socket.io-client';
 import api from '@/lib/axios';
 import { useAuth } from '@/store/AuthContext';
-import RatingSection from '@/components/RatingSection';
+import ARPreview from '@/components/ARPreview';
 import SwipeToBid from '@/components/SwipeToBid';
+import LumeAssistant from '@/components/LumeAssistant';
 import AIAssistant from '@/components/AIAssistant';
 import VoiceBidding from '@/components/VoiceBidding';
-import ARPreview from '@/components/ARPreview';
-import LumeAssistant from '@/components/LumeAssistant';
-import { MessageSquare, Sparkles, Loader2 } from 'lucide-react';
+import RatingSection from '@/components/RatingSection';
+import AuthenticityBadge from '@/components/AuthenticityBadge';
+import LivePulseFeed from '@/components/LivePulseFeed';
+import Confetti from '@/components/Confetti';
 import { Skeleton } from '@/components/ui/Skeleton';
 
 // ── Helpers ────────────────────────────────────────────────────────
@@ -54,24 +56,6 @@ function useCountdown(endTime: string | null) {
     return { time, urgent };
 }
 
-function Confetti() {
-    return (
-        <div className="fixed inset-0 pointer-events-none z-[1000] overflow-hidden">
-            {[...Array(50)].map((_, i) => (
-                <div
-                    key={i}
-                    className="confetti"
-                    style={{
-                        left: `${Math.random() * 100}%`,
-                        backgroundColor: ['#facc15', '#ef4444', '#3b82f6', '#22c55e'][Math.floor(Math.random() * 4)],
-                        animationDelay: `${Math.random() * 3}s`,
-                        animationDuration: `${2 + Math.random() * 2}s`
-                    }}
-                />
-            ))}
-        </div>
-    );
-}
 
 // ── Types ──────────────────────────────────────────────────────────
 interface Bid { bidderId: string; amount: number; time?: string; user?: string; isAutoBid?: boolean }
@@ -234,6 +218,12 @@ export default function LiveAuctionPage() {
                 });
 
                 setPulseEffect(true);
+                if (data.bidderId !== user?.id) {
+                    setOutbid(true);
+                    if (typeof window !== 'undefined' && window.navigator.vibrate) {
+                        window.navigator.vibrate([100, 50, 100]); // Competitive double-buzz
+                    }
+                }
                 setTimeout(() => setPulseEffect(false), 800);
 
                 setBids(prev => [{
@@ -582,6 +572,7 @@ export default function LiveAuctionPage() {
                     )}
 
                     <div className="space-y-6">
+                        <LivePulseFeed />
                         <div>
                             <p className="inline-block bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-4">{auction.category.name}</p>
                             <h1 className="text-4xl md:text-5xl font-black text-white mb-6 leading-tight tracking-tighter drop-shadow-sm">{auction.title}</h1>
@@ -623,8 +614,9 @@ export default function LiveAuctionPage() {
                         <p className="text-gray-300 leading-relaxed text-lg">{auction.description}</p>
                     </div>
 
-                    <div className="mb-6">
-                        <AIAssistant auctionId={auction.id} auctionTitle={auction.title} />
+                    <div className="space-y-4">
+                        <AuthenticityBadge />
+                        <LumeAssistant auctionId={id} onApply={(amt) => setBidAmount(amt)} />
                     </div>
 
                     <div className="bg-zinc-900/40 backdrop-blur-2xl border border-white/10 p-6 rounded-[2rem] flex items-center justify-between hover:bg-zinc-900/60 transition-colors shadow-inner">

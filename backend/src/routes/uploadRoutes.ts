@@ -35,10 +35,9 @@ router.post('/', authenticateJWT, upload.array('images', 5), async (req: Request
             return res.status(400).json({ error: 'No files provided' });
         }
 
-        const PORT = process.env.PORT || 5000;
-        const baseUrl = process.env.NODE_ENV === 'production'
-            ? 'https://your-production-url.com' // Replace with actual domain later
-            : `http://localhost:${PORT}`;
+        const protocol = req.protocol;
+        const host = req.get('host');
+        const baseUrl = `${protocol}://${host}`;
 
         const imageUrls = files.map(file => `${baseUrl}/uploads/${file.filename}`);
 

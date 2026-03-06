@@ -7,7 +7,7 @@ import {
     TrendingUp, Star, Bell, Shield, LogOut, Plus, BarChart3, PieChart, Filter,
     ChevronLeft, ChevronRight, Trophy, Target, Zap, ShoppingBag, Tag,
     ArrowDownLeft, ArrowUpRight, CheckCircle2, XCircle, Clock, ArrowDownCircle, AlertTriangle,
-    FileText, Upload, UserCheck, BadgeCheck
+    FileText, Upload, UserCheck, BadgeCheck, X
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/store/AuthContext';
@@ -1105,39 +1105,56 @@ export default function DashboardPage() {
                                         />
                                     </div>
 
-                                    <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4">
+                                    <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 sm:p-6">
                                         <p className="text-blue-400 text-xs font-black uppercase tracking-widest mb-3">📎 Document Upload Instructions</p>
-                                        <p className="text-gray-400 text-sm leading-relaxed mb-3">
-                                            Upload your ID proofs and asset ownership documents below. You can select multiple images to upload.
+                                        <p className="text-gray-400 text-sm leading-relaxed mb-6">
+                                            Upload your ID proofs and asset ownership documents below. <strong className="text-blue-400">Selected files are automatically uploaded</strong> to our secure server.
                                         </p>
-                                        <div className="grid sm:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">ID Proofs (Aadhaar / PAN / Passport)</label>
-                                                <input
-                                                    type="file" multiple accept="image/*"
-                                                    onChange={e => handleDocumentUpload(e, 'documentUrls')}
-                                                    className="w-full text-xs text-white bg-zinc-950/60 border border-white/10 rounded-xl px-3 py-2 cursor-pointer font-mono mb-2"
-                                                />
-                                                <textarea
-                                                    rows={3} placeholder="Uploaded links will appear here..."
-                                                    value={verificationForm.documentUrls}
-                                                    onChange={e => setVerificationForm(p => ({ ...p, documentUrls: e.target.value }))}
-                                                    className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs outline-none focus:border-blue-400/50 transition-all resize-none font-mono"
-                                                />
+                                        <div className="grid sm:grid-cols-2 gap-8">
+                                            {/* ID Proofs */}
+                                            <div className="space-y-4">
+                                                <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">ID Proofs (Aadhaar / PAN / Passport)</label>
+                                                <div className="flex flex-wrap gap-2 mb-3">
+                                                    {verificationForm.documentUrls.split('\n').filter(Boolean).map((url, idx) => (
+                                                        <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-white/10 group">
+                                                            <Image src={url} alt="ID Proof" fill className="object-cover" />
+                                                            <button
+                                                                onClick={() => setVerificationForm(p => ({ ...p, documentUrls: p.documentUrls.split('\n').filter((_, i) => i !== idx).join('\n') }))}
+                                                                className="absolute inset-0 bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            >
+                                                                <X className="w-4 h-4 text-white" />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                    <label className="w-16 h-16 rounded-lg border-2 border-dashed border-white/10 flex items-center justify-center cursor-pointer hover:border-blue-400/50 hover:bg-white/5 transition-all">
+                                                        <Plus className="w-5 h-5 text-gray-500" />
+                                                        <input type="file" multiple accept="image/*" className="hidden" onChange={e => handleDocumentUpload(e, 'documentUrls')} />
+                                                    </label>
+                                                </div>
+                                                <p className="text-[10px] text-gray-500">Supported: JPG, PNG, PDF images</p>
                                             </div>
-                                            <div>
-                                                <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Asset / Ownership Proofs</label>
-                                                <input
-                                                    type="file" multiple accept="image/*"
-                                                    onChange={e => handleDocumentUpload(e, 'assetUrls')}
-                                                    className="w-full text-xs text-white bg-zinc-950/60 border border-white/10 rounded-xl px-3 py-2 cursor-pointer font-mono mb-2"
-                                                />
-                                                <textarea
-                                                    rows={3} placeholder="Uploaded links will appear here..."
-                                                    value={verificationForm.assetUrls}
-                                                    onChange={e => setVerificationForm(p => ({ ...p, assetUrls: e.target.value }))}
-                                                    className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs outline-none focus:border-blue-400/50 transition-all resize-none font-mono"
-                                                />
+
+                                            {/* Asset Proofs */}
+                                            <div className="space-y-4">
+                                                <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Asset / Ownership Proofs</label>
+                                                <div className="flex flex-wrap gap-2 mb-3">
+                                                    {verificationForm.assetUrls.split('\n').filter(Boolean).map((url, idx) => (
+                                                        <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-white/10 group">
+                                                            <Image src={url} alt="Asset Proof" fill className="object-cover" />
+                                                            <button
+                                                                onClick={() => setVerificationForm(p => ({ ...p, assetUrls: p.assetUrls.split('\n').filter((_, i) => i !== idx).join('\n') }))}
+                                                                className="absolute inset-0 bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            >
+                                                                <X className="w-4 h-4 text-white" />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                    <label className="w-16 h-16 rounded-lg border-2 border-dashed border-white/10 flex items-center justify-center cursor-pointer hover:border-blue-400/50 hover:bg-white/5 transition-all">
+                                                        <Plus className="w-5 h-5 text-gray-500" />
+                                                        <input type="file" multiple accept="image/*" className="hidden" onChange={e => handleDocumentUpload(e, 'assetUrls')} />
+                                                    </label>
+                                                </div>
+                                                <p className="text-[10px] text-gray-500">Invoices, certificates, or physical location proofs</p>
                                             </div>
                                         </div>
                                     </div>
