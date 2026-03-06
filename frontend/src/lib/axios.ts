@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://bidora-api-production.up.railway.app/api/v1';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://bidora-production.up.railway.app/api/v1';
 
 const api = axios.create({
     baseURL: API_URL,

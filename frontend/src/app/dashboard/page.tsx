@@ -118,29 +118,39 @@ export default function DashboardPage() {
         if (!user) { router.push('/auth'); return; }
 
         setLoading(true);
-        Promise.all([
-            api.get('/auctions/my/bids'),
-            api.get('/auctions/my/listings'),
-            api.get(`/wallet/transactions?limit=10&page=${txPage}${txFilter ? `&type=${txFilter}` : ''}`),
-            api.get('/wallet'),
-            api.get('/notifications?limit=20'),
-            api.get('/auctions/my/orders'),
-            user.role === 'SELLER' || user.verifiedStatus !== 'BASIC' ? api.get('/auctions/my/analytics').catch(() => ({ data: null })) : Promise.resolve({ data: null })
-        ]).then(([bidsRes, listingsRes, txRes, walletRes, notifRes, ordersRes, analyticsRes]) => {
+        const fetchBids = api.get('/auctions/my/bids').catch(() => ({ data: { bids: [] } }));
+        const fetchListings = api.get('/auctions/my/listings').catch(() => ({ data: { auctions: [] } }));
+        const fetchTxs = api.get(`/wallet/transactions?limit=10&page=${txPage}${txFilter ? `&type=${txFilter}` : ''}`).catch(() => ({ data: { transactions: [], pagination: { pages: 1 } } }));
+        const fetchWallet = api.get('/wallet').catch(() => ({ data: { walletBalance: 0, pendingFunds: 0, availableBalance: 0 } }));
+        const fetchNotifs = api.get('/notifications?limit=20').catch(() => ({ data: { notifications: [], unreadCount: 0 } }));
+        const fetchOrders = api.get('/auctions/my/orders').catch(() => ({ data: { wonAuctions: [], soldAuctions: [] } }));
+        const fetchAnalytics = user.role === 'SELLER' || user.verifiedStatus !== 'BASIC'
+            ? api.get('/auctions/my/analytics').catch(() => ({ data: null }))
+            : Promise.resolve({ data: null });
 
-            setMyBids(bidsRes.data.bids);
-            setMyListings(listingsRes.data.auctions);
-            setTransactions(txRes.data.transactions);
+        Promise.all([
+            fetchBids,
+            fetchListings,
+            fetchTxs,
+            fetchWallet,
+            fetchNotifs,
+            fetchOrders,
+            fetchAnalytics
+        ]).then(([bidsRes, listingsRes, txRes, walletRes, notifRes, ordersRes, analyticsRes]) => {
+            setMyBids(bidsRes.data.bids || []);
+            setMyListings(listingsRes.data.auctions || []);
+            setTransactions(txRes.data.transactions || []);
             setTxTotalPages(txRes.data.pagination?.pages || 1);
             setWallet(walletRes.data);
-            setNotifications(notifRes.data.notifications);
-            setWonOrders(ordersRes.data.wonAuctions);
-            setSoldOrders(ordersRes.data.soldAuctions);
+            setNotifications(notifRes.data.notifications || []);
+            setWonOrders(ordersRes.data.wonAuctions || []);
+            setSoldOrders(ordersRes.data.soldAuctions || []);
             setAnalytics(analyticsRes.data);
+
             // Fetch verification status separately
             api.get('/verification/my-status').then(r => setVerificationRequest(r.data.request)).catch(() => { });
         }).catch((err) => {
-            console.error(err);
+            console.error("Dashboard critical fetch error:", err);
             setPageError('Connection lost. Please check your internet or try again later.');
         }).finally(() => setLoading(false));
     }, [user, authLoading, txPage, txFilter]);
