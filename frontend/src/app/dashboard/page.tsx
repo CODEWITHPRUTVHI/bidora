@@ -88,7 +88,14 @@ export default function DashboardPage() {
     const [txPage, setTxPage] = useState(1);
     const [txTotalPages, setTxTotalPages] = useState(1);
     const [txFilter, setTxFilter] = useState('');
-    const [analytics, setAnalytics] = useState<{ totalSales: number; activeBidsReceiving: number; revenuePotential: number; recentSales: number } | null>(null);
+    const [analytics, setAnalytics] = useState<{
+        totalSales: number;
+        activeBidsReceiving: number;
+        revenuePotential: number;
+        recentSales: number;
+        performance?: number[];
+        sellerLevel?: { level: number; nextTier: number; progress: number; }
+    } | null>(null);
     const [wonOrders, setWonOrders] = useState<any[]>([]);
     const [soldOrders, setSoldOrders] = useState<any[]>([]);
     const [verificationRequest, setVerificationRequest] = useState<VerificationRequest | null>(null);
@@ -381,49 +388,112 @@ export default function DashboardPage() {
                     transition={{ duration: 0.2 }}
                 >
 
-                    {/* ── Overview ─────────────────────────────── */}
+                    {/* ── Overview ── BENTO GRID ─────────────────────── */}
                     {activeTab === 'overview' && (
                         <div className="space-y-6">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">
-                                {[
-                                    { label: 'Bids Placed', value: myBids.length, color: 'text-yellow-400', icon: '🎯' },
-                                    { label: 'Listings', value: myListings.filter(a => ['LIVE', 'SCHEDULED', 'DRAFT'].includes(a.status)).length, color: 'text-green-400', icon: '📦' },
-                                    { label: 'Balance', value: `₹${(wallet?.walletBalance || 0).toLocaleString()}`, color: 'text-blue-400', icon: '💰' },
-                                    { label: 'Alerts', value: unreadCount, color: 'text-orange-400', icon: '🔔' }
-                                ].map(card => (
-                                    <div key={card.label} className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 hover:-translate-y-1 transition-transform duration-300 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.5)] cursor-default overflow-hidden">
-                                        <p className="text-xl sm:text-3xl mb-1 sm:mb-3">{card.icon}</p>
-                                        <p className={`text-xl sm:text-3xl md:text-4xl font-black ${card.color} tracking-tighter drop-shadow-md truncate`}>{card.value}</p>
-                                        <p className="text-gray-500 text-[9px] sm:text-xs font-bold uppercase tracking-wider mt-1 sm:mt-2 truncate">{card.label}</p>
-                                    </div>
-                                ))}
-                            </div>
+                            <div className="grid grid-cols-6 grid-rows-2 gap-4 h-auto md:h-[500px]">
+                                {/* MAIN TILE: Analytics Summary (2x2) */}
+                                <div className="col-span-6 md:col-span-4 row-span-2 bg-gradient-to-br from-zinc-900/40 to-black/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-8 relative overflow-hidden group shadow-2xl">
+                                    <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/5 blur-[100px] rounded-full pointer-events-none group-hover:bg-yellow-400/10 transition-colors" />
 
-                            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8 shadow-[0_15px_40px_-15px_rgba(0,0,0,0.5)]">
-                                <h3 className="font-black text-xl mb-6 flex items-center gap-2"><Activity className="w-5 h-5 text-yellow-400" /> Recent Activity</h3>
-                                <div className="space-y-4">
-                                    {myBids.slice(0, 3).map(bid => (
-                                        <div key={bid.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-zinc-950/60 rounded-2xl border border-white/5 hover:border-yellow-400/20 transition-colors gap-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-white/5 shadow-md">
-                                                    <Image src={bid.auction.imageUrls[0] || ''} alt="" fill className="object-cover" sizes="56px" />
-                                                </div>
-                                                <div>
-                                                    <p className="text-white font-bold text-sm tracking-tight">{bid.auction.title}</p>
-                                                    <p className="text-gray-500 text-xs mt-1">{new Date(bid.createdAt).toLocaleDateString()}</p>
+                                    <div className="relative z-10 h-full flex flex-col">
+                                        <div className="flex justify-between items-start mb-8">
+                                            <div>
+                                                <p className="text-yellow-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Performance Analytics</p>
+                                                <h3 className="text-3xl font-black text-white tracking-tighter">Your Auction Growth</h3>
+                                            </div>
+                                            <div className="bg-white/5 p-3 rounded-2xl border border-white/10">
+                                                <TrendingUp className="w-6 h-6 text-yellow-400" />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-6 mt-auto">
+                                            <div className="bg-white/5 rounded-3xl p-6 border border-white/5 hover:border-white/10 transition-all">
+                                                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-2">Revenue Potential</p>
+                                                <p className="text-4xl font-black text-white tracking-tighter">₹{(analytics?.revenuePotential || 0).toLocaleString()}</p>
+                                                <div className="h-1 w-full bg-white/5 rounded-full mt-4 overflow-hidden">
+                                                    <motion.div initial={{ width: 0 }} animate={{ width: '65%' }} className="h-full bg-yellow-400" />
                                                 </div>
                                             </div>
-                                            <div className="text-right flex items-center sm:flex-col justify-between sm:justify-center">
-                                                <p className="text-yellow-400 font-black text-lg">₹{Number(bid.amount).toLocaleString()}</p>
-                                                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border mt-1 shadow-sm ${statusColor[bid.auction.status] || 'text-gray-400'}`}>{bid.auction.status}</span>
+                                            <div className="bg-white/5 rounded-3xl p-6 border border-white/5 hover:border-white/10 transition-all">
+                                                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-2">Total Sales</p>
+                                                <p className="text-4xl font-black text-white tracking-tighter">₹{(analytics?.totalSales || 0).toLocaleString()}</p>
+                                                <div className="h-1 w-full bg-white/5 rounded-full mt-4 overflow-hidden">
+                                                    <motion.div initial={{ width: 0 }} animate={{ width: '40%' }} className="h-full bg-blue-400" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* SECONDARY TILE: Wallet (2x1) */}
+                                <div className="col-span-6 md:col-span-2 row-span-1 bg-zinc-900/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 flex flex-col justify-between group cursor-pointer hover:border-blue-400/30 transition-all shadow-xl">
+                                    <div className="flex justify-between items-start">
+                                        <div className="p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20">
+                                            <Wallet className="w-6 h-6 text-blue-400" />
+                                        </div>
+                                        <ArrowUpRight className="w-5 h-5 text-gray-600 group-hover:text-blue-400 transition-colors" />
+                                    </div>
+                                    <div>
+                                        <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Available Funds</p>
+                                        <p className="text-3xl font-black text-white tracking-tighter">₹{(wallet?.availableBalance || 0).toLocaleString()}</p>
+                                    </div>
+                                </div>
+
+                                {/* THIRD TILE: Active Bids Count (1x1) */}
+                                <div className="col-span-3 md:col-span-1 row-span-1 bg-zinc-900/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 flex flex-col justify-between group shadow-xl">
+                                    <div className="p-3 bg-green-500/10 rounded-2xl border border-green-500/20 w-fit">
+                                        <Activity className="w-5 h-5 text-green-400" />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-4xl font-black text-white tracking-tighter">{myBids.length}</h4>
+                                        <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Active Bids</p>
+                                    </div>
+                                </div>
+
+                                {/* FOURTH TILE: Listings Count (1x1) */}
+                                <div className="col-span-3 md:col-span-1 row-span-1 bg-zinc-900/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 flex flex-col justify-between group shadow-xl">
+                                    <div className="p-3 bg-orange-500/10 rounded-2xl border border-orange-500/20 w-fit">
+                                        <Package className="w-5 h-5 text-orange-400" />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-4xl font-black text-white tracking-tighter">{myListings.length}</h4>
+                                        <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Listings</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden">
+                                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-400/20 to-transparent" />
+                                <h3 className="font-black text-xl mb-6 flex items-center gap-3"><Activity className="w-5 h-5 text-yellow-400" /> Recent Bidding Activity</h3>
+                                <div className="space-y-4">
+                                    {myBids.slice(0, 3).map(bid => (
+                                        <div key={bid.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-zinc-950/40 rounded-3xl border border-white/5 hover:border-yellow-400/20 transition-all hover:bg-zinc-950/60 group">
+                                            <div className="flex items-center gap-5">
+                                                <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-white/5 shadow-inner">
+                                                    <Image src={bid.auction.imageUrls[0] || ''} alt="" fill className="object-cover group-hover:scale-110 transition-transform duration-500" sizes="64px" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-white font-black text-base tracking-tight">{bid.auction.title}</p>
+                                                    <p className="text-gray-500 text-xs font-bold mt-1 uppercase tracking-widest">{new Date(bid.createdAt).toLocaleDateString()}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right flex items-center sm:flex-col justify-between sm:justify-center mt-4 sm:mt-0">
+                                                <p className="text-yellow-400 font-black text-2xl tracking-tighter">₹{Number(bid.amount).toLocaleString()}</p>
+                                                <span className={`text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full border mt-2 shadow-sm ${statusColor[bid.auction.status] || 'text-gray-400 border-white/10'}`}>{bid.auction.status}</span>
                                             </div>
                                         </div>
                                     ))}
+                                    {myBids.length === 0 && (
+                                        <div className="text-center py-10 bg-zinc-950/20 rounded-3xl border border-dashed border-white/10">
+                                            <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">No active bids yet</p>
+                                        </div>
+                                    )}
                                 </div>
-                                {myBids.length === 0 && <p className="text-gray-500 text-sm text-center py-6 bg-zinc-950/50 rounded-2xl border border-white/5">No activity yet. Start bidding!</p>}
                             </div>
                         </div>
                     )}
+
 
                     {/* ── My Bids ──────────────────────────────── */}
                     {activeTab === 'bids' && (
@@ -633,55 +703,86 @@ export default function DashboardPage() {
 
                             <div className="grid lg:grid-cols-3 gap-6">
                                 <div className="lg:col-span-2 bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8">
-                                    <h3 className="font-black text-xl mb-6">Performance Trend</h3>
+                                    <h3 className="font-black text-xl mb-6 flex items-center gap-2"><Activity className="w-5 h-5 text-yellow-400" /> Bids Received (Last 7 Days)</h3>
                                     <div className="h-64 flex items-end justify-between gap-2 px-2">
-                                        {[40, 60, 45, 90, 65, 80, 100].map((h, i) => (
-                                            <div key={i} className="flex-1 space-y-2 group">
-                                                <div className="relative h-full flex items-end">
-                                                    <motion.div
-                                                        initial={{ height: 0 }} animate={{ height: `${h}%` }}
-                                                        className="w-full bg-gradient-to-t from-yellow-400/20 to-yellow-400 rounded-lg group-hover:to-yellow-300 transition-all cursor-pointer relative"
-                                                    >
-                                                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-yellow-400 text-black text-[10px] px-1.5 py-0.5 rounded font-black opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            {h}%
-                                                        </div>
-                                                    </motion.div>
+                                        {(analytics?.performance || [0, 0, 0, 0, 0, 0, 0]).map((h, i) => {
+                                            const daysAgo = 6 - i;
+                                            const label = daysAgo === 0 ? 'Today' : `D-${daysAgo}`;
+                                            return (
+                                                <div key={i} className="flex-1 space-y-2 group">
+                                                    <div className="relative h-full flex items-end">
+                                                        <motion.div
+                                                            initial={{ height: 0 }} animate={{ height: `${Math.max(h, 5)}%` }}
+                                                            className="w-full bg-gradient-to-t from-yellow-400/20 to-yellow-400 rounded-lg group-hover:to-yellow-300 transition-all cursor-pointer relative"
+                                                        >
+                                                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-yellow-400 text-black text-[10px] px-1.5 py-0.5 rounded font-black opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                                                {h > 5 ? h + '%' : '0'}
+                                                            </div>
+                                                        </motion.div>
+                                                    </div>
+                                                    <p className="text-center text-[10px] text-gray-600 font-bold">{label}</p>
                                                 </div>
-                                                <p className="text-center text-[10px] text-gray-600 font-bold">D{i + 1}</p>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                     <p className="text-center text-xs text-gray-500 mt-6 font-medium italic">Showing platform engagement score relative to your listings over last 7 days.</p>
                                 </div>
 
-                                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8">
-                                    <h3 className="font-black text-xl mb-6">Audience Interest</h3>
-                                    <div className="space-y-6">
-                                        <div className="p-4 bg-zinc-950/60 rounded-2xl border border-white/5">
-                                            <div className="flex justify-between mb-2">
-                                                <span className="text-sm font-bold text-gray-400">Winning Bids</span>
-                                                <span className="text-sm font-black text-yellow-400">{myListings.filter(a => a.status === 'PAID' || a.status === 'SHIPPED').length}</span>
+                                <div className="space-y-6">
+                                    {/* Seller Level Card */}
+                                    <div className="bg-gradient-to-br from-yellow-500/10 to-amber-500/5 backdrop-blur-xl border border-yellow-500/20 rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-[0_10px_30px_-15px_rgba(250,204,21,0.3)]">
+                                        <div className="absolute -top-10 -right-10 text-yellow-500/10">
+                                            <Trophy className="w-40 h-40" />
+                                        </div>
+                                        <div className="relative z-10">
+                                            <div className="flex items-center gap-3 mb-4">
+                                                <div className="bg-yellow-400 text-black w-10 h-10 rounded-xl flex items-center justify-center font-black text-xl shadow-lg">
+                                                    {analytics?.sellerLevel?.level || 1}
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-black text-white text-lg">Seller Level {analytics?.sellerLevel?.level || 1}</h3>
+                                                    <p className="text-xs font-bold text-yellow-400 uppercase tracking-widest">Premium Status</p>
+                                                </div>
                                             </div>
-                                            <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                                                <div className="h-full bg-yellow-400" style={{ width: '65%' }} />
+                                            <div className="mt-8">
+                                                <div className="flex justify-between text-xs font-bold mb-2">
+                                                    <span className="text-gray-400">Current</span>
+                                                    <span className="text-gray-400">Level {(analytics?.sellerLevel?.level || 1) + 1} (₹{(analytics?.sellerLevel?.nextTier || 10000).toLocaleString()})</span>
+                                                </div>
+                                                <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden shadow-inner border border-white/5">
+                                                    <motion.div
+                                                        initial={{ width: 0 }} animate={{ width: `${analytics?.sellerLevel?.progress || 0}%` }}
+                                                        className="h-full bg-gradient-to-r from-yellow-500 to-yellow-300"
+                                                    />
+                                                </div>
+                                                <p className="text-[10px] text-gray-500 font-bold mt-3 text-center">
+                                                    {analytics?.sellerLevel?.progress || 0}% towards next rank
+                                                </p>
                                             </div>
                                         </div>
-                                        <div className="p-4 bg-zinc-950/60 rounded-2xl border border-white/5">
-                                            <div className="flex justify-between mb-2">
-                                                <span className="text-sm font-bold text-gray-400">Total Views</span>
-                                                <span className="text-sm font-black text-blue-400">1.2K</span>
+                                    </div>
+
+                                    {/* Audience Interest */}
+                                    <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8">
+                                        <h3 className="font-black text-xl mb-6">Audience Interest</h3>
+                                        <div className="space-y-6">
+                                            <div className="p-4 bg-zinc-950/60 rounded-2xl border border-white/5">
+                                                <div className="flex justify-between mb-2">
+                                                    <span className="text-sm font-bold text-gray-400">Winning Bids</span>
+                                                    <span className="text-sm font-black text-yellow-400">{myListings.filter(a => a.status === 'PAID' || a.status === 'SHIPPED').length}</span>
+                                                </div>
+                                                <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-yellow-400" style={{ width: '65%' }} />
+                                                </div>
                                             </div>
-                                            <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                                                <div className="h-full bg-blue-400" style={{ width: '80%' }} />
-                                            </div>
-                                        </div>
-                                        <div className="p-4 bg-zinc-950/60 rounded-2xl border border-white/5">
-                                            <div className="flex justify-between mb-2">
-                                                <span className="text-sm font-bold text-gray-400">Conversion Rate</span>
-                                                <span className="text-sm font-black text-green-400">8.4%</span>
-                                            </div>
-                                            <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                                                <div className="h-full bg-green-400" style={{ width: '40%' }} />
+                                            <div className="p-4 bg-zinc-950/60 rounded-2xl border border-white/5">
+                                                <div className="flex justify-between mb-2">
+                                                    <span className="text-sm font-bold text-gray-400">Total Views</span>
+                                                    <span className="text-sm font-black text-blue-400">1.2K</span>
+                                                </div>
+                                                <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-blue-400" style={{ width: '80%' }} />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -876,8 +977,8 @@ export default function DashboardPage() {
                             {/* Pending / Under Review */}
                             {user.verifiedStatus === 'BASIC' && verificationRequest && verificationRequest.status !== 'REJECTED' && (
                                 <div className={`border rounded-3xl p-8 text-center ${verificationRequest.status === 'UNDER_REVIEW'
-                                        ? 'bg-blue-500/5 border-blue-500/20'
-                                        : 'bg-orange-500/5 border-orange-500/20'
+                                    ? 'bg-blue-500/5 border-blue-500/20'
+                                    : 'bg-orange-500/5 border-orange-500/20'
                                     }`}>
                                     <div className="text-5xl mb-4">{verificationRequest.status === 'UNDER_REVIEW' ? '🔍' : '⏳'}</div>
                                     <h3 className="text-2xl font-black text-white mb-2">
@@ -886,8 +987,8 @@ export default function DashboardPage() {
                                     <p className="text-gray-400 mb-4">Your application was submitted on {new Date(verificationRequest.createdAt).toLocaleDateString()}. Our team reviews within 24–48 hours.</p>
                                     <div className="flex items-center justify-center gap-3 text-sm">
                                         <span className={`px-4 py-2 rounded-full font-bold border ${verificationRequest.status === 'UNDER_REVIEW'
-                                                ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
-                                                : 'bg-orange-500/10 text-orange-400 border-orange-500/30'
+                                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                                            : 'bg-orange-500/10 text-orange-400 border-orange-500/30'
                                             }`}>{verificationRequest.status.replace('_', ' ')}</span>
                                     </div>
                                 </div>
@@ -996,8 +1097,8 @@ export default function DashboardPage() {
 
                                     {verificationMsg && (
                                         <p className={`text-sm font-bold px-4 py-3 rounded-xl border ${verificationMsg.type === 'success'
-                                                ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                                                : 'bg-red-500/10 text-red-400 border-red-500/20'
+                                            ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                                            : 'bg-red-500/10 text-red-400 border-red-500/20'
                                             }`}>{verificationMsg.text}</p>
                                     )}
 

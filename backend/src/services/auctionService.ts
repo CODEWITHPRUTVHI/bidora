@@ -3,6 +3,10 @@ import { Prisma } from '@prisma/client';
 import { EscrowService } from './escrowService';
 import { io } from './websocketService';
 import { FraudService } from './fraudService';
+import { WalletService } from './walletService';
+import { rescheduleAuctionEnd } from './queueService';
+import { CacheService } from './cacheService';
+
 
 const ANTI_SNIPE_WINDOW_SECONDS = 10;
 const ANTI_SNIPE_EXTENSION_SECONDS = 10;
@@ -28,6 +32,9 @@ export class AuctionService {
      */
     static async placeBid(auctionId: string, bidderId: string, amount: number) {
         const { result } = await this._placeBidCore(auctionId, bidderId, amount);
+
+        FraudService.analyzeForShillBidding(auctionId).catch(console.error);
+
         return result;
     }
 
@@ -38,7 +45,13 @@ export class AuctionService {
      * so WebSocket can notify them of being outbid.
      */
     static async placeBidWithOutbidInfo(auctionId: string, bidderId: string, amount: number) {
-        return this._placeBidCore(auctionId, bidderId, amount);
+        const result = await this._placeBidCore(auctionId, bidderId, amount);
+
+        // Asynchronously check for shill bidding after a successful bid
+        // We do not await this to avoid blocking the bid response time
+        FraudService.analyzeForShillBidding(auctionId).catch(console.error);
+
+        return result;
     }
 
     /**
@@ -95,8 +108,24 @@ export class AuctionService {
             // 4. Fraud check & Balance check
             await FraudService.assertUserCanBid(bidderId, amount, auctionId);
 
+
+            // ── NEW: FINANCIAL INTEGRITY LAYER ─────────────────
+            // A. Block funds for the NEW highest bidder
+            await WalletService.blockFundsForBid(bidderId, amount, tx);
+
+            // B. Release funds for the PREVIOUS highest bidder (if any)
+            if (previousWinningBid) {
+                await WalletService.releaseBlockedFunds(
+                    previousWinningBid.bidderId,
+                    Number(previousWinningBid.amount),
+                    tx
+                );
+            }
+            // ──────────────────────────────────────────────────
+
             // 5. Anti-sniping
             let newEndTime = new Date(auction.endTime);
+
             const timeRemaining = (newEndTime.getTime() - Date.now()) / 1000;
             let extended = false;
 
@@ -126,9 +155,23 @@ export class AuctionService {
                 data: { auctionId, bidderId, amount, isWinning: true }
             });
 
+            // ── NEW: MICRO-CACHING ────────────────────────────
+            await CacheService.setAuctionState(auctionId, {
+                currentHighestBid: amount,
+                endTime: newEndTime.toISOString(),
+                bidCount: updatedAuction.bidCount
+            });
+            // ──────────────────────────────────────────────────
+
             // 8. Trigger auto-bid cascade (non-recursive, handled below)
             return { bid, updatedAuction, extended };
         });
+
+        // ── NEW: PRECISION RESCHEDULING ───────────────────
+        if (result.extended) {
+            await rescheduleAuctionEnd(auctionId, result.updatedAuction.endTime);
+        }
+        // ──────────────────────────────────────────────────
 
         // Trigger auto-bid cascade OUTSIDE the transaction to avoid nested tx issues
         await this._triggerAutoBid(auctionId, bidderId, amount);
@@ -245,6 +288,24 @@ export class AuctionService {
                     Number(highestBid.amount),
                     Number(auction.commissionRate)
                 );
+
+                // AUTOMATIC ESCROW TRANSFER: If funds were blocked (which they are), finalize the payment
+                // This moves funds from WalletBalance + PendingFunds -> WalletTransaction (ESCROW_HELD)
+                try {
+                    await WalletService.processWinningPayment(
+                        highestBid.bidderId,
+                        Number(highestBid.amount),
+                        auctionId,
+                        tx
+                    );
+                    // If payment processed successfully, we can skip the manual payment step
+                    // finalStatus = 'PAID'; // UNCOMMENT if you want instant settlement. 
+                    // For now keeping PAYMENT_PENDING for audit trail, but funds are already moved.
+                } catch (walletError) {
+                    console.error('[AuctionFinalize] Automatic wallet deduction failed:', walletError);
+                    // We fall back to standard flow (user must pay manually if auto-deduct fails)
+                }
+
 
                 // Deactivate all auto-bids for this auction
                 await tx.autoBid.updateMany({ where: { auctionId }, data: { isActive: false } });

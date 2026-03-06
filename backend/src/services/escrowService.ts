@@ -1,5 +1,6 @@
 import prisma from '../utils/prisma';
 import { Prisma } from '@prisma/client';
+import { ProvenanceService } from './provenanceService';
 
 export class EscrowService {
     /**
@@ -64,7 +65,7 @@ export class EscrowService {
             });
 
             // 2. Mark escrow as released
-            const updatedEscrow = await tx.escrowPayment.update({
+            await tx.escrowPayment.update({
                 where: { auctionId },
                 data: {
                     status: 'RELEASED',
@@ -99,10 +100,20 @@ export class EscrowService {
                 }
             });
 
-            return updatedEscrow;
+            return true;
         };
 
-        return txClient ? await executeLogic(txClient) : await prisma.$transaction(executeLogic);
+        const result = txClient ? await executeLogic(txClient) : await prisma.$transaction(executeLogic);
+
+        // 5. Generate Provenance (Digital Certificate) asynchronously
+        // We do this after the transaction is committed to ensure the auction status is COMPLETED
+        if (result) {
+            ProvenanceService.generateProvenance(auctionId).catch(err => {
+                console.error(`[Provenance] Failed to generate record for ${auctionId}:`, err);
+            });
+        }
+
+        return result;
     }
 
     /**

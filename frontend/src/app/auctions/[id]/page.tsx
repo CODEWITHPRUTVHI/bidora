@@ -15,6 +15,8 @@ import { useAuth } from '@/store/AuthContext';
 import RatingSection from '@/components/RatingSection';
 import SwipeToBid from '@/components/SwipeToBid';
 import AIAssistant from '@/components/AIAssistant';
+import VoiceBidding from '@/components/VoiceBidding';
+import ARPreview from '@/components/ARPreview';
 import { MessageSquare, Sparkles, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/Skeleton';
 
@@ -142,6 +144,7 @@ export default function LiveAuctionPage() {
     const [uniqueBidders, setUniqueBidders] = useState(0);
     const [isWatched, setIsWatched] = useState(false);
     const [isWatchingLoading, setIsWatchingLoading] = useState(false);
+    const [viewers, setViewers] = useState(0);
 
     const socketRef = useRef<Socket | null>(null);
     const { time, urgent } = useCountdown(auction?.endTime ?? null);
@@ -210,6 +213,13 @@ export default function LiveAuctionPage() {
             });
 
             socket.on('new_bid', (data: any) => {
+                // Subtle Audio Feedback
+                try {
+                    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                    audio.volume = 0.2;
+                    audio.play().catch(() => { });
+                } catch (e) { }
+
                 setAuction(prev => prev ? { ...prev, currentHighestBid: data.highestBid } : prev);
                 setBids(prev => [{
                     bidderId: data.bidderId,
@@ -243,6 +253,15 @@ export default function LiveAuctionPage() {
                 setUserTotalBids(prev => prev + Number(data.yourBid));
                 setMessage({ type: 'success', text: '✅ Bid confirmed!' });
                 refreshUser();
+
+                // Haptic Feedback for Mobile
+                if (typeof window !== 'undefined' && window.navigator.vibrate) {
+                    window.navigator.vibrate([50, 30, 50]);
+                }
+            });
+
+            socket.on('room_stats', (data: { viewers: number }) => {
+                setViewers(data.viewers);
             });
 
             socket.on('bid_error', (data: any) => {
@@ -459,6 +478,9 @@ export default function LiveAuctionPage() {
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/60 via-transparent to-transparent pointer-events-none" />
 
+                        {/* AR Preview Overlay Button */}
+                        <ARPreview />
+
                         {/* Carousel Controls */}
                         {auction.imageUrls.length > 1 && (
                             <>
@@ -537,6 +559,14 @@ export default function LiveAuctionPage() {
                                     <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-yellow-400 animate-pulse' : (isConnecting ? 'bg-blue-400 animate-spin border-t-transparent' : 'bg-gray-600')}`} />
                                     {wsConnected ? 'LIVE FEED ACTIVE' : (isConnecting ? 'CONNECTING...' : 'LIVE FEED OFFLINE')}
                                 </div>
+
+                                {viewers > 0 && (
+                                    <div className="px-4 py-1.5 rounded-full text-[10px] font-black tracking-[0.2em] uppercase flex items-center gap-2 shadow-lg backdrop-blur-md border bg-blue-500/20 text-blue-400 border-blue-500/30">
+                                        <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                                        {viewers} PEOPLE WATCHING
+                                    </div>
+                                )}
+
                             </div>
 
                             <div className="flex flex-wrap gap-4">
@@ -681,6 +711,19 @@ export default function LiveAuctionPage() {
                                         </button>
                                     ))}
                                 </div>
+
+                                {/* Voice Bidding Integration */}
+                                {isLive && user?.id !== auction.bids[0]?.bidderId && (
+                                    <VoiceBidding
+                                        minBid={minNext}
+                                        currentBid={currentBidAmt}
+                                        onRecognizedBid={(amount) => {
+                                            setBidAmount(amount);
+                                            // Optional: You could even automatically submit the bid here
+                                            // if you want pure hands-free, but safer to let them swipe to confirm
+                                        }}
+                                    />
+                                )}
 
                                 {/* Insufficient Balance Banner */}
                                 {availableBalance < bidAmount && (

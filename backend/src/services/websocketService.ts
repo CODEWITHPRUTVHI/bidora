@@ -82,17 +82,25 @@ export const initWebSocket = async (server: HTTPServer) => {
         socket.join(`user:${userId}`);
 
         // ── JOIN AUCTION ROOM ─────────────────────
-        socket.on('join_auction', (auctionId: string) => {
+        socket.on('join_auction', async (auctionId: string) => {
             if (!auctionId) return;
             socket.join(auctionId);
             console.log(`[WS] ${userId} joined auction room: ${auctionId}`);
+
+            // Broadcast room count to everyone in the room
+            const roomSize = (await io.in(auctionId).fetchSockets()).length;
+            io.to(auctionId).emit('room_stats', { viewers: roomSize });
         });
 
         // ── LEAVE AUCTION ROOM ────────────────────
-        socket.on('leave_auction', (auctionId: string) => {
+        socket.on('leave_auction', async (auctionId: string) => {
             console.log(`[WS] ${userId} leaving room: ${auctionId}`);
             socket.leave(auctionId);
+
+            const roomSize = (await io.in(auctionId).fetchSockets()).length;
+            io.to(auctionId).emit('room_stats', { viewers: roomSize });
         });
+
 
         // ── PLACE BID ─────────────────────────────
         socket.on('place_bid', async (data: { auctionId: string; amount: number }) => {

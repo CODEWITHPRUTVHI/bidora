@@ -27,6 +27,8 @@ interface OrderDetail {
         buyerAddress?: { fullName: string; line1: string; line2?: string; city: string; state: string; pincode: string; country: string };
     } | null;
     escrowPayment?: { status: string; amount: number };
+    provenanceHash?: string;
+    blockchainTxId?: string;
 }
 
 const STEPS = [
@@ -455,23 +457,97 @@ export default function OrderPage() {
             )}
 
             {order.status === 'COMPLETED' && (
-                <div className="bg-green-500/5 border border-green-500/20 rounded-2xl p-6 text-center">
-                    <CheckCircle2 className="w-12 h-12 text-green-400 mx-auto mb-3" />
-                    <h3 className="font-black text-white text-xl mb-2">Order Complete!</h3>
-                    <p className="text-gray-400 text-sm mb-5">Transaction successfully closed. Escrow funds have been released to the seller.</p>
+                <div className="space-y-6">
+                    <div className="bg-green-500/5 border border-green-500/20 rounded-2xl p-6 text-center">
+                        <CheckCircle2 className="w-12 h-12 text-green-400 mx-auto mb-3" />
+                        <h3 className="font-black text-white text-xl mb-2">Order Complete!</h3>
+                        <p className="text-gray-400 text-sm mb-5">Transaction successfully closed. Escrow funds have been released to the seller.</p>
 
-                    {/* Reciprocal Rating Section */}
-                    <div className="mt-8 pt-8 border-t border-white/5 text-left">
-                        <RatingSection
-                            sellerId={isSeller ? (order.buyer?.id || '') : order.seller.id}
-                            sellerName={isSeller ? (order.buyer?.fullName || 'Buyer') : order.seller.fullName}
-                            auctionId={auctionId}
-                            showForm={true}
-                            targetType={isSeller ? 'BUYER' : 'SELLER'}
-                            canRateUserId={isSeller ? (order.buyer?.id || '') : order.seller.id}
-                            canRateUserName={isSeller ? (order.buyer?.fullName || 'Buyer') : order.seller.fullName}
-                        />
+                        {/* Reciprocal Rating Section */}
+                        <div className="mt-8 pt-8 border-t border-white/5 text-left">
+                            <RatingSection
+                                sellerId={isSeller ? (order.buyer?.id || '') : order.seller.id}
+                                sellerName={isSeller ? (order.buyer?.fullName || 'Buyer') : order.seller.fullName}
+                                auctionId={auctionId}
+                                showForm={true}
+                                targetType={isSeller ? 'BUYER' : 'SELLER'}
+                                canRateUserId={isSeller ? (order.buyer?.id || '') : order.seller.id}
+                                canRateUserName={isSeller ? (order.buyer?.fullName || 'Buyer') : order.seller.fullName}
+                            />
+                        </div>
                     </div>
+
+                    {/* Web3 Provenance Hash Card */}
+                    {order.provenanceHash && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="bg-zinc-950 border-2 border-yellow-400/30 rounded-[2.5rem] p-8 relative overflow-hidden group shadow-[0_20px_50px_rgba(250,204,21,0.1)]"
+                        >
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/5 blur-[100px] rounded-full pointer-events-none" />
+                            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-500/5 blur-[80px] rounded-full pointer-events-none" />
+
+                            <div className="relative z-10">
+                                <div className="flex items-center gap-3 mb-6">
+                                    <div className="w-12 h-12 rounded-2xl bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center">
+                                        <Shield className="w-6 h-6 text-yellow-400" />
+                                    </div>
+                                    <div>
+                                        <p className="text-yellow-400 text-[10px] font-black uppercase tracking-[0.3em]">Ledger Authenticated</p>
+                                        <h3 className="text-white font-black text-xl tracking-tight">Provenance Certificate</h3>
+                                    </div>
+                                    <div className="ml-auto flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                                        <span className="text-blue-400 text-[9px] font-black uppercase tracking-widest">Web3 Verified</span>
+                                    </div>
+                                </div>
+
+                                <p className="text-gray-400 text-sm leading-relaxed mb-8">
+                                    This auction result has been cryptographically hashed and anchored to the global ledger. This ensures permanent, immutable proof of ownership transfer from <span className="text-white font-bold">{order.seller.fullName}</span> to <span className="text-white font-bold">{order.buyer?.fullName}</span>.
+                                </p>
+
+                                <div className="space-y-4">
+                                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Cryptographic Hash (SHA-256)</p>
+                                        <div className="flex items-center justify-between">
+                                            <code className="text-xs text-yellow-500/80 font-mono break-all line-clamp-1">{order.provenanceHash}</code>
+                                            <button
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(order.provenanceHash!);
+                                                    setMessage({ type: 'success', text: 'Hash copied to clipboard!' });
+                                                }}
+                                                className="text-gray-500 hover:text-white transition-colors ml-4"
+                                            >
+                                                <ExternalLink className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Blockchain Transaction ID</p>
+                                        <div className="flex items-center justify-between">
+                                            <code className="text-xs text-blue-400/80 font-mono break-all line-clamp-1">{order.blockchainTxId}</code>
+                                            <a
+                                                href={`https://polygonscan.com/tx/${order.blockchainTxId}`} // Simulated explorer link
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-gray-500 hover:text-white transition-colors ml-4"
+                                            >
+                                                <ExternalLink className="w-4 h-4" />
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-8 flex items-center justify-center border-t border-white/10 pt-6">
+                                    <div className="flex items-center gap-2 opacity-40 hover:opacity-100 transition-opacity">
+                                        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Trustless Verification Enabled</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
                 </div>
             )}
         </div>

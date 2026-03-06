@@ -5,13 +5,17 @@ import { qs, qn } from '../utils/queryHelpers';
 import { AuctionService } from '../services/auctionService';
 import { io } from '../services/websocketService';
 import { GoogleGenAI } from '@google/genai';
+import { scheduleAuctionEvents } from '../services/queueService';
+import { CacheService } from '../services/cacheService';
+
 
 // Gemini moved into function scope to prevent global boot crashes
 
 
-// ─────────────────────────────────────────────
+// ───────────────────────────────────────────
 // POST /api/v1/auctions
-// ─────────────────────────────────────────────
+// ───────────────────────────────────────────
+
 export const createAuction = async (req: AuthRequest, res: Response) => {
     try {
         const { title, description, categoryId, startingPrice, reservePrice,
@@ -48,12 +52,17 @@ export const createAuction = async (req: AuthRequest, res: Response) => {
             } as any
         });
 
+        // ── NEW: PRECISION SCHEDULING ───────────────────────
+        await scheduleAuctionEvents(auction.id, start, end);
+        // ──────────────────────────────────────────────────
+
         return res.status(201).json({ auction });
     } catch (error) {
         console.error('[Auction] Create error:', error);
         return res.status(500).json({ error: 'Internal server error' });
     }
 };
+
 
 // ─────────────────────────────────────────────
 // GET /api/v1/auctions
@@ -204,6 +213,15 @@ export const getAuctionById = async (req: AuthRequest, res: Response) => {
         }
 
         prisma.auction.update({ where: { id: req.params.id }, data: { viewCount: { increment: 1 } } }).catch(() => { });
+
+        // ── NEW: CACHE ENHANCEMENT ────────────────────────
+        const cachedState = await CacheService.getAuctionState(req.params.id);
+        if (cachedState) {
+            (auction as any).currentHighestBid = cachedState.currentHighestBid;
+            (auction as any).endTime = cachedState.endTime;
+            (auction as any).bidCount = cachedState.bidCount;
+        }
+        // ──────────────────────────────────────────────────
 
         return res.status(200).json({ auction, userTotalBids, isWatched, uniqueBiddersCount });
     } catch (error) {
@@ -494,10 +512,11 @@ export const getMyAnalytics = async (req: AuthRequest, res: Response) => {
         const userId = req.user!.id;
 
         // 1. Total Sales (Released Escrows)
-        const totalSales = await prisma.escrowPayment.aggregate({
+        const totalSalesAggr = await prisma.escrowPayment.aggregate({
             where: { sellerId: userId, status: 'RELEASED' },
             _sum: { amount: true }
         });
+        const totalSales = Number(totalSalesAggr._sum.amount) || 0;
 
         // 2. Active Bids Receiving (Count of bids on their LIVE auctions)
         const activeBidsCount = await prisma.bid.count({
@@ -520,16 +539,54 @@ export const getMyAnalytics = async (req: AuthRequest, res: Response) => {
         });
 
         // 4. Sales Velocity (Items sold in last 7 days)
-        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const today = new Date();
+        const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
         const recentSalesArr = await prisma.auction.findMany({
             where: { sellerId: userId, status: { in: ['PAID', 'SHIPPED', 'DELIVERED', 'COMPLETED'] as any }, createdAt: { gte: weekAgo } }
         });
 
+        // 5. Build 7-day performance data (bids received per day)
+        const bidsLast7Days = await prisma.bid.findMany({
+            where: {
+                auction: { sellerId: userId },
+                createdAt: { gte: weekAgo }
+            },
+            select: { createdAt: true }
+        });
+
+        const performanceData = Array(7).fill(0);
+        bidsLast7Days.forEach(bid => {
+            const diffTime = Math.abs(today.getTime() - bid.createdAt.getTime());
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            if (diffDays >= 0 && diffDays < 7) {
+                // index 6 is today, index 0 is 6 days ago
+                performanceData[6 - diffDays]++;
+            }
+        });
+
+        // Normalize performance data to percentages for UI (max 100)
+        const maxBids = Math.max(...performanceData, 1);
+        const performance = performanceData.map(val => Math.round((val / maxBids) * 100));
+
+        // 6. Calculate Seller Level based on total sales
+        let level = 1;
+        let nextTier = 10000;
+        let progress = 0;
+
+        if (totalSales >= 500000) { level = 4; nextTier = 1000000; }
+        else if (totalSales >= 100000) { level = 3; nextTier = 500000; }
+        else if (totalSales >= 10000) { level = 2; nextTier = 100000; }
+        else { nextTier = 10000; }
+
+        progress = Math.min(Math.round((totalSales / nextTier) * 100), 100);
+
         return res.status(200).json({
-            totalSales: Number(totalSales._sum.amount) || 0,
+            totalSales,
             activeBidsReceiving: activeBidsCount,
             revenuePotential: parseFloat(profitPotential.toFixed(2)),
-            recentSales: recentSalesArr.length
+            recentSales: recentSalesArr.length,
+            performance, // 7 elements array
+            sellerLevel: { level, nextTier, progress }
         });
     } catch (error) {
         console.error('[Analytics] Error:', error);

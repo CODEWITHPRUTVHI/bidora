@@ -103,6 +103,8 @@ model Auction {
   ratings           Rating[]
   shippingDetail    ShippingDetail?
   watchers          Watchlist[]
+  provenanceHash    String?
+  blockchainTxId    String?
 
   @@index([status])
   @@index([endTime])
