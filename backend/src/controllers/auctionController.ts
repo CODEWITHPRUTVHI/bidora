@@ -505,6 +505,81 @@ export const askProductAI = async (req: AuthRequest, res: Response) => {
 };
 
 // ─────────────────────────────────────────────
+// POST /api/v1/auctions/:id/lume-suggestion
+// ─────────────────────────────────────────────
+export const getLumeSuggestion = async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+        const auction = await prisma.auction.findUnique({
+            where: { id },
+            include: { category: true, _count: { select: { bids: true } } }
+        });
+
+        if (!auction) return res.status(404).json({ error: 'Auction not found' });
+
+        const uniqueBiddersCount = await prisma.bid.groupBy({
+            by: ['bidderId'],
+            where: { auctionId: id },
+            _count: true
+        }).then(res => res.length);
+
+        const currentBid = Number(auction.currentHighestBid);
+        const startPrice = Number(auction.startingPrice);
+        const bidInc = Number(auction.bidIncrement);
+        const timeLeft = new Date(auction.endTime).getTime() - Date.now();
+        const views = auction.viewCount;
+
+        if (!process.env.GEMINI_API_KEY) {
+            return res.status(500).json({ error: 'AI features are not configured.' });
+        }
+
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        // @ts-ignore
+        const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        const systemPrompt = `
+        You are "Lume", Bidora's premium AI strategy assistant.
+        You analyze real-time auction data to recommend a strategic "Max Auto-Bid" limit.
+        
+        DATA:
+        - Current Price: ₹${currentBid}
+        - Starting Price: ₹${startPrice}
+        - Unique Bidders: ${uniqueBiddersCount}
+        - Total Bids: ${auction._count.bids}
+        - View Count: ${views}
+        - Bid Increment: ₹${bidInc}
+        - Time Left: ${Math.floor(timeLeft / 60000)} minutes
+        
+        GOAL: Suggest a Max Bid value that is likely to win given the competition intensity, without grossly overpaying. 
+        - If competition is high (many bidders/views), suggest higher (~20-50% over current).
+        - If competition is low, suggest a safer margin (~10-15%).
+        - If very little time left, factor in "last-minute sniping" risk.
+        
+        RESPONSE FORMAT (JSON):
+        {
+          "suggestedMaxBid": number,
+          "confidence": "High" | "Medium" | "Low",
+          "reasoning": "1 sentence explanation of the strategy."
+        }
+        Return ONLY valid JSON.
+        `;
+
+        const result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: systemPrompt }] }],
+            generationConfig: { responseMimeType: "application/json" }
+        });
+
+        const textResponse = result.response.text();
+        const suggestion = JSON.parse(textResponse);
+
+        return res.status(200).json(suggestion);
+    } catch (error) {
+        console.error('[Lume] Suggestion error:', error);
+        return res.status(500).json({ error: 'Failed to get Lume suggestion.' });
+    }
+};
+
+// ─────────────────────────────────────────────
 // GET /api/v1/auctions/my/analytics
 // ─────────────────────────────────────────────
 export const getMyAnalytics = async (req: AuthRequest, res: Response) => {

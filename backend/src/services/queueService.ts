@@ -57,8 +57,12 @@ export const initQueueWorker = () => {
         }
     }, { connection: redisConnection });
 
-    worker.on('failed', (job, err) => {
+    worker.on('failed', (job: Job | undefined, err: Error) => {
         console.error(`[Queue] Job ${job?.id} failed:`, err);
+    });
+
+    worker.on('error', (err: Error) => {
+        console.error(`[Queue] Worker error (Is Redis running?):`, err.message);
     });
 
     console.log('👷 Queue Worker started (BullMQ)');

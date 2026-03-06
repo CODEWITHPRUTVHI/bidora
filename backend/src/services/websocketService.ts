@@ -30,12 +30,15 @@ export const initWebSocket = async (server: HTTPServer) => {
             const pubClient = createClient({ url: process.env.REDIS_URL });
             const subClient = pubClient.duplicate();
 
+            pubClient.on('error', (err) => console.error('WS Redis Pub Client Error', err));
+            subClient.on('error', (err) => console.error('WS Redis Sub Client Error', err));
+
             await Promise.all([pubClient.connect(), subClient.connect()]);
 
             io.adapter(createAdapter(pubClient, subClient));
             console.log('📡 Redis Adapter → initialized (Scalable WS mode)');
         } catch (err) {
-            console.error('❌ Redis Connection Failed. Falling back to memory adapter.', err);
+            console.error('❌ Redis Adapter Connection Failed. Falling back to memory adapter.', err);
         }
     }
 
@@ -164,6 +167,21 @@ export const initWebSocket = async (server: HTTPServer) => {
             } catch (error: any) {
                 socket.emit('bid_error', { message: error.message });
             }
+        });
+
+        // ── SEND REACTION ─────────────────────────
+        socket.on('send_reaction', (data: { auctionId: string; reaction: string }) => {
+            const { auctionId, reaction } = data;
+            if (!auctionId || !reaction) return;
+
+            // Broadcast reaction to everyone in the room except sender
+            socket.to(auctionId).emit('new_reaction', {
+                auctionId,
+                reaction,
+                userId: socket.data.user.userId
+            });
+
+            console.log(`[WS] Reaction ${reaction} sent by ${userId} in ${auctionId}`);
         });
 
         // ── DISCONNECT ────────────────────────────

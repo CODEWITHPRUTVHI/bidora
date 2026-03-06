@@ -4,6 +4,8 @@ import { createClient } from 'redis';
 
 // Create a redis client for rate limiting
 const redisClient = createClient({ url: process.env.REDIS_URL || 'redis://localhost:6379/0' });
+redisClient.on('error', (err) => console.error('Rate Limiter Redis Client Error', err));
+
 if (process.env.REDIS_URL) {
     redisClient.connect().catch(console.error);
 }

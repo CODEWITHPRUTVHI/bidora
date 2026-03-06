@@ -3,7 +3,7 @@ import { authenticateJWT, requireRole, requireEmailVerified } from '../middlewar
 import {
     createAuction, getAuctions, searchAuctions, getCategories,
     getAuctionById, updateAuction, cancelAuction,
-    getMyListings, getMyBids, setAutoBid, aiAutoLister, askProductAI, getMyAnalytics, getMyOrders
+    getMyListings, getMyBids, setAutoBid, aiAutoLister, askProductAI, getLumeSuggestion, getMyAnalytics, getMyOrders
 } from '../controllers/auctionController';
 
 const router = Router();
@@ -32,5 +32,6 @@ router.post('/:id/cancel', requireRole(['BUYER', 'SELLER', 'ADMIN']), requireEma
 // Buyer routes
 router.post('/:id/auto-bid', requireEmailVerified, setAutoBid);
 router.post('/:id/ask-ai', askProductAI);
+router.post('/:id/lume-suggestion', getLumeSuggestion);
 
 export default router;
