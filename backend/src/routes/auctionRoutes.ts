@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateJWT, requireRole, requireEmailVerified } from '../middlewares/authMiddleware';
+import { authenticateJWT, optionalAuth, requireRole, requireEmailVerified } from '../middlewares/authMiddleware';
 import {
     createAuction, getAuctions, searchAuctions, getCategories,
     getAuctionById, updateAuction, cancelAuction,
@@ -9,27 +9,27 @@ import {
 const router = Router();
 
 // ── Public routes (no auth required) ──────────────────────────────
-router.get('/search', searchAuctions);   // MUST be before /:id
+router.get('/search', searchAuctions);
 router.get('/categories', getCategories);
 router.get('/', getAuctions);
-router.get('/:id', getAuctionById);
 
-// ── All routes below require authentication ────────────────────────
-router.use(authenticateJWT);
-
+// ── Authenticated routes FIRST to avoid /my/* being caught by /:id ─
+router.use('/my', authenticateJWT);
 router.get('/my/listings', getMyListings);
 router.get('/my/bids', getMyBids);
 router.get('/my/analytics', getMyAnalytics);
 router.get('/my/orders', getMyOrders);
 
+// ── Single auction GET — optionally auth so guests & users both work
+router.get('/:id', optionalAuth, getAuctionById);
 
-// Seller/Buyer testing
+// ── Authenticated write routes ─────────────────────────────────────
+router.use(authenticateJWT);
+
 router.post('/ai-auto-lister', requireRole(['SELLER', 'ADMIN', 'BUYER']), requireEmailVerified, aiAutoLister);
 router.post('/', requireRole(['BUYER', 'SELLER', 'ADMIN']), requireEmailVerified, createAuction);
 router.patch('/:id', requireRole(['BUYER', 'SELLER', 'ADMIN']), requireEmailVerified, updateAuction);
 router.post('/:id/cancel', requireRole(['BUYER', 'SELLER', 'ADMIN']), requireEmailVerified, cancelAuction);
-
-// Buyer routes
 router.post('/:id/auto-bid', requireEmailVerified, setAutoBid);
 router.post('/:id/ask-ai', askProductAI);
 router.post('/:id/lume-suggestion', getLumeSuggestion);

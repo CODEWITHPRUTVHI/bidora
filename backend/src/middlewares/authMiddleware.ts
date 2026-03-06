@@ -65,3 +65,27 @@ export const requireEmailVerified = (req: AuthRequest, res: Response, next: Next
     }
     next();
 };
+
+/**
+ * Optional auth: if a Bearer token is present, verify it and attach user.
+ * If no token (or invalid), just continue as a guest — does NOT block the request.
+ */
+export const optionalAuth = async (req: AuthRequest, _res: Response, next: NextFunction) => {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+        try {
+            const decoded = jwt.verify(token, getJWTSecret()) as { userId: string; role: string };
+            const user = await prisma.user.findUnique({
+                where: { id: decoded.userId },
+                select: { id: true, role: true, suspiciousFlags: true, isEmailVerified: true }
+            });
+            if (user && user.suspiciousFlags < 5) {
+                req.user = { id: user.id, role: user.role, isEmailVerified: user.isEmailVerified };
+            }
+        } catch (_) {
+            // Invalid token — treat as guest, don't block
+        }
+    }
+    next();
+};
