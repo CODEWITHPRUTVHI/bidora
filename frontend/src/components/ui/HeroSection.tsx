@@ -4,8 +4,18 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Trophy, ShieldCheck, Zap } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useState, useEffect } from 'react';
 
 export default function HeroSection() {
+    const [timeLeft, setTimeLeft] = useState(43);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setTimeLeft((prev) => (prev > 0 ? prev - 1 : 59));
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
+
     return (
         <section className="relative w-full min-h-[90vh] flex items-center justify-center overflow-hidden pt-20 pb-16">
             {/* Dynamic Background */}
@@ -106,27 +116,12 @@ export default function HeroSection() {
                                         </div>
                                     </div>
                                     <p className="text-sm font-bold text-red-400">
-                                        00:43 Remaining
+                                        00:{timeLeft < 10 ? `0${timeLeft}` : timeLeft} Remaining
                                     </p>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    {/* Micro Interaction Element */}
-                    <motion.div
-                        animate={{ y: [0, -10, 0] }}
-                        transition={{ repeat: Infinity, duration: 5, ease: 'easeInOut' }}
-                        className="absolute -bottom-6 -left-10 bg-zinc-900/80 backdrop-blur-2xl border border-white/10 p-4 rounded-2xl flex items-center space-x-4 shadow-[0_15px_40px_-10px_rgba(0,0,0,0.8)]"
-                    >
-                        <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-yellow-400/50 shadow-[0_0_15px_rgba(250,204,21,0.3)]">
-                            <Image src="https://i.pravatar.cc/100?img=4" fill className="object-cover" alt="" />
-                        </div>
-                        <div>
-                            <p className="text-xs text-gray-400 mb-0.5 font-medium">New bid placed</p>
-                            <p className="text-sm font-bold text-white"><span className="text-yellow-400">Vikram S.</span> bid ₹12,400</p>
-                        </div>
-                    </motion.div>
                 </motion.div>
 
             </div>
