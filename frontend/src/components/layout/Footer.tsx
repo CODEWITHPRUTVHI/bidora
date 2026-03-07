@@ -15,7 +15,7 @@ export default function Footer() {
             <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-500/5 blur-[150px] -z-10 rounded-full" />
 
             <div className="container mx-auto px-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 mb-16 text-center sm:text-left">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-10 mb-16 text-center sm:text-left">
 
                     {/* Brand Section */}
                     <div className="space-y-6 flex flex-col items-center sm:items-start text-center sm:text-left">
@@ -25,7 +25,7 @@ export default function Footer() {
                             </h2>
                         </Link>
                         <p className="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto sm:ml-0">
-                            The world's premier destination for verified luxury watches, rare sneakers, and premium collectibles. Secured by industry-leading escrow and real-time bidding technology.
+                            India&apos;s home for verified sneaker auctions. Hunt, bid, and win — with zero risk and zero lag.
                         </p>
                         <div className="flex items-center space-x-4">
                             {[Facebook, Twitter, Instagram, Youtube].map((Icon, i) => (
@@ -78,7 +78,26 @@ export default function Footer() {
                         </ul>
                     </div>
 
-                    {/* Interaction Section */}
+                    {/* Community */}
+                    <div className="space-y-6 pt-8 sm:pt-0 border-t sm:border-t-0 border-white/5">
+                        <h3 className="text-white font-black uppercase text-xs tracking-[0.2em]">Community</h3>
+                        <ul className="space-y-4">
+                            {[
+                                { name: 'Bidora Discord', href: '#' },
+                                { name: 'Friday Drops Waitlist', href: '#' },
+                                { name: 'Seller Stories', href: '#' },
+                                { name: 'Hall of Fame', href: '#' },
+                                { name: 'Bidora OG Program', href: '#' },
+                            ].map((link) => (
+                                <li key={link.name}>
+                                    <Link href={link.href} className="text-gray-400 text-sm hover:text-white transition-colors flex items-center justify-center sm:justify-start group">
+                                        <ArrowRight size={12} className="mr-2 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-yellow-400 hidden sm:block" />
+                                        {link.name}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
                     <div className="space-y-6 pt-8 sm:pt-0 border-t sm:border-t-0 border-white/5 flex flex-col items-center sm:items-start text-center sm:text-left transition-all">
                         <h3 className="text-white font-black uppercase text-xs tracking-[0.2em]">Our Newsletter</h3>
                         <p className="text-gray-400 text-sm max-w-xs">Join 20k+ collectors getting weekly deal updates.</p>
@@ -94,7 +113,7 @@ export default function Footer() {
                         </div>
                         <div className="pt-4 flex items-center space-x-2 text-gray-500 text-xs">
                             <Globe size={14} className="text-yellow-400/60" />
-                            <span>Available in 120+ countries</span>
+                            <span>Proudly built in India 🇮🇳</span>
                         </div>
                     </div>
 
@@ -119,8 +138,10 @@ export default function Footer() {
                         </div>
                     </div>
 
-                    <div className="text-gray-500 text-xs font-medium">
-                        © {new Date().getFullYear()} BIDORA INC. ALL RIGHTS RESERVED.
+                    <div className="text-gray-500 text-xs font-medium flex items-center gap-3">
+                        <span>© {new Date().getFullYear()} BIDORA INC. ALL RIGHTS RESERVED.</span>
+                        <span className="text-gray-600">·</span>
+                        <span>Made with 🔥 in India</span>
                     </div>
 
                 </div>

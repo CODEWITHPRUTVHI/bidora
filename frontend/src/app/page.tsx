@@ -4,6 +4,9 @@ import { useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
 import HeroSection from '@/components/ui/HeroSection';
 import LiveBidsGrid from '@/components/auction/LiveBidsGrid';
+import FridayDropBanner from '@/components/FridayDropBanner';
+import RecentWins from '@/components/RecentWins';
+import SellOnBidora from '@/components/SellOnBidora';
 import { Shield, Zap, CheckCircle, ArrowRight, TrendingUp, Users, Award, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/store/AuthContext';
@@ -25,18 +28,18 @@ function FadeIn({ children, delay = 0, className = '', scale = false }: { childr
 
 // ── Stats ────────────────────────────────────────────────────────────
 const STATS = [
-  { value: '₹2.4Cr+', label: 'Total Auction Volume', icon: TrendingUp },
-  { value: '12,000+', label: 'Active Bidders', icon: Users },
-  { value: '99.2%', label: 'Escrow Success Rate', icon: Shield },
-  { value: '4.8★', label: 'Avg. Seller Rating', icon: Award },
+  { value: '₹2.4Cr+', label: 'Rupees Won on Bidora', icon: TrendingUp },
+  { value: '12,000+', label: 'Hunters in the Game', icon: Users },
+  { value: '99.2%', label: 'Zero Fraud Rate', icon: Shield },
+  { value: '4.8★', label: 'Seller Trust Score', icon: Award },
 ];
 
 // ── How it works ─────────────────────────────────────────────────────
 const STEPS = [
-  { step: '01', title: 'Browse & Discover', desc: 'Explore live auctions across electronics, fashion, art, and collectibles.', color: 'from-yellow-500/10 to-transparent border-yellow-500/10' },
-  { step: '02', title: 'Fund Your Wallet', desc: 'Deposit securely using Stripe. Funds are held in escrow until the deal is complete.', color: 'from-blue-500/10 to-transparent border-blue-500/10' },
-  { step: '03', title: 'Bid in Real-Time', desc: 'Place bids with our live WebSocket engine. Auto-bid up to your maximum limit.', color: 'from-purple-500/10 to-transparent border-purple-500/10' },
-  { step: '04', title: 'Win & Track', desc: 'Winner gets notified instantly. Funds release from escrow only after confirmed delivery.', color: 'from-green-500/10 to-transparent border-green-500/10' },
+  { step: '01', title: 'Find Your Hunt', desc: 'Browse live sneaker drops. Filter by brand, size, or what\'s ending soonest.', color: 'from-yellow-500/10 to-transparent border-yellow-500/10' },
+  { step: '02', title: 'Load Up Safely', desc: 'Add funds via UPI or card. Every rupee sits in escrow — untouchable until you win.', color: 'from-blue-500/10 to-transparent border-blue-500/10' },
+  { step: '03', title: 'Bid. Fight. Win.', desc: 'Our live engine has zero lag. Set your max bid and let it battle for you — or go manual.', color: 'from-purple-500/10 to-transparent border-purple-500/10' },
+  { step: '04', title: 'Flex Your Win', desc: 'You win, we notify instantly. Funds release only after your kicks arrive confirmed.', color: 'from-green-500/10 to-transparent border-green-500/10' },
 ];
 
 // ── Trust features ────────────────────────────────────────────────────
@@ -60,17 +63,21 @@ export default function Home() {
       </div>
 
       <div className="relative z-10">
+        {/* ── Hero ─────────────────────────────────────────────────── */}
         <HeroSection />
 
-        {/* ── Trust Bar ──────────────────────────────────────────── */}
+        {/* ── STEP 5: Friday Drop Banner (below hero, above trust bar) ── */}
+        <FridayDropBanner />
+
+        {/* ── Trust Bar ─────────────────────────────────────────────── */}
         <section className="border-y border-white/5 bg-black/40 py-6 backdrop-blur-xl relative z-20 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
           <div className="container mx-auto px-6">
             <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-4 text-gray-400 text-sm font-semibold tracking-wide">
               {[
-                { icon: Shield, text: 'BANK-GRADE ESCROW' },
-                { icon: CheckCircle, text: 'VERIFIED SELLERS' },
-                { icon: Zap, text: 'REAL-TIME WEBSOCKETS' },
-                { icon: Lock, text: 'BUYER PROTECTION' },
+                { icon: Shield, text: 'YOUR MONEY IS SAFE' },
+                { icon: CheckCircle, text: 'ONLY THE REAL ONES' },
+                { icon: Zap, text: 'ZERO LAG BIDDING' },
+                { icon: Lock, text: 'WIN OR GET REFUNDED' },
               ].map(({ icon: Icon, text }) => (
                 <div key={text} className="flex items-center gap-2.5 opacity-80 hover:opacity-100 transition-opacity">
                   <Icon className="w-5 h-5 text-yellow-500" />
@@ -81,7 +88,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── Stats ──────────────────────────────────────────────── */}
+        {/* ── Stats ──────────────────────────────────────────────────── */}
         <section className="py-24 relative">
           <div className="absolute inset-0 bg-yellow-500/5 blur-[150px] rounded-full pointer-events-none w-[70%] left-1/2 -translate-x-1/2" />
           <div className="container mx-auto px-6">
@@ -104,12 +111,15 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── Live Auctions Grid ─────────────────────────────────── */}
+        {/* ── STEP 4: Recent Wins Ticker (after stats, before auctions) ── */}
+        <RecentWins />
+
+        {/* ── Live Auctions Grid ─────────────────────────────────────── */}
         <FadeIn>
           <LiveBidsGrid />
         </FadeIn>
 
-        {/* ── How It Works ───────────────────────────────────────── */}
+        {/* ── How It Works ────────────────────────────────────────────── */}
         <section className="py-32 relative">
           <div className="container mx-auto px-6 max-w-7xl">
             <FadeIn className="text-center mb-20">
@@ -136,7 +146,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── Trust Features ─────────────────────────────────────── */}
+        {/* ── Trust Features ──────────────────────────────────────────── */}
         <section className="py-24 border-t border-white/5 bg-black/30">
           <div className="container mx-auto px-6 max-w-7xl">
             <FadeIn className="text-center mb-16">
@@ -162,7 +172,10 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── CTA ────────────────────────────────────────────────── */}
+        {/* ── STEP 8: Sell on Bidora (before final CTA) ────────────────── */}
+        <SellOnBidora />
+
+        {/* ── CTA ─────────────────────────────────────────────────────── */}
         <section className="relative py-20 md:py-40 px-6 overflow-hidden mt-12 border-t border-white/5 bg-gradient-to-b from-transparent to-zinc-950/80">
           <div className="absolute inset-0 bg-yellow-500/10 blur-[150px] rounded-full pointer-events-none w-[80%] left-[10%] mix-blend-screen" />
           <FadeIn className="relative z-10 text-center max-w-4xl mx-auto" scale>

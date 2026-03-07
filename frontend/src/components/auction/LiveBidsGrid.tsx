@@ -107,7 +107,7 @@ function AuctionCard({ auction, idx }: { auction: Auction; idx: number }) {
 const FILTERS = ['All', 'Watches', 'Sneakers', 'Fashion', 'Collectibles', 'Art', 'Electronics'];
 
 export default function LiveBidsGrid() {
-    const [activeFilter, setActiveFilter] = useState('All');
+    const [activeFilter, setActiveFilter] = useState('Sneakers');
     const [auctions, setAuctions] = useState<Auction[]>([]);
     const [loading, setLoading] = useState(true);
     const [categories, setCategories] = useState<string[]>([]);
@@ -146,20 +146,21 @@ export default function LiveBidsGrid() {
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6 relative z-10">
                 <div>
                     <p className="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-3">Real-time bidding</p>
-                    <h2 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter mb-4">
-                        TRENDING <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-600 drop-shadow-[0_0_10px_rgba(250,204,21,0.3)]">AUCTIONS</span>
+                    <h2 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter mb-2">
+                        🔥 LIVE <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-600 drop-shadow-[0_0_10px_rgba(250,204,21,0.3)]">SNEAKER DROPS</span>
                     </h2>
-                    <p className="text-gray-400 font-light max-w-lg text-lg">Highest-velocity items being bid on through our escrow platform right now.</p>
+                    <p className="text-gray-400 font-light max-w-lg text-lg">Mumbai&apos;s hottest kicks — bid before time runs out.</p>
                 </div>
 
                 <div className="flex items-center gap-3 overflow-x-auto pb-4 hide-scrollbar z-10 -mx-6 px-6">
                     {filterList.map(f => (
                         <button key={f} onClick={() => setActiveFilter(f)}
-                            className={`px-6 py-2.5 rounded-full whitespace-nowrap text-sm font-bold transition-all ${activeFilter === f
+                            className={`px-6 py-2.5 rounded-full whitespace-nowrap text-sm font-bold transition-all flex items-center gap-1.5 ${activeFilter === f
                                 ? 'bg-gradient-to-b from-yellow-400 to-yellow-500 text-zinc-950 shadow-[0_0_15px_rgba(250,204,21,0.3)]'
                                 : 'bg-zinc-900/50 backdrop-blur-md border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-white/20'
                                 }`}>
                             {f}
+                            {f === 'Sneakers' && <span className="text-[9px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded-full tracking-widest">HOT</span>}
                         </button>
                     ))}
                     <Link href="/search"

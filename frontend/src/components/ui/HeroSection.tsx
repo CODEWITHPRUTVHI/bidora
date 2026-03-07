@@ -33,25 +33,25 @@ export default function HeroSection() {
                     </div>
 
                     <h1 className="text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-black leading-[1.1] tracking-tighter text-white mb-6 drop-shadow-2xl">
-                        DISCOVER & WIN <br className="hidden xs:block" />
+                        WHERE RARE<br className="hidden xs:block" />
                         <span className="text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-amber-600 drop-shadow-[0_0_15px_rgba(250,204,21,0.3)]">
-                            EXCLUSIVE
-                        </span> ITEMS.
+                            LANDS.
+                        </span>
                     </h1>
 
                     <p className="text-lg text-gray-400 font-light leading-relaxed mb-10 max-w-xl">
-                        The world's premier destination for verified luxury watches, rare sneakers, and premium collectibles. Secured by industry-leading escrow and real-time bidding technology.
+                        India&apos;s home for sneakerheads who hunt, bid, and win. Only verified. Only real. Only Bidora.
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center gap-4">
                         <Link href="#live-auctions"
                             className="w-full sm:w-auto bg-gradient-to-b from-yellow-400 to-yellow-500 text-zinc-950 px-8 py-4 flex items-center justify-center space-x-3 transition-all hover:-translate-y-1 active:scale-95 shadow-[0_10px_40px_-5px_rgba(250,204,21,0.5)] hover:shadow-[0_20px_50px_-5px_rgba(250,204,21,0.8)] border border-yellow-300 rounded-2xl font-black text-lg">
-                            <span>View Live Auctions</span>
+                            <span>JOIN THE HUNT</span>
                             <ArrowRight className="w-5 h-5" />
                         </Link>
                         <Link href="/dashboard?tab=listings"
                             className="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-white border border-white/20 bg-white/5 backdrop-blur-md hover:bg-white/10 transition-all text-center">
-                            Start Selling
+                            LIST YOUR KICKS
                         </Link>
                     </div>
 
@@ -67,8 +67,8 @@ export default function HeroSection() {
                     <div className="relative w-full aspect-[4/5] rounded-[2rem] overflow-hidden bg-black/40 backdrop-blur-2xl p-3 border border-white/10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.8)] group transition-transform duration-700 hover:scale-[1.02]">
                         <div className="relative w-full h-full rounded-2xl overflow-hidden">
                             <Image
-                                src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=1000&auto=format&fit=crop"
-                                alt="Rolex Submariner Watch"
+                                src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=1000&auto=format&fit=crop"
+                                alt="Nike Air Jordan Sneakers"
                                 fill
                                 priority
                                 className="object-cover select-none"
@@ -84,12 +84,12 @@ export default function HeroSection() {
                             <div className="absolute bottom-0 left-0 w-full p-6">
                                 <div className="flex justify-between items-end mb-4">
                                     <div>
-                                        <h3 className="text-2xl font-bold text-white mb-1">Vintage Submariner</h3>
-                                        <p className="text-gray-300 font-medium text-sm">1980 Mint Condition</p>
+                                        <h3 className="text-2xl font-bold text-white mb-1">Air Jordan 1 Retro High</h3>
+                                        <p className="text-gray-300 font-medium text-sm">Chicago Colourway · Size 10</p>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-[10px] text-yellow-400 font-bold uppercase tracking-widest mb-1">Current Bid</p>
-                                        <p className="text-3xl font-black text-white">₹14,500</p>
+                                        <p className="text-3xl font-black text-white">₹12,400</p>
                                     </div>
                                 </div>
 
@@ -124,7 +124,7 @@ export default function HeroSection() {
                         </div>
                         <div>
                             <p className="text-xs text-gray-400 mb-0.5 font-medium">New bid placed</p>
-                            <p className="text-sm font-bold text-white"><span className="text-yellow-400">Alex M.</span> bid ₹14,500</p>
+                            <p className="text-sm font-bold text-white"><span className="text-yellow-400">Arjun M.</span> bid ₹12,400</p>
                         </div>
                     </motion.div>
                 </motion.div>

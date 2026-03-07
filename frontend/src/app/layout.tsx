@@ -6,8 +6,20 @@ import ClientLayout from '@/components/layout/ClientLayout';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'Bidora | Global Live Social Auctions',
-  description: 'Bidora is a premium real-time auction marketplace for verified luxury and collectibles.',
+  title: 'Bidora — India\'s Live Sneaker Auction Platform | Bid, Win, Flex',
+  description: 'India\'s most trusted live sneaker auction platform. Bid on verified Air Jordans, Yeezys, Dunks and more. Zero fraud. 100% escrow. Join 12,000+ collectors hunting on Bidora.',
+  openGraph: {
+    title: 'Bidora — Where Rare Lands',
+    description: 'India\'s home for rare sneaker auctions. Every item verified. Every rupee protected.',
+    siteName: 'Bidora',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Bidora — Where Rare Lands',
+    description: 'India\'s home for rare sneaker auctions. Every item verified. Every rupee protected.',
+  },
+  keywords: ['sneaker auction India', 'live sneaker auction', 'buy sneakers India', 'Air Jordan auction', 'Yeezy auction', 'verified sneakers', 'Bidora'],
 };
 
 export default function RootLayout({

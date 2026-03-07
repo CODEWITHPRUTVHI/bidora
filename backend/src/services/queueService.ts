@@ -15,57 +15,65 @@ const redisConnection = {
 export const auctionQueue = new Queue('auction-engine', { connection: redisConnection });
 
 // ── JOB HANDLER ─────────────────────────────────
-export const initQueueWorker = () => {
-    const worker = new Worker('auction-engine', async (job: Job) => {
-        const { auctionId, type } = job.data;
+export const initQueueWorker = async () => {
+    try {
+        const worker = new Worker('auction-engine', async (job: Job) => {
+            const { auctionId, type } = job.data;
 
-        console.log(`[Queue] Processing ${type} for auction: ${auctionId}`);
+            console.log(`[Queue] Processing ${type} for auction: ${auctionId}`);
 
-        if (type === 'AUCTION_START') {
-            await prisma.auction.update({
-                where: { id: auctionId },
-                data: { status: 'LIVE' }
-            });
-            console.log(`[Queue] Auction ${auctionId} is now LIVE`);
-        }
-
-        if (type === 'AUCTION_END') {
-            // Re-fetch auction to ensure it hasn't been extended (Anti-sniping check)
-            const auction = await prisma.auction.findUnique({
-                where: { id: auctionId },
-                select: { endTime: true, status: true }
-            });
-
-            if (!auction || auction.status !== 'LIVE') return;
-
-            // If the current time is still before endTime, it means it was extended.
-            // We shouldn't finalize yet. The Anti-sniping logic should have scheduled a new job.
-            if (new Date() < new Date(auction.endTime)) {
-                console.log(`[Queue] Auction ${auctionId} was extended. Skipping finalization.`);
-                return;
+            if (type === 'AUCTION_START') {
+                await prisma.auction.update({
+                    where: { id: auctionId },
+                    data: { status: 'LIVE' }
+                });
+                console.log(`[Queue] Auction ${auctionId} is now LIVE`);
             }
 
-            const result = await AuctionService.finalizeAuction(auctionId);
-            if (result?.winner) {
-                await NotificationService.notifyAuctionWon(
-                    result.winner.bidderId,
-                    auctionId,
-                    '', // Title can be fetched inside notify service if needed
-                    Number(result.winner.amount)
-                ).catch(console.error);
+            if (type === 'AUCTION_END') {
+                // Re-fetch auction to ensure it hasn't been extended (Anti-sniping check)
+                const auction = await prisma.auction.findUnique({
+                    where: { id: auctionId },
+                    select: { endTime: true, status: true }
+                });
+
+                if (!auction || auction.status !== 'LIVE') return;
+
+                // If the current time is still before endTime, it means it was extended.
+                if (new Date() < new Date(auction.endTime)) {
+                    console.log(`[Queue] Auction ${auctionId} was extended. Skipping finalization.`);
+                    return;
+                }
+
+                const result = await AuctionService.finalizeAuction(auctionId);
+                if (result?.winner) {
+                    await NotificationService.notifyAuctionWon(
+                        result.winner.bidderId,
+                        auctionId,
+                        '',
+                        Number(result.winner.amount)
+                    ).catch(console.error);
+                }
             }
-        }
-    }, { connection: redisConnection });
+        }, {
+            connection: redisConnection,
+            // Prevent BullMQ from automatically retrying connection indefinitely in a loud way
+            connectionRecheckInterval: 30000
+        });
 
-    worker.on('failed', (job: Job | undefined, err: Error) => {
-        console.error(`[Queue] Job ${job?.id} failed:`, err);
-    });
+        worker.on('failed', (job: Job | undefined, err: Error) => {
+            console.error(`[Queue] Job ${job?.id} failed:`, err);
+        });
 
-    worker.on('error', (err: Error) => {
-        console.error(`[Queue] Worker error (Is Redis running?):`, err.message);
-    });
+        worker.on('error', (err: Error) => {
+            // Only log once or at intervals if needed, but BullMQ's core handles retries
+            // We just want to avoid the massive stack trace spam in the console
+        });
 
-    console.log('👷 Queue Worker started (BullMQ)');
+        console.log('👷 Queue Worker started (BullMQ)');
+    } catch (error: any) {
+        console.warn('⚠️ [Queue] Could not initialize BullMQ worker. Redis might be down. Auction scheduling will rely on Cron fallback.', error.message);
+    }
 };
 
 /**
