@@ -22,6 +22,9 @@ import AuthenticityBadge from '@/components/AuthenticityBadge';
 import LivePulseFeed from '@/components/LivePulseFeed';
 import Confetti from '@/components/Confetti';
 import { Skeleton } from '@/components/ui/Skeleton';
+import Breadcrumbs from '@/components/seo/Breadcrumbs';
+import Schema from '@/components/seo/Schema';
+
 
 // ── Helpers ────────────────────────────────────────────────────────
 function getMinIncrement(currentBid: number): number {
@@ -447,6 +450,37 @@ export default function LiveAuctionPage() {
 
             <div className="absolute top-40 left-10 w-[40vw] h-[40vw] bg-yellow-500/5 blur-[150px] rounded-full pointer-events-none -z-10" />
             <div className="absolute bottom-40 right-10 w-[30vw] h-[30vw] bg-blue-500/5 blur-[150px] rounded-full pointer-events-none -z-10" />
+
+            <Breadcrumbs
+                items={[
+                    { label: 'Live Auctions', href: '/search' },
+                    { label: auction.category.name, href: `/search?category=${auction.category.name}` },
+                    { label: auction.title, href: `/auctions/${id}` }
+                ]}
+            />
+
+            <Schema
+                data={{
+                    '@context': 'https://schema.org/',
+                    '@type': 'Product',
+                    'name': auction.title,
+                    'image': auction.imageUrls,
+                    'description': auction.description,
+                    'brand': {
+                        '@type': 'Brand',
+                        'name': auction.category.name.split(' ')[0] || 'Sneakers'
+                    },
+                    'offers': {
+                        '@type': 'Offer',
+                        'url': `https://bidora.me/auctions/${id}`,
+                        'price': auction.currentHighestBid || auction.startingPrice,
+                        'priceCurrency': 'INR',
+                        'availability': auction.status === 'LIVE' ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+                        'priceValidUntil': auction.endTime,
+                        'itemCondition': 'https://schema.org/NewCondition'
+                    }
+                }}
+            />
 
             <Link href="/" className="inline-flex items-center text-gray-500 hover:text-white font-bold transition-colors mb-8 group bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl backdrop-blur-md">
                 <ArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" />

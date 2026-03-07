@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+
+# Protected Routes
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /auth
+Disallow: /profile
+Disallow: /orders
+Disallow: /api
+
+# Host
+Host: https://bidora.me
+
+# Sitemap
+Sitemap: https://bidora.me/sitemap.xml

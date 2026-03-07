@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, SlidersHorizontal, X, Flame, Timer, TrendingUp, ChevronDown } from 'lucide-react';
+import Breadcrumbs from '@/components/seo/Breadcrumbs';
+
 import Link from 'next/link';
 import Image from 'next/image';
 import api from '@/lib/axios';
@@ -161,6 +163,12 @@ function SearchContent() {
     return (
         <div className="container mx-auto px-4 md:px-8 py-24 max-w-7xl relative min-h-screen">
             <div className="absolute top-20 right-1/4 w-[30vw] h-[30vw] bg-yellow-500/10 blur-[150px] rounded-full pointer-events-none -z-10" />
+
+            <Breadcrumbs
+                items={[
+                    { label: 'Auctions', href: '/search' }
+                ]}
+            />
 
             <div className="mb-10 text-center md:text-left">
                 <h1 className="text-4xl md:text-5xl font-black tracking-tighter mb-2">

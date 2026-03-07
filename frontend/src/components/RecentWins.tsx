@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 
 const recentWins = [
-    { name: 'Arjun M.', city: 'Mumbai', item: 'Nike Air Jordan 1 Retro High', price: '₹12,400', time: '2 mins ago', emoji: '🔥' },
+    { name: 'Vikram S.', city: 'Mumbai', item: 'Nike Air Jordan 1 Retro High', price: '₹12,400', time: '2 mins ago', emoji: '🔥' },
     { name: 'Priya K.', city: 'Pune', item: 'Adidas Yeezy Boost 350', price: '₹8,900', time: '7 mins ago', emoji: '👟' },
     { name: 'Rohit S.', city: 'Bangalore', item: 'New Balance 550 White', price: '₹6,200', time: '12 mins ago', emoji: '⚡' },
     { name: 'Sneha D.', city: 'Delhi', item: 'Off-White x Nike Dunk Low', price: '₹31,000', time: '18 mins ago', emoji: '🏆' },

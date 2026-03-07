@@ -62,11 +62,12 @@ export default function Footer() {
                         <h3 className="text-white font-black uppercase text-xs tracking-[0.2em]">Bidora</h3>
                         <ul className="space-y-4">
                             {[
-                                { name: 'About CEO (Pruthviraj)', href: '/about' },
-                                { name: 'Terms of Service', href: '/legal/terms' },
-                                { name: 'Privacy Policy', href: '/legal/privacy' },
-                                { name: 'Bidding Guide', href: '/support/bidding-guide' },
-                                { name: 'Seller Verification', href: '/support/seller-verification' }
+                                { name: 'About Bidora', href: '/about' },
+                                { name: 'How It Works', href: '/how-it-works' },
+                                { name: 'Sell Kicks', href: '/sell-sneakers' },
+                                { name: 'Authentication Guide', href: '/sneaker-authentication' },
+                                { name: 'Buyer Protection', href: '/buyer-protection' },
+                                { name: 'Bidding Guide', href: '/support/bidding-guide' }
                             ].map((link) => (
                                 <li key={link.name}>
                                     <Link href={link.href} className="text-gray-400 text-sm hover:text-white transition-colors flex items-center justify-center sm:justify-start group">

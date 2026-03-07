@@ -112,6 +112,16 @@ export default function AboutPage() {
                                     <p>
                                         As an engineer first and a collector second, I realized that the only way to solve fraud was to integrate the financial layer directly into the bidding engine. Every RUPEE you see on Bidora is real, locked in escrow before the gavel drops.
                                     </p>
+                                    <h3 className="text-2xl font-black text-white mt-12 tracking-tight">The Origin Story</h3>
+                                    <p className="text-gray-400 text-base leading-relaxed">
+                                        Bidora was born in a small room in Mumbai, driven by a simple frustration: the inability to buy authentic sneakers in India without the fear of being scammed. I saw thousands of collectors losing their hard-earned money to Instagram 'resellers' who would ghost after receiving payment. I knew there had to be a better way.
+                                    </p>
+                                    <p className="text-gray-400 text-base leading-relaxed">
+                                        We spent over 14 months architecting a high-speed bidding engine that could handle thousands of concurrent bids with sub-millisecond latency. But more importantly, we built a 'trust-first' culture. We don't just facilitate sales; we protect the culture of 'sneaker collecting in India'.
+                                    </p>
+                                    <p className="text-gray-400 text-base leading-relaxed">
+                                        Today, Bidora is the definitive platform for 'rare sneakers online India'. We serve over 12,000 active hunters across Mumbai, Delhi, Bangalore, and beyond. Our mission is to democratize access to the world's most exclusive footwear while maintaining a 100% security record.
+                                    </p>
                                     <p className="text-yellow-400/60 font-medium italic">
                                         "We are building the definitive global standard for rapid, secure luxury exchange."
                                     </p>
