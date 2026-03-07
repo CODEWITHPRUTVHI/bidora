@@ -80,14 +80,25 @@ export default function Navbar() {
                 </Link>
 
                 {/* Search - Desktop Only */}
-                <form onSubmit={e => { e.preventDefault(); const q = (e.currentTarget.querySelector('input') as HTMLInputElement).value; if (q) router.push(`/search?q=${encodeURIComponent(q)}`); }} className="hidden md:flex flex-1 max-w-md mx-10 relative group">
+                <form onSubmit={e => { e.preventDefault(); const q = (e.currentTarget.querySelector('input') as HTMLInputElement).value; if (q) router.push(`/search?q=${encodeURIComponent(q)}`); }} className="hidden md:flex flex-1 max-w-md mx-6 lg:mx-10 relative group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-hover:text-yellow-400 transition-colors" />
-                    <input type="text" placeholder="Search auctions, items, sellers…"
+                    <input type="text" placeholder="Search sneakers, brands, sizes…"
                         className="w-full bg-zinc-900/50 backdrop-blur-md border border-white/10 rounded-full py-3 pl-11 pr-5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-400/30 focus:bg-zinc-900 focus:border-yellow-400/50 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.3)] placeholder:text-gray-500" />
                 </form>
 
                 {/* Right Actions */}
-                <div className="flex items-center gap-2 sm:gap-5">
+                <div className="flex items-center gap-2 sm:gap-4">
+                    {/* Live Bids Counter - Desktop Only */}
+                    <div className="hidden lg:flex items-center space-x-2 mr-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full whitespace-nowrap">
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                        </span>
+                        <span className="text-[10px] font-black tracking-widest text-white uppercase">
+                            <span className="text-yellow-400">₹4,23,000</span> bid today
+                        </span>
+                    </div>
+
                     {/* Mobile Search Icon */}
                     <button
                         onClick={() => { setMenuOpen(true); setTimeout(() => document.getElementById('mobile-search')?.focus(), 150); }}

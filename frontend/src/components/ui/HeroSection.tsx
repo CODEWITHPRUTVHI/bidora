@@ -40,7 +40,7 @@ export default function HeroSection() {
                     </h1>
 
                     <p className="text-lg text-gray-400 font-light leading-relaxed mb-10 max-w-xl">
-                        India&apos;s home for sneakerheads who hunt, bid, and win. Only verified. Only real. Only Bidora.
+                        Hunt. Bid. Win. Only verified kicks. Only Bidora.
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -50,7 +50,7 @@ export default function HeroSection() {
                             <ArrowRight className="w-5 h-5" />
                         </Link>
                         <Link href="/dashboard?tab=listings"
-                            className="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-white border border-white/20 bg-white/5 backdrop-blur-md hover:bg-white/10 transition-all text-center">
+                            className="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-white border border-white/40 bg-white/5 backdrop-blur-md hover:bg-white/10 hover:border-white/60 transition-all text-center">
                             LIST YOUR KICKS
                         </Link>
                     </div>
@@ -76,8 +76,8 @@ export default function HeroSection() {
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
 
-                            <div className="absolute top-4 left-4 bg-red-500/90 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-xs font-bold tracking-widest flex items-center shadow-lg shadow-red-500/20">
-                                <span className="w-2 h-2 rounded-full bg-white mr-2 animate-pulse" />
+                            <div className="absolute top-4 left-4 bg-zinc-900/90 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest flex items-center shadow-2xl border border-white/10">
+                                <span className="w-2 h-2 rounded-full bg-red-500 mr-2 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
                                 LIVE NOW
                             </div>
 
@@ -124,7 +124,7 @@ export default function HeroSection() {
                         </div>
                         <div>
                             <p className="text-xs text-gray-400 mb-0.5 font-medium">New bid placed</p>
-                            <p className="text-sm font-bold text-white"><span className="text-yellow-400">Arjun M.</span> bid ₹12,400</p>
+                            <p className="text-sm font-bold text-white"><span className="text-yellow-400">Vikram S.</span> bid ₹12,400</p>
                         </div>
                     </motion.div>
                 </motion.div>
