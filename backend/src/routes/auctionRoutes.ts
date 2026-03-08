@@ -26,7 +26,7 @@ router.get('/:id', optionalAuth, getAuctionById);
 // ── Authenticated write routes ─────────────────────────────────────
 router.use(authenticateJWT);
 
-router.post('/ai-auto-lister', requireRole(['SELLER', 'ADMIN', 'BUYER']), requireEmailVerified, aiAutoLister);
+router.post('/ai-auto-lister', requireRole(['SELLER', 'ADMIN', 'BUYER']), aiAutoLister);
 router.post('/', requireRole(['BUYER', 'SELLER', 'ADMIN']), requireEmailVerified, createAuction);
 router.patch('/:id', requireRole(['BUYER', 'SELLER', 'ADMIN']), requireEmailVerified, updateAuction);
 router.post('/:id/cancel', requireRole(['BUYER', 'SELLER', 'ADMIN']), requireEmailVerified, cancelAuction);

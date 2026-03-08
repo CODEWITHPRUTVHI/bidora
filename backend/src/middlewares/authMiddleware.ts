@@ -60,9 +60,9 @@ export const requireRole = (roles: string[]) => {
     };
 };
 export const requireEmailVerified = (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (!req.user?.isEmailVerified) {
-        return res.status(403).json({ error: 'Please verify your email to access this feature.' });
-    }
+    // if (!req.user?.isEmailVerified) {
+    //     return res.status(403).json({ error: 'Please verify your email to access this feature.' });
+    // }
     next();
 };
 
