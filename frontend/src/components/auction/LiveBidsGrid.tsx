@@ -178,36 +178,129 @@ export default function LiveBidsGrid() {
                         <AuctionCardSkeleton key={i} />
                     ))}
                 </div>
-            ) : auctions.length === 0 ? (
-                <div className="text-center py-24 text-gray-500">
-                    <p className="text-5xl mb-6">🔨</p>
-                    <p className="text-xl font-semibold text-white mb-2">No auctions running right now</p>
-                    <p className="mb-8">Be the first to list an item!</p>
-                    <div className="flex justify-center gap-4">
-                        <Link href="/create-auction" className="px-6 py-3 bg-yellow-400 text-black font-bold rounded-xl hover:bg-yellow-300 transition-colors">
-                            Create Auction
-                        </Link>
-                        <Link href="/search?status=SCHEDULED" className="px-6 py-3 bg-white/5 border border-white/10 text-white font-bold rounded-xl hover:bg-white/10 transition-colors">
-                            View Upcoming
-                        </Link>
-                    </div>
-                </div>
             ) : (
                 <>
                     <AnimatePresence mode="popLayout">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                            {auctions.map((auction, idx) => (
-                                <AuctionCard key={auction.id} auction={auction} idx={idx} />
-                            ))}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 relative z-10">
+                            {auctions.length === 0 ? (
+                                // PRE-LAUNCH TEASER CARDS
+                                [
+                                    {
+                                        id: 't1',
+                                        title: "Air Jordan 1 Retro High OG 'Chicago' (2015)",
+                                        img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=1000&auto=format&fit=crop",
+                                        price: 45000,
+                                        category: 'Jordan'
+                                    },
+                                    {
+                                        id: 't2',
+                                        title: "Travis Scott x Air Jordan 1 Low 'Canary'",
+                                        img: "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?q=80&w=1000&auto=format&fit=crop",
+                                        price: 32000,
+                                        category: 'Collabs'
+                                    },
+                                    {
+                                        id: 't3',
+                                        title: "Nike SB Dunk Low 'Jeff Staple Pigeon'",
+                                        img: "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?q=80&w=1000&auto=format&fit=crop",
+                                        price: 85000,
+                                        category: 'SB Dunk'
+                                    },
+                                    {
+                                        id: 't4',
+                                        title: "Adidas Yeezy Boost 350 V2 'Zebra'",
+                                        img: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=1000&auto=format&fit=crop",
+                                        price: 18000,
+                                        category: 'Yeezy'
+                                    },
+                                    {
+                                        id: 't5',
+                                        title: "Air Jordan 4 Retro 'Military Blue' (2024)",
+                                        img: "https://images.unsplash.com/photo-1514989940723-e8e51635b782?q=80&w=1000&auto=format&fit=crop",
+                                        price: 24000,
+                                        category: 'Jordan'
+                                    }
+                                ].map((teaser, idx) => (
+                                    <motion.article
+                                        key={teaser.id}
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ delay: idx * 0.1, duration: 0.5 }}
+                                        whileHover={{ y: -8 }}
+                                        className="group relative bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl"
+                                    >
+                                        <div className="relative aspect-[4/3] bg-zinc-800">
+                                            <Image
+                                                src={teaser.img}
+                                                alt={teaser.title}
+                                                fill
+                                                className="object-cover group-hover:scale-110 transition-transform duration-700 opacity-80"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+
+                                            <div className="absolute top-3 left-3 bg-yellow-400 text-black text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-lg">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
+                                                DROPPING SOON
+                                            </div>
+
+                                            <div className="absolute bottom-4 left-4 right-4">
+                                                <p className="text-yellow-400 text-[9px] font-black uppercase tracking-widest mb-1">{teaser.category}</p>
+                                                <h3 className="text-white font-bold text-sm leading-tight line-clamp-2">{teaser.title}</h3>
+                                            </div>
+                                        </div>
+
+                                        <div className="px-5 py-4 flex items-center justify-between border-t border-white/5 bg-zinc-950/40">
+                                            <div>
+                                                <p className="text-gray-500 text-[9px] uppercase tracking-wider font-bold">Starts At</p>
+                                                <p className="text-white font-black text-lg leading-tight">₹{teaser.price.toLocaleString()}</p>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    const btn = document.activeElement as HTMLButtonElement;
+                                                    if (btn) {
+                                                        const originalContent = btn.innerHTML;
+                                                        btn.innerHTML = 'COPIED ✓';
+                                                        btn.classList.add('text-green-400', 'border-green-400/30');
+                                                        setTimeout(() => {
+                                                            btn.innerHTML = originalContent;
+                                                            btn.classList.remove('text-green-400', 'border-green-400/30');
+                                                        }, 2000);
+                                                    }
+                                                }}
+                                                className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest hover:bg-yellow-400 hover:text-black hover:border-yellow-400 transition-all active:scale-95 whitespace-nowrap"
+                                            >
+                                                Notify Me
+                                            </button>
+                                        </div>
+                                    </motion.article>
+                                ))
+                            ) : (
+                                auctions.map((auction, idx) => (
+                                    <AuctionCard key={auction.id} auction={auction} idx={idx} />
+                                ))
+                            )}
                         </div>
                     </AnimatePresence>
 
-                    <div className="mt-12 text-center">
-                        <Link href="/search?status=LIVE"
-                            className="inline-flex items-center gap-2 px-8 py-4 border border-white/20 text-white rounded-xl font-semibold hover:bg-white/5 hover:border-yellow-400/30 transition-all group">
-                            View All Live Auctions
-                            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                        </Link>
+                    <div className="mt-16 text-center">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            whileInView={{ opacity: 1 }}
+                            className="bg-yellow-400/5 border border-yellow-400/20 rounded-2xl p-8 max-w-2xl mx-auto"
+                        >
+                            <h4 className="text-xl font-black text-white mb-2">WHICH ONE DO YOU WANT?</h4>
+                            <p className="text-gray-400 text-sm mb-6 uppercase tracking-[0.2em]">Join 12,000+ hunters waiting for the first drop.</p>
+                            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                                <Link href="/search?status=SCHEDULED"
+                                    className="px-8 py-4 bg-yellow-400 text-black font-black rounded-2xl hover:-translate-y-1 transition-all shadow-[0_10px_30px_-5px_rgba(250,204,21,0.4)]">
+                                    VIEW ALL UPCOMING
+                                </Link>
+                                <Link href="/dashboard?tab=notifs"
+                                    className="px-8 py-4 bg-white/5 border border-white/10 text-white font-black rounded-2xl hover:bg-white/10 transition-all">
+                                    MANTAGE ALERTS
+                                </Link>
+                            </div>
+                        </motion.div>
                     </div>
                 </>
             )}
