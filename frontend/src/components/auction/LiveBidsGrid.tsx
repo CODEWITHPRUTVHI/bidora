@@ -181,35 +181,35 @@ export default function LiveBidsGrid() {
             ) : (
                 <>
                     <AnimatePresence mode="popLayout">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 relative z-10">
+                        <div className={`grid gap-8 relative z-10 ${auctions.length === 0 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
                             {auctions.length === 0 ? (
                                 // PRE-LAUNCH TEASER CARDS
                                 [
                                     {
                                         id: 't1',
-                                        title: "Air Jordan 1 Retro High OG 'Chicago' (2015)",
-                                        img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=1000&auto=format&fit=crop",
-                                        price: 45000,
-                                        category: 'Jordan'
-                                    },
-                                    {
-                                        id: 't2',
-                                        title: "Travis Scott x Air Jordan 1 Low 'Canary'",
-                                        img: "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?q=80&w=1000&auto=format&fit=crop",
-                                        price: 32000,
-                                        category: 'Collabs'
-                                    },
-                                    {
-                                        id: 't3',
                                         title: "Nike SB Dunk Low 'Jeff Staple Pigeon'",
                                         img: "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?q=80&w=1000&auto=format&fit=crop",
                                         price: 85000,
                                         category: 'SB Dunk'
                                     },
                                     {
+                                        id: 't2',
+                                        title: "Air Jordan 1 Retro High OG 'Chicago' (2015)",
+                                        img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=1000&auto=format&fit=crop",
+                                        price: 45000,
+                                        category: 'Jordan'
+                                    },
+                                    {
+                                        id: 't3',
+                                        title: "Travis Scott x Air Jordan 1 Low 'Canary'",
+                                        img: "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?q=80&w=1000&auto=format&fit=crop",
+                                        price: 32000,
+                                        category: 'Collabs'
+                                    },
+                                    {
                                         id: 't4',
                                         title: "Adidas Yeezy Boost 350 V2 'Zebra'",
-                                        img: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=1000&auto=format&fit=crop",
+                                        img: "https://images.unsplash.com/photo-1581655353564-df123a1eb820?q=80&w=1000&auto=format&fit=crop",
                                         price: 18000,
                                         category: 'Yeezy'
                                     },
@@ -218,6 +218,13 @@ export default function LiveBidsGrid() {
                                         title: "Air Jordan 4 Retro 'Military Blue' (2024)",
                                         img: "https://images.unsplash.com/photo-1514989940723-e8e51635b782?q=80&w=1000&auto=format&fit=crop",
                                         price: 24000,
+                                        category: 'Jordan'
+                                    },
+                                    {
+                                        id: 't6',
+                                        title: "Union LA x Air Jordan 1 Retro High 'Storm Blue'",
+                                        img: "https://images.unsplash.com/photo-1595341888016-a392ef81b7de?q=80&w=1000&auto=format&fit=crop",
+                                        price: 55000,
                                         category: 'Jordan'
                                     }
                                 ].map((teaser, idx) => (
@@ -238,9 +245,14 @@ export default function LiveBidsGrid() {
                                             />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
 
-                                            <div className="absolute top-3 left-3 bg-yellow-400 text-black text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-lg">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
-                                                DROPPING SOON
+                                            <div className="absolute top-3 left-3 flex flex-col gap-2 scale-90 origin-top-left">
+                                                <div className="bg-yellow-400 text-black text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-lg w-fit">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
+                                                    DROPPING SOON
+                                                </div>
+                                                <div className="bg-black/60 backdrop-blur-md text-white text-[9px] font-bold px-2.5 py-1 rounded-full border border-white/20 w-fit">
+                                                    Launching March 28, 2026
+                                                </div>
                                             </div>
 
                                             <div className="absolute bottom-4 left-4 right-4">
@@ -251,7 +263,7 @@ export default function LiveBidsGrid() {
 
                                         <div className="px-5 py-4 flex items-center justify-between border-t border-white/5 bg-zinc-950/40">
                                             <div>
-                                                <p className="text-gray-500 text-[9px] uppercase tracking-wider font-bold">Starts At</p>
+                                                <p className="text-yellow-400 text-[9px] uppercase tracking-wider font-bold">Opening Bid</p>
                                                 <p className="text-white font-black text-lg leading-tight">₹{teaser.price.toLocaleString()}</p>
                                             </div>
                                             <button
@@ -259,7 +271,7 @@ export default function LiveBidsGrid() {
                                                     const btn = document.activeElement as HTMLButtonElement;
                                                     if (btn) {
                                                         const originalContent = btn.innerHTML;
-                                                        btn.innerHTML = 'COPIED ✓';
+                                                        btn.innerHTML = 'NOTIFIED ✓';
                                                         btn.classList.add('text-green-400', 'border-green-400/30');
                                                         setTimeout(() => {
                                                             btn.innerHTML = originalContent;
