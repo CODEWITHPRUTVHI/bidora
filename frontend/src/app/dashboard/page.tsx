@@ -1,5 +1,5 @@
 'use client';
-// Dashboard UI Redesign - Red Theme & Structured Navigation
+// Build trigger: 2026-03-02-v2
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -18,7 +18,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 // @ts-ignore
 import { load } from '@cashfreepayments/cashfree-js';
 
-// Cashfree instance
+// Cashfree is lazy loaded but we need the instance initialized
 let cashfree: any = null;
 const initCashfree = async () => {
     if (!cashfree) {
@@ -58,42 +58,37 @@ const statusColor: Record<string, string> = {
     PAYMENT_PENDING: 'text-orange-400 bg-orange-400/10 border-orange-400/20',
     PAID: 'text-blue-400 bg-blue-400/10 border-blue-400/20',
     SHIPPED: 'text-purple-400 bg-purple-400/10 border-purple-400/20',
-    COMPLETED: 'text-red-400 bg-red-400/10 border-red-400/20',
+    COMPLETED: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20',
     DRAFT: 'text-gray-400 bg-gray-400/10 border-gray-400/20',
     SCHEDULED: 'text-cyan-400 bg-cyan-400/10 border-cyan-400/20'
 };
 
-// ──────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 export default function DashboardPage() {
+    const [activeTab, setActiveTab] = useState('overview');
     const { user, logout, refreshUser, loading: authLoading } = useAuth();
     const router = useRouter();
-
-    // ── State ──
-    const [activeTab, setActiveTab] = useState('overview');
-    const [loading, setLoading] = useState(true);
-    const [pageError, setPageError] = useState('');
 
     const [myBids, setMyBids] = useState<Bid[]>([]);
     const [myListings, setMyListings] = useState<Auction[]>([]);
     const [transactions, setTransactions] = useState<Tx[]>([]);
-    const [txPage, setTxPage] = useState(1);
-    const [txTotalPages, setTxTotalPages] = useState(1);
-    const [txFilter, setTxFilter] = useState('');
-
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [unreadCount, setUnreadCount] = useState(0);
     const [wallet, setWallet] = useState<{ walletBalance: number; pendingFunds: number; availableBalance: number } | null>(null);
     const [depositAmount, setDepositAmount] = useState('');
     const [depositing, setDepositing] = useState(false);
     const [depositMsg, setDepositMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-
+    const [paymentSessionId, setPaymentSessionId] = useState('');
     const [withdrawAmount, setWithdrawAmount] = useState('');
     const [withdrawing, setWithdrawing] = useState(false);
     const [withdrawMsg, setWithdrawMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [pageError, setPageError] = useState('');
 
-    const [notifications, setNotifications] = useState<Notification[]>([]);
-    const [unreadCount, setUnreadCount] = useState(0);
-    const [wonOrders, setWonOrders] = useState<any[]>([]);
-    const [soldOrders, setSoldOrders] = useState<any[]>([]);
-
+    // Pagination/Filters
+    const [txPage, setTxPage] = useState(1);
+    const [txTotalPages, setTxTotalPages] = useState(1);
+    const [txFilter, setTxFilter] = useState('');
     const [analytics, setAnalytics] = useState<{
         totalSales: number;
         activeBidsReceiving: number;
@@ -102,7 +97,8 @@ export default function DashboardPage() {
         performance?: number[];
         sellerLevel?: { level: number; nextTier: number; progress: number; }
     } | null>(null);
-
+    const [wonOrders, setWonOrders] = useState<any[]>([]);
+    const [soldOrders, setSoldOrders] = useState<any[]>([]);
     const [verificationRequest, setVerificationRequest] = useState<VerificationRequest | null>(null);
     const [verificationForm, setVerificationForm] = useState({
         fullLegalName: '',
@@ -116,7 +112,8 @@ export default function DashboardPage() {
     const [submittingVerification, setSubmittingVerification] = useState(false);
     const [verificationMsg, setVerificationMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-    // ── Lifecycle ──
+
+
     useEffect(() => {
         if (authLoading) return;
         if (!user) { router.push('/auth'); return; }
@@ -132,37 +129,34 @@ export default function DashboardPage() {
             ? api.get('/auctions/my/analytics').catch(() => ({ data: null }))
             : Promise.resolve({ data: null });
 
-        Promise.all([fetchBids, fetchListings, fetchTxs, fetchWallet, fetchNotifs, fetchOrders, fetchAnalytics])
-            .then(([bidsRes, listingsRes, txRes, walletRes, notifRes, ordersRes, analyticsRes]) => {
-                setMyBids(bidsRes.data.bids || []);
-                setMyListings(listingsRes.data.auctions || []);
-                setTransactions(txRes.data.transactions || []);
-                setTxTotalPages(txRes.data.pagination?.pages || 1);
-                setWallet(walletRes.data);
-                setNotifications(notifRes.data.notifications || []);
-                setUnreadCount(notifRes.data.unreadCount || 0);
-                setWonOrders(ordersRes.data.wonAuctions || []);
-                setSoldOrders(ordersRes.data.soldAuctions || []);
-                setAnalytics(analyticsRes.data);
+        Promise.all([
+            fetchBids,
+            fetchListings,
+            fetchTxs,
+            fetchWallet,
+            fetchNotifs,
+            fetchOrders,
+            fetchAnalytics
+        ]).then(([bidsRes, listingsRes, txRes, walletRes, notifRes, ordersRes, analyticsRes]) => {
+            setMyBids(bidsRes.data.bids || []);
+            setMyListings(listingsRes.data.auctions || []);
+            setTransactions(txRes.data.transactions || []);
+            setTxTotalPages(txRes.data.pagination?.pages || 1);
+            setWallet(walletRes.data);
+            setNotifications(notifRes.data.notifications || []);
+            setUnreadCount(notifRes.data.unreadCount || 0);
+            setWonOrders(ordersRes.data.wonAuctions || []);
+            setSoldOrders(ordersRes.data.soldAuctions || []);
+            setAnalytics(analyticsRes.data);
 
-                api.get('/verification/my-status').then(r => setVerificationRequest(r.data.request)).catch(() => { });
-            })
-            .catch(err => {
-                console.error("Dashboard fetch error:", err);
-                setPageError('Unable to load dashboard data. Please try again.');
-            })
-            .finally(() => setLoading(false));
+            // Fetch verification status separately
+            api.get('/verification/my-status').then(r => setVerificationRequest(r.data.request)).catch(() => { });
+        }).catch((err) => {
+            console.error("Dashboard critical fetch error:", err);
+            setPageError('Connection lost. Please check your internet or try again later.');
+        }).finally(() => setLoading(false));
     }, [user, authLoading, txPage, txFilter]);
 
-    // ── Handlers ──
-    const handleLogout = async () => {
-        try {
-            await logout();
-            router.push('/login');
-        } catch (error) {
-            console.error('Logout failed:', error);
-        }
-    };
 
     const handleDepositRequest = async () => {
         if (!depositAmount || Number(depositAmount) < 100) {
@@ -172,755 +166,1107 @@ export default function DashboardPage() {
         setDepositing(true);
         setDepositMsg(null);
         try {
+            // 1. Get Payment Session ID from our backend
             const res = await api.post('/payments/create-order', { amount: Number(depositAmount) });
+            const sessionId = res.data.payment_session_id;
+            const orderId = res.data.order_id;
+
+            // 2. Initialize Cashfree Web SDK Dropin
             const cf = await initCashfree();
-            await cf.checkout({ paymentSessionId: res.data.paymentSessionId, returnUrl: `${window.location.origin}/dashboard?tab=finance&paid=true` });
-        } catch (err: any) {
-            setDepositMsg({ type: 'error', text: err.response?.data?.message || 'Payment initiation failed' });
-        } finally {
+            let checkoutOptions = {
+                paymentSessionId: sessionId,
+                redirectTarget: "_modal",
+            };
+
+            // 3. Open Cashfree UI
+            cf.checkout(checkoutOptions).then((result: any) => {
+                if (result.error) {
+                    setDepositMsg({ type: 'error', text: result.error.message || 'Payment failed or cancelled' });
+                    setDepositing(false);
+                }
+                if (result.redirect) {
+                    console.log('Payment will be redirected');
+                }
+                if (result.paymentDetails) {
+                    // 4. Verify payment via backend
+                    api.post('/payments/verify', { order_id: orderId }).then(() => {
+                        setDepositMsg({ type: 'success', text: 'Deposit successful!' });
+                        setDepositAmount('');
+                        api.get('/wallet').then(res => setWallet(res.data));
+                        api.get('/wallet/transactions?limit=10').then(res => setTransactions(res.data.transactions));
+                        refreshUser();
+                        setDepositing(false);
+                    }).catch(err => {
+                        setDepositMsg({ type: 'error', text: 'Payment verification failed.' });
+                        setDepositing(false);
+                    });
+                }
+            });
+
+        } catch (e: any) {
+            setDepositMsg({ type: 'error', text: e.response?.data?.error || 'Failed to initialize payment' });
             setDepositing(false);
         }
     };
 
-    const handleWithdrawRequest = async () => {
-        if (!withdrawAmount || Number(withdrawAmount) < 500) {
-            setWithdrawMsg({ type: 'error', text: 'Minimum withdrawal is ₹500' });
-            return;
-        }
-        if (wallet && Number(withdrawAmount) > wallet.availableBalance) {
-            setWithdrawMsg({ type: 'error', text: 'Insufficient available balance' });
-            return;
-        }
+    const handleWithdraw = async () => {
+        const amt = Number(withdrawAmount);
+        if (!amt || amt < 100) return setWithdrawMsg({ type: 'error', text: 'Minimum withdrawal is ₹100.' });
+        if (amt > (wallet?.availableBalance || 0)) return setWithdrawMsg({ type: 'error', text: 'Insufficient balance.' });
         setWithdrawing(true);
         setWithdrawMsg(null);
         try {
-            await api.post('/wallet/withdraw', { amount: Number(withdrawAmount) });
-            setWithdrawMsg({ type: 'success', text: 'Withdrawal request submitted for review' });
+            const res = await api.post('/wallet/withdraw', { amount: amt });
+            setWithdrawMsg({
+                type: 'success',
+                text: res.data.message || `₹${amt.toLocaleString()} withdrawal initiated!`
+            });
             setWithdrawAmount('');
-            const wRes = await api.get('/wallet'); setWallet(wRes.data);
-            const tRes = await api.get(`/wallet/transactions?limit=10&page=${txPage}`); setTransactions(tRes.data.transactions);
-        } catch (err: any) {
-            setWithdrawMsg({ type: 'error', text: err.response?.data?.message || 'Withdrawal failed' });
+            api.get('/wallet').then(res => setWallet(res.data));
+            api.get('/wallet/transactions?limit=10').then(res => setTransactions(res.data.transactions));
+            refreshUser();
+        } catch (e: any) {
+            setWithdrawMsg({ type: 'error', text: e.response?.data?.error || 'Withdrawal failed.' });
         } finally {
             setWithdrawing(false);
         }
     };
 
-    const handleSubmitVerification = async () => {
+    const markAllRead = async () => {
+        await api.patch('/notifications/read-all');
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        setUnreadCount(0);
+    };
+
+    const handleVerifySeller = async () => {
+        // Redirect to the verification tab
+        setActiveTab('verify');
+    };
+
+    const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'documentUrls' | 'assetUrls') => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
         setSubmittingVerification(true);
-        setVerificationMsg(null);
         try {
-            const res = await api.post('/verification/request', verificationForm);
-            setVerificationMsg({ type: 'success', text: 'Identity documents submitted successfully' });
-            setVerificationRequest(res.data.request);
-        } catch (err: any) {
-            setVerificationMsg({ type: 'error', text: err.response?.data?.message || 'Verification submission failed' });
+            const formData = new FormData();
+            files.forEach(f => formData.append('images', f));
+
+            const res = await api.post('/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            if (res.data.urls) {
+                setVerificationForm(p => ({
+                    ...p,
+                    [fieldName]: p[fieldName] ? p[fieldName] + '\n' + res.data.urls.join('\n') : res.data.urls.join('\n')
+                }));
+            }
+        } catch (err) {
+            console.error(err);
+            window.alert("Failed to upload document.");
         } finally {
             setSubmittingVerification(false);
         }
     };
 
-    const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'documentUrls' | 'assetUrls') => {
-        const files = e.target.files;
-        if (!files) return;
-        const formData = new FormData();
-        Array.from(files).forEach(f => formData.append('files', f));
+    const handleSubmitVerification = async () => {
+        if (!verificationForm.fullLegalName.trim() || !verificationForm.description.trim()) {
+            setVerificationMsg({ type: 'error', text: 'Full legal name and description are required.' });
+            return;
+        }
+        setSubmittingVerification(true);
+        setVerificationMsg(null);
         try {
-            const res = await api.post('/upload/multi', formData);
-            const urls = res.data.urls.join('\n');
-            setVerificationForm(prev => ({ ...prev, [field]: prev[field] ? prev[field] + '\n' + urls : urls }));
-        } catch (err) {
-            alert('File upload failed. Please try again.');
+            const docUrls = verificationForm.documentUrls.split('\n').map(u => u.trim()).filter(Boolean);
+            const assetUrls = verificationForm.assetUrls.split('\n').map(u => u.trim()).filter(Boolean);
+            const res = await api.post('/verification/apply', {
+                ...verificationForm,
+                documentUrls: docUrls,
+                assetUrls: assetUrls
+            });
+            setVerificationRequest(res.data.request);
+            setVerificationMsg({ type: 'success', text: 'Application submitted! An admin will review it within 24-48 hours.' });
+        } catch (e: any) {
+            setVerificationMsg({ type: 'error', text: e.response?.data?.error || 'Failed to submit application.' });
+        } finally {
+            setSubmittingVerification(false);
         }
     };
 
-    // ── Navigation Structure ──
-    const navCategories = [
-        {
-            title: 'Main',
-            items: [
-                { id: 'overview', label: 'My Hub', icon: Activity },
-                { id: 'bids', label: 'Active Bids', icon: Target },
-                { id: 'listings', label: 'My Listings', icon: Tag },
-            ]
-        },
-        {
-            title: 'Finance',
-            items: [
-                { id: 'finance', label: 'Wallet', icon: Wallet },
-                { id: 'transactions', label: 'History', icon: FileText },
-            ]
-        },
-        {
-            title: 'Account',
-            items: [
-                { id: 'verify', label: user?.verifiedStatus !== 'BASIC' ? 'Verified' : 'Verify Identity', icon: BadgeCheck },
-                { id: 'alerts', label: 'Alerts', icon: Bell, count: unreadCount },
-                { id: 'analytics', label: 'Performance', icon: BarChart3 },
-            ]
-        }
-    ];
+    const handleLogout = async () => { await logout(); router.push('/'); };
 
-    if (authLoading || loading) {
-        return (
-            <div className="min-h-screen bg-black flex items-center justify-center">
-                <div className="space-y-4 text-center">
-                    <div className="w-16 h-16 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin mx-auto" />
-                    <p className="text-gray-500 font-black uppercase tracking-widest text-xs animate-pulse">Syncing Encrypted Data...</p>
+    if (!user || loading) return (
+        <div className="container mx-auto px-4 md:px-8 py-24 max-w-7xl animate-fade-in">
+            <div className="h-48 w-full bg-zinc-900/40 rounded-[2rem] border border-white/10 p-8 flex justify-between animate-pulse">
+                <div className="space-y-4">
+                    <div className="h-4 w-24 bg-zinc-800 rounded-full" />
+                    <div className="h-8 w-48 bg-zinc-800 rounded-lg" />
+                    <div className="h-6 w-32 bg-zinc-800 rounded-full" />
                 </div>
+                <div className="w-32 h-16 bg-zinc-800 rounded-2xl" />
             </div>
-        );
-    }
+            <div className="mt-8 flex gap-2 overflow-hidden">
+                {[...Array(6)].map((_, i) => <div key={i} className="h-10 w-28 bg-zinc-900/60 rounded-xl flex-shrink-0" />)}
+            </div>
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-3xl" />)}
+            </div>
+            <div className="mt-8">
+                <Skeleton className="h-96 w-full rounded-3xl" />
+            </div>
+        </div>
+    );
 
-    if (!user) return null;
+    if (pageError) return (
+        <div className="min-h-screen flex items-center justify-center p-6">
+            <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-8 rounded-3xl max-w-sm w-full text-center shadow-2xl">
+                <AlertTriangle className="w-12 h-12 mx-auto mb-4" />
+                <h2 className="text-xl font-black mb-2 text-white">Dashboard Offline</h2>
+                <p className="text-sm opacity-80 mb-6">{pageError}</p>
+                <button onClick={() => window.location.reload()} className="w-full bg-red-500/20 hover:bg-red-500/30 font-bold py-3 rounded-xl transition-all border border-red-500/30">
+                    Retry Connection
+                </button>
+            </div>
+        </div>
+    );
+
+    const unreadCount = notifications.filter(n => !n.isRead).length;
+    const tabs = [
+        { id: 'overview', label: 'Home', icon: Activity },
+        { id: 'bids', label: 'Bids', icon: TrendingUp },
+        { id: 'wallet', label: 'Wallet', icon: Wallet },
+        { id: 'tx', label: 'Ledger', icon: Clock },
+        { id: 'orders', label: 'Wins', icon: Trophy },
+        { id: 'listings', label: 'Sales', icon: Package },
+        { id: 'analytics', label: 'Stats', icon: BarChart3 },
+        { id: 'verify', label: user.verifiedStatus !== 'BASIC' ? 'Verified ✓' : 'Get Verified', icon: BadgeCheck },
+        { id: 'notifs', label: `Alerts${unreadCount > 0 ? ` (${unreadCount})` : ''}`, icon: Bell }
+    ].filter(t => {
+        if (t.id === 'analytics' && user.verifiedStatus === 'BASIC' && user.role !== 'SELLER') return false;
+        return true;
+    });
+
 
     return (
-        <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans flex overflow-hidden">
-            {/* ── Sidebar Navigation (Desktop) ───────────────────────── */}
-            <aside className="hidden lg:flex w-72 flex-col border-r border-white/[0.05] bg-zinc-900/50 backdrop-blur-xl shrink-0">
-                <div className="p-8">
-                    <Link href="/" className="group flex items-center gap-3">
-                        <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center group-hover:rotate-12 transition-transform duration-500 shadow-[0_0_20px_rgba(220,38,38,0.4)]">
-                            <Flame className="w-6 h-6 text-white" />
-                        </div>
-                        <span className="text-2xl font-black tracking-tighter text-white">BIDORA</span>
-                    </Link>
-                </div>
+        <div className="mx-auto px-3 sm:px-4 md:px-8 py-16 sm:py-24 w-full md:max-w-[90%] lg:max-w-[85%] relative min-h-screen bg-[#0a0a0a]">
+            <div className="absolute top-0 left-1/4 w-[40vw] h-[40vw] bg-yellow-500/5 blur-[150px] rounded-full pointer-events-none -z-10" />
 
-                <nav className="flex-1 px-4 py-4 space-y-8 overflow-y-auto">
-                    {navCategories.map((cat, idx) => (
-                        <div key={idx} className="space-y-4">
-                            <h3 className="px-4 text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">{cat.title}</h3>
-                            <div className="space-y-1">
-                                {cat.items.map(item => {
-                                    const Icon = item.icon;
-                                    const isActive = activeTab === item.id;
-                                    return (
-                                        <button
-                                            key={item.id}
-                                            onClick={() => setActiveTab(item.id)}
-                                            className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 group relative ${isActive ? 'bg-red-600 text-white shadow-[0_10px_20px_-5px_rgba(220,38,38,0.4)]' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                                        >
-                                            <Icon className={`w-5 h-5 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
-                                            <span className="font-bold text-sm tracking-tight">{item.label}</span>
-                                            {item.count && item.count > 0 && (
-                                                <span className={`ml-auto px-2 py-0.5 rounded-lg text-[10px] font-black ${isActive ? 'bg-white text-red-600' : 'bg-red-600 text-white'}`}>
-                                                    {item.count}
-                                                </span>
-                                            )}
-                                            {isActive && (
-                                                <motion.div layoutId="nav-acc" className="absolute left-0 w-1 h-6 bg-white rounded-r-full" />
-                                            )}
-                                        </button>
-                                    );
-                                })}
+
+
+
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 bg-gradient-to-r from-zinc-900/80 to-zinc-900/40 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-6 sm:p-8 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] overflow-hidden">
+                <div className="w-full flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                    {/* Initials Avatar */}
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-yellow-400 rounded-full flex items-center justify-center text-zinc-950 text-2xl sm:text-3xl font-black shadow-[0_0_20px_rgba(250,204,21,0.3)] shrink-0">
+                        {user.fullName?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || 'B'}
+                    </div>
+
+                    <div>
+                        <p className="text-yellow-400 text-[10px] sm:text-sm font-black uppercase tracking-widest mb-1 sm:mb-2">Dashboard</p>
+                        <h1 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tighter mb-1 break-words text-white">
+                            Hey, <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500 drop-shadow-[0_0_10px_rgba(250,204,21,0.3)]">{user.fullName?.split(' ')[0] || 'Bidder'}</span> 👋
+                        </h1>
+                        <div className="flex items-center flex-wrap gap-4 mt-4">
+                            <span className="flex items-center text-yellow-400 text-sm bg-black/40 px-3 py-1.5 rounded-full border border-white/10 shadow-inner">
+                                {[...Array(5)].map((_, i) => (
+                                    <Star key={i} className={`w-3.5 h-3.5 ${i < Math.round(user.trustScore) ? 'fill-yellow-400 drop-shadow-[0_0_5px_rgba(250,204,21,0.5)]' : 'text-gray-600'}`} />
+                                ))}
+                                <span className="ml-2 font-bold text-white">{Number(user.trustScore).toFixed(1)}</span>
+                            </span>
+
+                            <span className={`flex items-center font-bold text-xs px-3 py-1.5 rounded-full border border-white/10 shadow-sm ${user.role === 'SELLER' ? 'text-blue-400 bg-blue-500/10 border-blue-500/20' : 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20'}`}>
+                                {user.role === 'SELLER' ? <Tag className="w-3.5 h-3.5 mr-1.5" /> : <ShoppingBag className="w-3.5 h-3.5 mr-1.5" />}
+                                {user.role}
+                            </span>
+
+                            <div className="flex items-center gap-4 ml-0 sm:ml-2">
+                                {user.verifiedStatus !== 'BASIC' && (
+                                    <span className="flex items-center font-bold text-blue-400 text-xs bg-blue-500/10 border border-blue-500/20 px-4 py-2 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.2)]">
+                                        <CheckCircle2 className="w-4 h-4 mr-1.5" /> Verified Seller
+                                    </span>
+                                )}
+                                {user.verifiedStatus === 'BASIC' && verificationRequest?.status === 'PENDING' && (
+                                    <span className="flex items-center font-bold text-orange-400 text-xs bg-orange-500/10 border border-orange-500/20 px-4 py-2 rounded-full">
+                                        <Clock className="w-3.5 h-3.5 mr-1.5" /> Verification Pending
+                                    </span>
+                                )}
+                                {user.verifiedStatus === 'BASIC' && verificationRequest?.status === 'UNDER_REVIEW' && (
+                                    <span className="flex items-center font-bold text-blue-400 text-xs bg-blue-500/10 border border-blue-500/20 px-4 py-2 rounded-full">
+                                        <Shield className="w-3.5 h-3.5 mr-1.5" /> Under Review
+                                    </span>
+                                )}
+                                {user.verifiedStatus === 'BASIC' && (!verificationRequest || verificationRequest.status === 'REJECTED') && (
+                                    <button onClick={handleVerifySeller} className="flex items-center font-bold text-blue-400 text-xs bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 px-4 py-2 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.2)] transition-colors">
+                                        <Shield className="w-4 h-4 mr-1.5" /> {verificationRequest?.status === 'REJECTED' ? 'Reapply for Verification' : 'Get Verified Seller Status'}
+                                    </button>
+                                )}
                             </div>
-                        </div>
-                    ))}
-                </nav>
-
-                <div className="p-4 border-t border-white/[0.05]">
-                    <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all group font-bold"
-                    >
-                        <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-                        <span>Sign Out</span>
-                    </button>
-                </div>
-            </aside>
-
-            {/* ── Main Content Area ──────────────────────────────────── */}
-            <main className="flex-1 flex flex-col h-screen relative overflow-y-auto">
-                {/* ── Header / Mobile Nav ── */}
-                <header className="sticky top-0 z-30 bg-zinc-950/80 backdrop-blur-xl border-b border-white/[0.05]">
-                    <div className="px-4 lg:px-10 py-6">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                            <div className="flex items-center gap-4">
-                                <div className="w-14 h-14 bg-red-600 rounded-2xl flex items-center justify-center font-black text-xl text-white shadow-[0_10px_20px_-5px_rgba(220,38,38,0.4)] transition-transform hover:rotate-6">
-                                    {user.fullName?.[0] || user.email?.[0].toUpperCase()}
-                                </div>
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <h1 className="text-2xl font-black tracking-tight text-white">Hey, {user.fullName?.split(' ')[0] || 'Member'} 👋</h1>
-                                        <span className="px-2 py-0.5 bg-red-600/10 text-red-500 rounded-lg text-[10px] font-black uppercase tracking-widest border border-red-600/20">{user.role}</span>
-                                    </div>
-                                    <p className="text-gray-500 text-sm font-medium">Welcome back to your dashboard</p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-4 bg-zinc-900/50 p-2 rounded-2xl border border-white/[0.05]">
-                                <div className="px-4 py-2">
-                                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Available Balance</p>
-                                    <p className="text-xl font-black text-white">₹{wallet?.availableBalance.toLocaleString() || '0'}</p>
-                                </div>
-                                <button
-                                    onClick={() => setActiveTab('finance')}
-                                    className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-black text-sm transition-all shadow-lg hover:shadow-red-600/20 active:scale-95"
-                                >
-                                    TOP UP
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Mobile Tab Scroller */}
-                        <div className="lg:hidden mt-8 -mx-4 px-4 overflow-x-auto no-scrollbar flex items-center gap-2">
-                            {navCategories.flatMap(c => c.items).map(item => (
-                                <button
-                                    key={item.id}
-                                    onClick={() => setActiveTab(item.id)}
-                                    className={`whitespace-nowrap flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === item.id ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' : 'bg-white/5 text-gray-400  hover:bg-white/10'}`}
-                                >
-                                    <item.icon className="w-4 h-4" />
-                                    {item.label}
-                                </button>
-                            ))}
                         </div>
                     </div>
-                </header>
+                </div>
 
-                {/* ── Tab Panels ────────────────────────────────────────── */}
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={activeTab}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                        className="p-4 lg:p-10 max-w-7xl mx-auto w-full pb-20"
-                    >
-                        {/* Error Notification */}
-                        {pageError && (
-                            <div className="mb-8 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl flex items-center gap-4">
-                                <AlertTriangle className="w-6 h-6 text-red-500" />
-                                <p className="text-red-400 font-bold text-sm">{pageError}</p>
+                <div className="flex items-center gap-4 mt-8 md:mt-0 w-full md:w-auto">
+                    <div className="flex-1 md:flex-none text-left bg-zinc-950/60 border border-white/[0.08] border-l-yellow-400 border-l-[3px] rounded-2xl px-6 py-4 sm:py-5 shadow-2xl min-w-[200px]">
+                        <p className="text-gray-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-2">Available Balance</p>
+                        <p className="text-2xl sm:text-4xl font-black text-white tracking-tight drop-shadow-md truncate">₹{(wallet?.availableBalance || 0).toLocaleString()}</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Tab Bar - Enhanced scroll for mobile */}
+            <div className="relative border-b border-white/[0.08] mb-8">
+                <div className="flex flex-nowrap gap-2 overflow-x-auto hide-scrollbar scroll-smooth snap-x pb-4">
+                    {tabs.map(tab => {
+                        const Icon = tab.icon;
+                        return (
+                            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                                className={`flex items-center gap-2.5 px-6 sm:px-8 py-3 sm:py-4 rounded-xl text-[12px] sm:text-base font-black transition-all duration-300 whitespace-nowrap snap-start ${activeTab === tab.id ? 'bg-yellow-400 text-zinc-950 shadow-[0_4px_20px_rgba(250,204,21,0.4)]' : 'text-gray-300 hover:text-white hover:bg-white/[0.05]'
+                                    }`}
+                            >
+                                <Icon className="w-5 h-5" /> {tab.label}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* Tab Content */}
+            <AnimatePresence mode="wait">
+                <motion.div key={activeTab}
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                >
+
+                    {/* ── Overview ── BENTO GRID ─────────────────────── */}
+                    {activeTab === 'overview' && (
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                {/* CARD: Wallet */}
+                                <div onClick={() => setActiveTab('wallet')} className="bg-zinc-900/40 backdrop-blur-3xl border border-white/[0.08] rounded-[2.5rem] p-8 flex flex-col justify-between items-center text-center group cursor-pointer hover:border-yellow-400/40 transition-all shadow-xl h-[280px]">
+                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em]">Available Funds</p>
+                                    <div className="flex flex-col items-center gap-2">
+                                        <Wallet className="w-8 h-8 text-yellow-400 mb-2" />
+                                        <p className="text-4xl font-black text-white tracking-tighter">₹{(wallet?.availableBalance || 0).toLocaleString()}</p>
+                                    </div>
+                                    <div className="w-full flex items-center justify-center gap-2 text-yellow-400 text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                                        Go To Wallet <ArrowUpRight className="w-3 h-3" />
+                                    </div>
+                                </div>
+
+                                {/* CARD: Active Bids */}
+                                <div onClick={() => setActiveTab('bids')} className="bg-zinc-900/40 backdrop-blur-3xl border border-white/[0.08] rounded-[2.5rem] p-8 flex flex-col justify-between items-center text-center group cursor-pointer hover:border-yellow-400/40 transition-all shadow-xl h-[280px]">
+                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em]">Active Bids</p>
+                                    <div className="flex flex-col items-center gap-2">
+                                        <Activity className="w-8 h-8 text-yellow-400 mb-2" />
+                                        <p className="text-5xl font-black text-white tracking-tighter">{myBids.length}</p>
+                                    </div>
+                                    <div className="w-full flex items-center justify-center gap-2 text-yellow-400 text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                                        Track Bids <ArrowUpRight className="w-3 h-3" />
+                                    </div>
+                                </div>
+
+                                {/* CARD: Revenue Potential */}
+                                <div className="bg-zinc-900/40 backdrop-blur-3xl border border-white/[0.08] rounded-[2.5rem] p-8 flex flex-col justify-between items-center text-center group transition-all shadow-xl h-[280px]">
+                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em]">Revenue Potential</p>
+                                    <div className="flex flex-col items-center gap-2">
+                                        <TrendingUp className="w-8 h-8 text-yellow-400 mb-2" />
+                                        <p className="text-4xl font-black text-white tracking-tighter">₹{(analytics?.revenuePotential || 0).toLocaleString()}</p>
+                                    </div>
+                                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                                        <motion.div initial={{ width: 0 }} animate={{ width: '65%' }} className="h-full bg-yellow-400" />
+                                    </div>
+                                </div>
+
+                                {/* CARD: Total Sales */}
+                                <div className="bg-zinc-900/40 backdrop-blur-3xl border border-white/[0.08] rounded-[2.5rem] p-8 flex flex-col justify-between items-center text-center group transition-all shadow-xl h-[280px]">
+                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em]">Total Sales</p>
+                                    <div className="flex flex-col items-center gap-2">
+                                        <Package className="w-8 h-8 text-yellow-400 mb-2" />
+                                        <p className="text-4xl font-black text-white tracking-tighter">₹{(analytics?.totalSales || 0).toLocaleString()}</p>
+                                    </div>
+                                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                                        <motion.div initial={{ width: 0 }} animate={{ width: '40%' }} className="h-full bg-yellow-400" />
+                                    </div>
+                                </div>
                             </div>
-                        )}
 
-                        {/* ── Overview Hub ─────────────────────────────── */}
-                        {activeTab === 'overview' && (
-                            <div className="space-y-12">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                                    {[
-                                        { label: 'Total Portfolio', value: `₹${(wallet?.walletBalance || 0).toLocaleString()}`, icon: <Wallet />, color: 'red' },
-                                        { label: 'Active Bids', value: myBids.length, icon: <Target />, color: 'blue' },
-                                        { label: 'My Listings', value: myListings.length, icon: <Tag />, color: 'purple' },
-                                        { label: 'Trust Level', value: user.verifiedStatus, icon: <ShieldCheck />, color: 'green' }
-                                    ].map((stat, i) => (
-                                        <div key={i} className="group bg-zinc-900/40 p-6 rounded-[2rem] border border-white/[0.05] hover:border-red-500/20 transition-all duration-500 hover:shadow-2xl overflow-hidden relative">
-                                            <div className={`absolute top-0 right-0 w-32 h-32 blur-[80px] rounded-full opacity-10 bg-${stat.color}-500 group-hover:opacity-20 transition-opacity`} />
-                                            <div className="relative">
-                                                <div className="flex items-center justify-between mb-4">
-                                                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-gray-400 group-hover:scale-110 group-hover:bg-red-600 transition-all duration-500 group-hover:text-white">
-                                                        {stat.icon}
-                                                    </div>
+                            {/* GROWTH CHART SECTION */}
+                            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden">
+                                <div className="flex justify-between items-start mb-10">
+                                    <div>
+                                        <p className="text-yellow-400 text-xs font-black uppercase tracking-[0.25em] mb-3">PERFORMANCE ANALYTICS</p>
+                                        <h3 className="text-3xl font-black text-white tracking-tighter">Your Auction Growth</h3>
+                                    </div>
+                                    <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
+                                        <BarChart3 className="w-8 h-8 text-yellow-400" />
+                                    </div>
+                                </div>
+
+                                <div className="h-[220px] bg-zinc-950/40 rounded-3xl border border-white/[0.06] flex items-center justify-center relative group">
+                                    {/* Empty State Centered */}
+                                    <div className="flex flex-col items-center text-center opacity-40 group-hover:opacity-60 transition-opacity">
+                                        <TrendingUp className="w-12 h-12 text-gray-400 mb-4 stroke-1" />
+                                        <p className="text-gray-400 text-sm font-bold uppercase tracking-widest">Your auction story starts here</p>
+                                    </div>
+
+                                    <div className="absolute inset-x-8 bottom-8 h-px bg-white/5" />
+                                </div>
+                            </div>
+
+                            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden mt-8">
+                                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-400/20 to-transparent" />
+                                <h3 className="font-black text-xl mb-6 flex items-center gap-3 text-white"><Activity className="w-5 h-5 text-yellow-400" /> Recent Bidding Activity</h3>
+                                <div className="space-y-6">
+                                    {myBids.slice(0, 3).map(bid => (
+                                        <div key={bid.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-6 bg-zinc-950/40 rounded-3xl border border-white/[0.05] hover:border-yellow-400/20 transition-all hover:bg-zinc-950/60 group">
+                                            <div className="flex items-center gap-5">
+                                                <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-white/5 shadow-inner">
+                                                    <Image src={bid.auction.imageUrls[0] || ''} alt="" fill className="object-cover group-hover:scale-110 transition-transform duration-500" sizes="64px" />
                                                 </div>
-                                                <p className="text-gray-500 font-black uppercase tracking-widest text-[10px]">{stat.label}</p>
-                                                <p className="text-3xl font-black text-white mt-1 tracking-tight">{stat.value}</p>
+                                                <div>
+                                                    <p className="text-white font-black text-base tracking-tight">{bid.auction.title}</p>
+                                                    <p className="text-gray-500 text-xs font-bold mt-1 uppercase tracking-widest">{new Date(bid.createdAt).toLocaleDateString()}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right flex items-center sm:flex-col justify-between sm:justify-center mt-4 sm:mt-0">
+                                                <p className="text-yellow-400 font-black text-2xl tracking-tighter">₹{Number(bid.amount).toLocaleString()}</p>
+                                                <span className={`text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full border mt-2 shadow-sm ${statusColor[bid.auction.status] || 'text-gray-400 border-white/10'}`}>{bid.auction.status}</span>
                                             </div>
                                         </div>
                                     ))}
-                                </div>
-
-                                <div className="grid lg:grid-cols-3 gap-10">
-                                    {/* Left Column - Active Bids */}
-                                    <div className="lg:col-span-2 space-y-8">
-                                        <div className="flex items-center justify-between">
-                                            <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
-                                                <Flame className="w-6 h-6 text-red-500" /> High-Stakes Activity
-                                            </h2>
-                                            <button onClick={() => setActiveTab('bids')} className="text-red-500 font-black text-xs uppercase tracking-[0.2em] flex items-center gap-1 hover:gap-2 transition-all">
-                                                View All <ArrowRight className="w-4 h-4" />
-                                            </button>
-                                        </div>
-
-                                        <div className="space-y-4">
-                                            {myBids.length === 0 ? (
-                                                <div className="bg-zinc-900/20 border-2 border-dashed border-white/[0.05] rounded-[2.5rem] p-16 text-center group cursor-pointer hover:border-red-500/20 transition-all duration-500">
-                                                    <div className="w-20 h-20 bg-white/5 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:rotate-12 transition-transform">
-                                                        <ShoppingBag className="w-10 h-10 text-gray-700" />
-                                                    </div>
-                                                    <h3 className="text-xl font-black text-white mb-2">No Active Bets</h3>
-                                                    <p className="text-gray-500 max-w-sm mx-auto font-medium">You haven't placed any bids yet. Explore high-ticket auctions and claim your legacy.</p>
-                                                    <Link href="/" className="inline-block mt-8 bg-white text-black px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all">Explore Marketplace</Link>
-                                                </div>
-                                            ) : myBids.slice(0, 3).map(bid => (
-                                                <div key={bid.id} className="group bg-zinc-900/50 border border-white/[0.05] rounded-[2rem] p-5 flex items-center gap-6 hover:border-red-500/20 transition-all duration-500">
-                                                    <div className="w-24 h-24 rounded-2xl overflow-hidden shrink-0 relative">
-                                                        <Image src={bid.auction.imageUrls[0]} alt={bid.auction.title} fill className="object-cover group-hover:scale-110 transition-transform duration-700" />
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-black text-white text-lg truncate tracking-tight">{bid.auction.title}</p>
-                                                        <div className="flex items-center gap-4 mt-2">
-                                                            <div>
-                                                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-0.5">My Bid</p>
-                                                                <p className="text-red-500 font-black">₹{bid.amount.toLocaleString()}</p>
-                                                            </div>
-                                                            <div className="w-px h-8 bg-white/10" />
-                                                            <div>
-                                                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-0.5">Status</p>
-                                                                <span className={`text-[10px] font-black uppercase tracking-widest ${bid.isWinning ? 'text-green-400' : 'text-orange-400'}`}>
-                                                                    {bid.isWinning ? 'Winning' : 'Outbid'}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <Link href={`/auctions/${bid.auction.id}`} className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-red-600 transition-all">
-                                                        <ChevronRight className="w-6 h-6" />
-                                                    </Link>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Right Column - Status & Notifications */}
-                                    <div className="space-y-8">
-                                        <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
-                                            <Bell className="w-6 h-6 text-red-500" /> Signals
-                                        </h2>
-                                        <div className="bg-zinc-900/50 border border-white/[0.05] rounded-[2.5rem] p-6 space-y-4">
-                                            {notifications.slice(0, 5).map(n => (
-                                                <button key={n.id} onClick={() => setActiveTab('alerts')} className="w-full group flex items-start gap-4 p-4 rounded-2xl hover:bg-white/5 transition-all text-left">
-                                                    <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${n.isRead ? 'bg-gray-800' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)] animate-pulse'}`} />
-                                                    <div className="min-w-0">
-                                                        <p className="text-sm font-bold text-white group-hover:text-red-400 transition-colors truncate">{n.title}</p>
-                                                        <p className="text-xs text-gray-500 mt-1 line-clamp-2">{n.body}</p>
-                                                    </div>
-                                                </button>
-                                            ))}
-                                            {notifications.length === 0 && <p className="text-center py-10 text-gray-600 font-bold uppercase tracking-widest text-[10px]">Zero Notifications</p>}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* ── Finance Tab ──────────────────────────────── */}
-                        {activeTab === 'finance' && (
-                            <div className="space-y-10">
-                                <div className="grid md:grid-cols-2 gap-10">
-                                    {/* Wallet Balance Card */}
-                                    <div className="bg-gradient-to-br from-red-600 to-red-800 rounded-[3rem] p-10 text-white relative overflow-hidden shadow-2xl">
-                                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-[100px] rounded-full -mr-20 -mt-20" />
-                                        <Activity className="absolute bottom-10 right-10 w-32 h-32 text-white/5 -rotate-12 pointer-events-none" />
-                                        <p className="text-[10px] font-black uppercase tracking-[0.4em] mb-4 opacity-80">Marketplace Identity Wallet</p>
-                                        <div className="space-y-2">
-                                            <p className="text-6xl font-black tracking-tighter">₹{wallet?.walletBalance.toLocaleString() || '0'}</p>
-                                            <div className="flex items-center gap-3">
-                                                <div className="px-3 py-1 bg-white/10 rounded-lg flex items-center gap-2 border border-white/20">
-                                                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(74,222,128,0.5)]" />
-                                                    <span className="text-[10px] font-black uppercase tracking-widest">₹{wallet?.availableBalance.toLocaleString()} Available</span>
-                                                </div>
-                                                {wallet?.pendingFunds && wallet.pendingFunds > 0 ? (
-                                                    <div className="px-3 py-1 bg-white/10 rounded-lg flex items-center gap-2 border border-white/20">
-                                                        <div className="w-2 h-2 bg-orange-400 rounded-full" />
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-orange-200">₹{wallet.pendingFunds.toLocaleString()} Pending</span>
-                                                    </div>
-                                                ) : null}
-                                            </div>
-                                        </div>
-                                        <div className="mt-12 flex items-center gap-4">
-                                            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-                                                <Shield className="w-6 h-6" />
-                                            </div>
-                                            <p className="text-xs font-bold leading-relaxed max-w-[200px] opacity-80">Secured with AES-256 military encryption & 2FA transaction logic.</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Actions Card */}
-                                    <div className="space-y-6">
-                                        {/* Deposit */}
-                                        <div className="bg-zinc-900 border border-white/[0.05] rounded-[2.5rem] p-8">
-                                            <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3">
-                                                <ArrowDownCircle className="w-6 h-6 text-red-500" /> Instant Deposit
-                                            </h3>
-                                            <div className="space-y-4">
-                                                <div className="relative">
-                                                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 font-black text-xl">₹</span>
-                                                    <input
-                                                        type="number"
-                                                        placeholder="Enter amount (min. 100)"
-                                                        value={depositAmount}
-                                                        onChange={e => setDepositAmount(e.target.value)}
-                                                        className="w-full bg-zinc-950 border border-white/[0.1] rounded-2xl pl-10 pr-6 py-5 text-white font-black text-xl outline-none focus:border-red-500 focus:ring-4 focus:ring-red-500/5 transition-all"
-                                                    />
-                                                </div>
-                                                {depositMsg && (
-                                                    <p className={`text-xs font-bold ${depositMsg.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>{depositMsg.text}</p>
-                                                )}
-                                                <button
-                                                    disabled={depositing}
-                                                    onClick={handleDepositRequest}
-                                                    className="w-full py-5 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl transition-all shadow-xl hover:shadow-red-600/20 active:scale-95 disabled:opacity-50"
-                                                >
-                                                    {depositing ? 'HANDSHAKING WITH GATEWAY...' : 'INSTANT RECHARGE via UPI/CARD'}
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Withdraw */}
-                                        <div className="bg-zinc-900/50 border border-white/[0.05] rounded-[2.5rem] p-8">
-                                            <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3">
-                                                <ArrowUpRight className="w-6 h-6 text-orange-500" /> High-Priority Payout
-                                            </h3>
-                                            <div className="flex gap-4">
-                                                <input
-                                                    type="number"
-                                                    placeholder="500+"
-                                                    value={withdrawAmount}
-                                                    onChange={e => setWithdrawAmount(e.target.value)}
-                                                    className="flex-1 bg-zinc-950 border border-white/[0.1] rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-white/20 transition-all"
-                                                />
-                                                <button
-                                                    disabled={withdrawing}
-                                                    onClick={handleWithdrawRequest}
-                                                    className="bg-zinc-800 hover:bg-white hover:text-black px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all disabled:opacity-50"
-                                                >
-                                                    {withdrawing ? 'INITIATING...' : 'WITHDRAW'}
-                                                </button>
-                                            </div>
-                                            {withdrawMsg && <p className="mt-4 text-xs font-bold text-orange-400">{withdrawMsg.text}</p>}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* ── Transaction History Tab ─────────────────────── */}
-                        {activeTab === 'transactions' && (
-                            <div className="space-y-8">
-                                <div className="flex items-center justify-between">
-                                    <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
-                                        <FileText className="w-6 h-6 text-red-500" /> Transaction Audit
-                                    </h2>
-                                    <select
-                                        value={txFilter}
-                                        onChange={e => { setTxFilter(e.target.value); setTxPage(1); }}
-                                        className="bg-zinc-900 border border-white/[0.05] rounded-xl px-4 py-2 text-xs font-black uppercase tracking-widest text-gray-400 outline-none"
-                                    >
-                                        <option value="">All Streams</option>
-                                        <option value="DEPOSIT">Deposits</option>
-                                        <option value="WITHDRAW">Withdrawals</option>
-                                        <option value="BID_HOLD">Bid Holds</option>
-                                        <option value="PURCHASE">Purchases</option>
-                                    </select>
-                                </div>
-
-                                <div className="bg-zinc-900/40 border border-white/[0.05] rounded-[2.5rem] overflow-hidden">
-                                    {transactions.length === 0 ? (
-                                        <p className="py-20 text-center text-gray-600 font-bold uppercase tracking-[0.3em] text-[10px]">Registry is empty</p>
-                                    ) : (
-                                        <div className="overflow-x-auto">
-                                            <table className="w-full">
-                                                <thead>
-                                                    <tr className="border-b border-white/[0.05]">
-                                                        <th className="px-8 py-6 text-left text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">Operation / ID</th>
-                                                        <th className="px-8 py-6 text-left text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">Date & Time</th>
-                                                        <th className="px-8 py-6 text-left text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">Type</th>
-                                                        <th className="px-8 py-6 text-right text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">Quantum</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {transactions.map((tx, idx) => (
-                                                        <tr key={tx.id} className={`group ${idx !== transactions.length - 1 ? 'border-b border-white/[0.03]' : ''} hover:bg-white/[0.02] transition-colors`}>
-                                                            <td className="px-8 py-6">
-                                                                <p className="font-black text-white tracking-tight">{tx.description}</p>
-                                                                <p className="text-[10px] font-mono text-gray-600 mt-1 uppercase">#{tx.id.slice(-12)}</p>
-                                                            </td>
-                                                            <td className="px-8 py-6">
-                                                                <p className="text-gray-400 font-bold text-sm">{new Date(tx.createdAt).toLocaleDateString()}</p>
-                                                                <p className="text-[10px] text-gray-600 uppercase font-black tracking-widest mt-1">{new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                                                            </td>
-                                                            <td className="px-8 py-6">
-                                                                <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${tx.status === 'SUCCESS' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
-                                                                        tx.status === 'PENDING' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' :
-                                                                            'bg-red-500/10 text-red-400 border border-red-500/20'
-                                                                    }`}>
-                                                                    {tx.type} | {tx.status}
-                                                                </span>
-                                                            </td>
-                                                            <td className="px-8 py-6 text-right">
-                                                                <p className={`text-lg font-black ${tx.amount > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                                    {tx.amount > 0 ? '+' : ''}{tx.amount.toLocaleString()}
-                                                                </p>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
+                                    {myBids.length === 0 && (
+                                        <div className="text-center py-10 bg-zinc-950/20 rounded-3xl border border-dashed border-white/10">
+                                            <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">No active bids yet</p>
                                         </div>
                                     )}
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+
+                    {/* ── My Bids ──────────────────────────────── */}
+                    {activeTab === 'bids' && (
+                        <div className="space-y-4">
+                            <h2 className="text-2xl font-black mb-6 flex items-center text-white"><TrendingUp className="w-6 h-6 mr-3 text-yellow-400" /> My Active Bids</h2>
+                            {myBids.length === 0 ? (
+                                <div className="text-center py-20 bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-3xl shadow-inner">
+                                    <div className="w-16 h-16 bg-yellow-400/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                                        <TrendingUp className="w-8 h-8 text-yellow-400" />
+                                    </div>
+                                    <h3 className="text-2xl font-black text-white mb-2 tracking-tight">No Bids Placed Yet</h3>
+                                    <p className="text-gray-400 mb-6 max-w-sm mx-auto">You haven't participated in any auctions recently. Discover rare items and place your first bid!</p>
+                                    <Link href="/" className="inline-flex items-center gap-2 bg-yellow-400 text-zinc-950 px-6 py-3 rounded-xl font-black hover:bg-yellow-300 transition-colors shadow-[0_10px_20px_-10px_rgba(250,204,21,0.5)]">
+                                        Explore Live Auctions <ArrowRight className="w-4 h-4" />
+                                    </Link>
+                                </div>
+                            ) : myBids.map(bid => (
+                                <div key={bid.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:border-yellow-400/30 hover:shadow-[0_15px_30px_-15px_rgba(0,0,0,0.8)] transition-all duration-300 gap-4">
+                                    <div className="flex items-center gap-5">
+                                        <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-zinc-800 shadow-md border border-white/5">
+                                            <Image src={bid.auction.imageUrls[0] || ''} alt="" fill className="object-cover" sizes="80px" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-white text-lg tracking-tight mb-1">{bid.auction.title}</h3>
+                                            <p className="text-gray-500 text-xs font-medium mb-3">Bid placed {new Date(bid.createdAt).toLocaleString()}</p>
+                                            <div className="flex items-center gap-2">
+                                                <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border shadow-sm ${statusColor[bid.auction.status] || 'text-gray-400'}`}>{bid.auction.status}</span>
+                                                {bid.isWinning && <span className="text-[10px] bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-2.5 py-1 rounded-md font-bold uppercase tracking-widest shadow-[0_0_10px_rgba(250,204,21,0.2)]">🏆 Winning</span>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t border-white/5 sm:border-0 pt-4 sm:pt-0 mt-2 sm:mt-0">
+                                        <div>
+                                            <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Your Max Bid</p>
+                                            <p className="text-3xl font-black text-yellow-400 drop-shadow-sm">₹{Number(bid.amount).toLocaleString()}</p>
+                                        </div>
+                                        <Link href={`/auctions/${bid.auction.id}`}
+                                            className="text-sm font-black text-zinc-950 bg-white hover:bg-gray-200 px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all sm:mt-4 shadow-md active:scale-95">
+                                            View Page <ArrowRight className="w-4 h-4" />
+                                        </Link>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* ── Payments (Wallet) ─────────────────────── */}
+                    {activeTab === 'wallet' && (
+                        <div className="space-y-6">
+                            <div className="grid md:grid-cols-2 gap-6">
+                                {/* Deposit Card */}
+                                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-3xl p-6 sm:p-7 relative overflow-hidden shadow-2xl">
+                                    <div className="absolute top-0 right-0 w-48 h-48 bg-yellow-400/10 blur-[80px] rounded-full pointer-events-none" />
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <Wallet className="w-8 h-8 text-yellow-400 drop-shadow-md" />
+                                        <h3 className="font-black text-white text-lg">Deposit Wallet</h3>
+                                    </div>
+                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Available Balance</p>
+                                    <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-2 tracking-tighter drop-shadow-md truncate">₹{(wallet?.availableBalance || 0).toLocaleString()}</h2>
+                                    <p className="text-gray-400 text-base font-black flex items-center gap-2 mb-8">
+                                        <Shield className="w-4 h-4 text-blue-400" /> Pending Escrow: ₹{(wallet?.pendingFunds || 0).toLocaleString()}
+                                    </p>
+
+                                    <div className="space-y-3">
+                                        <label className="block text-gray-500 text-[10px] font-black uppercase tracking-widest">Amount to Deposit</label>
+                                        <div className="flex items-center gap-3">
+                                            <div className="relative flex-1">
+                                                <Plus className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-yellow-400" />
+                                                <input
+                                                    type="number" placeholder="Min ₹100"
+                                                    value={depositAmount} onChange={e => setDepositAmount(e.target.value)}
+                                                    className="w-full bg-zinc-950/60 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-white text-base font-black outline-none focus:border-yellow-400 transition-all placeholder:text-gray-700 hover:bg-zinc-950/80"
+                                                />
+                                            </div>
+                                            <button onClick={handleDepositRequest} disabled={depositing}
+                                                className="shrink-0 px-8 py-4 bg-yellow-400 text-zinc-950 font-black rounded-2xl hover:bg-yellow-300 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl text-sm whitespace-nowrap active:scale-95">
+                                                {depositing ? <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <TrendingUp className="w-4 h-4" />}
+                                                Deposit
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {depositMsg && (
+                                        <p className={`mt-4 text-xs font-black px-4 py-4 rounded-xl border ${depositMsg.type === 'success' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                                            {depositMsg.text}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Withdraw Card */}
+                                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-3xl p-6 sm:p-7 relative overflow-hidden shadow-2xl">
+                                    <div className="absolute top-0 right-0 w-48 h-48 bg-blue-400/10 blur-[80px] rounded-full pointer-events-none" />
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <ArrowDownCircle className="w-8 h-8 text-blue-400 drop-shadow-md" />
+                                        <h3 className="font-black text-white text-lg">Payouts</h3>
+                                    </div>
+                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Funds Ready for Payout</p>
+                                    <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-2 tracking-tighter drop-shadow-md truncate">₹{(wallet?.availableBalance || 0).toLocaleString()}</h2>
+                                    <p className="text-blue-400 text-base font-black flex items-center gap-2 mb-8">
+                                        <Activity className="w-4 h-4" /> Credits in 2-3 working days
+                                    </p>
+
+                                    <div className="space-y-3">
+                                        <label className="block text-gray-500 text-[10px] font-black uppercase tracking-widest">Withdrawal Amount</label>
+                                        <div className="flex items-center gap-3">
+                                            <div className="relative flex-1">
+                                                <ArrowUpRight className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400" />
+                                                <input
+                                                    type="number" placeholder="Min ₹100"
+                                                    value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)}
+                                                    className="w-full bg-zinc-950/60 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-white text-base font-black outline-none focus:border-blue-400 transition-all placeholder:text-gray-700 hover:bg-zinc-950/80"
+                                                />
+                                            </div>
+                                            <button onClick={handleWithdraw} disabled={withdrawing}
+                                                className="shrink-0 px-8 py-4 bg-zinc-800 border border-white/10 text-white font-black rounded-2xl hover:bg-zinc-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl text-sm whitespace-nowrap active:scale-95">
+                                                {withdrawing ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+                                                Withdraw
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {withdrawMsg && (
+                                        <p className={`mt-4 text-xs font-black px-4 py-4 rounded-xl border ${withdrawMsg.type === 'success' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                                            {withdrawMsg.text}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Ledger (New Tab) ───────────────────────── */}
+                    {activeTab === 'tx' && (
+                        <div className="space-y-6">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-2">
+                                <h2 className="text-2xl font-black flex items-center text-white"><Clock className="w-6 h-6 mr-3 text-yellow-400" /> Transaction Ledger</h2>
+                                <div className="flex items-center gap-2 bg-zinc-900 border border-white/[0.08] p-1.5 rounded-2xl">
+                                    {['', 'DEPOSIT', 'WITHDRAWAL', 'ESCROW_HELD'].map(f => (
+                                        <button key={f} onClick={() => { setTxFilter(f); setTxPage(1); }}
+                                            className={`px-4 py-2 rounded-xl text-xs font-black transition-all duration-300 ${txFilter === f ? 'bg-yellow-400 text-zinc-950 shadow-[0_4px_10px_rgba(250,204,21,0.3)]' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                                            {f || 'All History'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-[2.5rem] p-6 sm:p-10 shadow-2xl">
+                                {transactions.length === 0 ? (
+                                    <div className="text-center py-20 bg-zinc-950/20 rounded-3xl border border-dashed border-white/10">
+                                        <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <Filter className="w-8 h-8 text-gray-700" />
+                                        </div>
+                                        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">No records found matching these criteria</p>
+                                    </div>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="border-b border-white/[0.08]">
+                                                    <th className="pb-6 text-xs font-black text-gray-500 uppercase tracking-widest pl-4">Type</th>
+                                                    <th className="pb-6 text-xs font-black text-gray-500 uppercase tracking-widest hidden md:table-cell">Timestamp</th>
+                                                    <th className="pb-6 text-xs font-black text-gray-500 uppercase tracking-widest lg:table-cell">Activity Log</th>
+                                                    <th className="pb-6 text-xs font-black text-gray-500 uppercase tracking-widest text-right pr-4">Amount</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-white/[0.04]">
+                                                {transactions.map((tx, idx) => (
+                                                    <tr key={tx.id} className={`group transition-colors h-20 ${idx % 2 === 0 ? 'bg-white/[0.01]' : 'bg-transparent'} hover:bg-white/[0.03]`}>
+                                                        <td className="py-2 pl-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/5 ${tx.type === 'DEPOSIT' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                                                                    tx.type === 'WITHDRAWAL' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                                                                        'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                                                    }`}>
+                                                                    {tx.type.replace('_', ' ')}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-2 text-sm text-gray-400 font-medium hidden md:table-cell">{new Date(tx.createdAt).toLocaleDateString()} · {new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                                                        <td className="py-2 text-sm text-gray-300 font-bold lg:table-cell max-w-md truncate">{tx.description}</td>
+                                                        <td className={`py-2 text-right font-black pr-4 text-lg ${Number(tx.amount) > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                            {Number(tx.amount) > 0 ? '+' : '-'}₹{Math.abs(Number(tx.amount)).toLocaleString()}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
 
                                 {/* Pagination */}
                                 {txTotalPages > 1 && (
-                                    <div className="flex items-center justify-center gap-6 pt-4">
-                                        <button
-                                            disabled={txPage === 1} onClick={() => setTxPage(p => p - 1)}
-                                            className="w-12 h-12 rounded-xl bg-zinc-900 border border-white/[0.05] flex items-center justify-center hover:bg-white/5 disabled:opacity-20 transition-all"
-                                        >
-                                            <ChevronLeft className="w-5 h-5" />
-                                        </button>
-                                        <span className="text-xs font-black uppercase tracking-[0.3em] text-gray-500">Ledger {txPage} of {txTotalPages}</span>
-                                        <button
-                                            disabled={txPage === txTotalPages} onClick={() => setTxPage(p => p + 1)}
-                                            className="w-12 h-12 rounded-xl bg-zinc-900 border border-white/[0.05] flex items-center justify-center hover:bg-white/5 disabled:opacity-20 transition-all"
-                                        >
-                                            <ChevronRight className="w-5 h-5" />
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* ── Seller Verification Tab ─────────────────────────── */}
-                        {activeTab === 'verify' && (
-                            <div className="space-y-12">
-                                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                                    <div>
-                                        <p className="text-red-500 font-black uppercase tracking-[0.4em] text-[10px] mb-2">Trust & Authenticity</p>
-                                        <h2 className="text-4xl font-black text-white tracking-tighter">Identity Verification</h2>
-                                    </div>
-                                    <div className="flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-white/[0.05] rounded-xl font-bold text-xs text-gray-500">
-                                        Status: <span className={`uppercase tracking-widest ${user.verifiedStatus !== 'BASIC' ? 'text-green-400' : 'text-red-500'}`}>{user.verifiedStatus}</span>
-                                    </div>
-                                </div>
-
-                                {/* Already Verified Block */}
-                                {user.verifiedStatus !== 'BASIC' && (
-                                    <div className="bg-gradient-to-br from-red-600/10 to-red-950/40 border border-red-500/20 rounded-[3rem] p-16 text-center relative overflow-hidden group shadow-3xl">
-                                        <div className="absolute inset-0 bg-red-400/5 blur-[120px] rounded-full" />
-                                        <CheckCircle2 className="w-24 h-24 text-red-500 mx-auto mb-8 animate-pulse" />
-                                        <h3 className="text-4xl font-black text-white mb-4 tracking-tighter">Credential Authenticated!</h3>
-                                        <p className="text-gray-400 text-lg max-w-xl mx-auto leading-relaxed font-medium">Your account is fully verified. You have authorized clearance for high-ticket auctions, unlimited listings, and priority settlement logic.</p>
-                                    </div>
-                                )}
-
-                                {/* Under Review / Submission Confirmation */}
-                                {user.verifiedStatus === 'BASIC' && verificationRequest && verificationRequest.status !== 'REJECTED' && (
-                                    <div className={`border rounded-[3rem] p-16 text-center shadow-3xl relative overflow-hidden group ${verificationRequest.status === 'UNDER_REVIEW' ? 'bg-blue-500/5 border-blue-500/30' : 'bg-red-500/5 border-red-500/30'}`}>
-                                        <div className="text-7xl mb-10 group-hover:scale-110 transition-transform duration-500">
-                                            {verificationRequest.status === 'UNDER_REVIEW' ? '🔍' : '⏳'}
-                                        </div>
-                                        <h3 className="text-4xl font-black text-white mb-4 tracking-tighter">
-                                            {verificationRequest.status === 'UNDER_REVIEW' ? 'Review Phase Active' : 'Vaulting Application...'}
-                                        </h3>
-                                        <p className="text-gray-400 text-lg max-w-xl mx-auto mb-10 font-medium">
-                                            Application logged on <span className="text-white font-black">{new Date(verificationRequest.createdAt).toLocaleDateString()}</span>. Our compliance nodes are validating your digital footprint.
-                                        </p>
-                                        <span className={`px-10 py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-sm border ${verificationRequest.status === 'UNDER_REVIEW' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
-                                            {verificationRequest.status.replace('_', ' ')}
-                                        </span>
-                                    </div>
-                                )}
-
-                                {/* Application Form */}
-                                {user.verifiedStatus === 'BASIC' && (!verificationRequest || verificationRequest.status === 'REJECTED') && (
-                                    <div className="space-y-12">
-                                        {verificationRequest?.status === 'REJECTED' && (
-                                            <div className="bg-red-500/10 border border-red-500/30 rounded-[2.5rem] p-8 flex items-center gap-6">
-                                                <XCircle className="w-12 h-12 text-red-500 shrink-0" />
-                                                <div>
-                                                    <h4 className="text-xl font-black text-white">Action Required</h4>
-                                                    <p className="text-red-400/80 font-medium mt-1">Reason: "{verificationRequest.adminNotes || 'Information provided was insufficient.'}"</p>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/[0.05] rounded-[3rem] p-12 space-y-12">
-                                            <div className="grid md:grid-cols-2 gap-10">
-                                                <div className="space-y-3">
-                                                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 ml-2">Identity Signature *</label>
-                                                    <input
-                                                        type="text" placeholder="Legal Full Name"
-                                                        value={verificationForm.fullLegalName}
-                                                        onChange={e => setVerificationForm(p => ({ ...p, fullLegalName: e.target.value }))}
-                                                        className="w-full bg-zinc-950 border border-white/[0.08] rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-red-500 transition-all"
-                                                    />
-                                                </div>
-                                                <div className="space-y-3">
-                                                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 ml-2">Business Type *</label>
-                                                    <select
-                                                        value={verificationForm.businessType}
-                                                        onChange={e => setVerificationForm(p => ({ ...p, businessType: e.target.value }))}
-                                                        className="w-full bg-zinc-950 border border-white/[0.08] rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-red-500 transition-all appearance-none cursor-pointer"
-                                                    >
-                                                        <option value="individual">Individual Collector</option>
-                                                        <option value="business">Registered Enterprise</option>
-                                                        <option value="dealer">Professional Dealer</option>
-                                                    </select>
-                                                </div>
-                                                <div className="space-y-3">
-                                                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 ml-2">Compliance ID (PAN) *</label>
-                                                    <input
-                                                        type="text" placeholder="ABCDE1234F"
-                                                        value={verificationForm.panNumber}
-                                                        onChange={e => setVerificationForm(p => ({ ...p, panNumber: e.target.value.toUpperCase() }))}
-                                                        className="w-full bg-zinc-950 border border-white/[0.08] rounded-2xl px-6 py-4 text-white font-black tracking-widest outline-none focus:border-red-500 transition-all"
-                                                    />
-                                                </div>
-                                                <div className="space-y-3">
-                                                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 ml-2">Aadhaar (Last 4) *</label>
-                                                    <input
-                                                        type="text" maxLength={4} placeholder="XXXX"
-                                                        value={verificationForm.aadhaarLast4}
-                                                        onChange={e => setVerificationForm(p => ({ ...p, aadhaarLast4: e.target.value.replace(/\D/g, '') }))}
-                                                        className="w-full bg-zinc-950 border border-white/[0.08] rounded-2xl px-6 py-4 text-white font-black tracking-[0.5em] outline-none focus:border-red-500 transition-all"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="space-y-3">
-                                                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 ml-2">Legacy Portfolio Declaration *</label>
-                                                <textarea
-                                                    rows={4} placeholder="Briefly describe your specialization (Luxury sneakers, fine art, collectibles)..."
-                                                    value={verificationForm.description}
-                                                    onChange={e => setVerificationForm(p => ({ ...p, description: e.target.value }))}
-                                                    className="w-full bg-zinc-950 border border-white/[0.08] rounded-3xl px-8 py-6 text-white font-medium outline-none focus:border-red-500 transition-all resize-none"
-                                                />
-                                            </div>
-
-                                            {/* Document Vault Section */}
-                                            <div className="bg-zinc-950/40 border border-white/[0.05] rounded-[2.5rem] p-10 relative overflow-hidden">
-                                                <div className="absolute top-0 left-0 w-2 h-full bg-red-600/50" />
-                                                <div className="flex items-center gap-3 mb-8">
-                                                    <ShieldCheck className="w-8 h-8 text-red-500" />
-                                                    <h3 className="text-xl font-black text-white uppercase tracking-widest">Document Vault</h3>
-                                                </div>
-
-                                                <div className="grid lg:grid-cols-2 gap-12">
-                                                    {/* ID Proofs */}
-                                                    <div className="space-y-6">
-                                                        <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                                                            <UserCheck className="w-4 h-4" /> Proof of Identity
-                                                        </p>
-                                                        <div className="flex flex-wrap gap-4">
-                                                            {verificationForm.documentUrls.split('\n').filter(Boolean).map((url, i) => (
-                                                                <div key={i} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-white/10 group">
-                                                                    <Image src={url} alt="ID" fill className="object-cover" />
-                                                                    <button onClick={() => setVerificationForm(p => ({ ...p, documentUrls: p.documentUrls.split('\n').filter((_, idx) => idx !== i).join('\n') }))} className="absolute inset-0 bg-red-600/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
-                                                                        <Trash2 className="w-6 h-6 text-white" />
-                                                                    </button>
-                                                                </div>
-                                                            ))}
-                                                            <label className="w-24 h-24 rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-red-500/50 hover:bg-red-500/5 transition-all text-gray-600 hover:text-red-500">
-                                                                <Plus className="w-6 h-6 mb-1" />
-                                                                <span className="text-[8px] font-black uppercase">ADD ID</span>
-                                                                <input type="file" multiple accept="image/*" className="hidden" onChange={e => handleDocumentUpload(e, 'documentUrls')} />
-                                                            </label>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Asset Proofs */}
-                                                    <div className="space-y-6">
-                                                        <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                                                            <Hexagon className="w-4 h-4" /> Provenance Proof (Asset Invoices)
-                                                        </p>
-                                                        <div className="flex flex-wrap gap-4">
-                                                            {verificationForm.assetUrls.split('\n').filter(Boolean).map((url, i) => (
-                                                                <div key={i} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-white/10 group">
-                                                                    <Image src={url} alt="Asset" fill className="object-cover" />
-                                                                    <button onClick={() => setVerificationForm(p => ({ ...p, assetUrls: p.assetUrls.split('\n').filter((_, idx) => idx !== i).join('\n') }))} className="absolute inset-0 bg-red-600/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
-                                                                        <Trash2 className="w-6 h-6 text-white" />
-                                                                    </button>
-                                                                </div>
-                                                            ))}
-                                                            <label className="w-24 h-24 rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-red-500/50 hover:bg-red-500/5 transition-all text-gray-600 hover:text-red-500">
-                                                                <Plus className="w-6 h-6 mb-1" />
-                                                                <span className="text-[8px] font-black uppercase">ADD DOC</span>
-                                                                <input type="file" multiple accept="image/*" className="hidden" onChange={e => handleDocumentUpload(e, 'assetUrls')} />
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {verificationMsg && (
-                                                <p className={`text-center py-6 rounded-2xl font-black text-sm border ${verificationMsg.type === 'success' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>
-                                                    {verificationMsg.text}
-                                                </p>
-                                            )}
-
-                                            <button
-                                                onClick={handleSubmitVerification}
-                                                disabled={submittingVerification}
-                                                className="w-full py-6 bg-red-600 hover:bg-red-700 text-white font-black rounded-[2rem] text-xl shadow-2xl hover:shadow-red-600/30 transition-all active:scale-95 disabled:opacity-50"
-                                            >
-                                                {submittingVerification ? 'SEALING VAULT...' : 'ENCRYPT & SUBMIT APPLICATION'}
+                                    <div className="flex items-center justify-between mt-10 pt-10 border-t border-white/[0.08]">
+                                        <p className="text-xs text-gray-500 font-black uppercase tracking-widest">Page {txPage} of {txTotalPages}</p>
+                                        <div className="flex gap-3">
+                                            <button disabled={txPage === 1} onClick={() => setTxPage(p => p - 1)}
+                                                className="p-3 border border-white/10 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30 transition-all active:scale-90">
+                                                <ChevronLeft className="w-6 h-6" />
+                                            </button>
+                                            <button disabled={txPage === txTotalPages} onClick={() => setTxPage(p => p + 1)}
+                                                className="p-3 border border-white/10 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30 transition-all active:scale-90">
+                                                <ChevronRight className="w-6 h-6" />
                                             </button>
                                         </div>
                                     </div>
                                 )}
-
-                                <div className="grid sm:grid-cols-3 gap-6">
-                                    {[
-                                        { title: 'Zero-Knowledge Privacy', desc: 'Your raw documents are never seen by third parties. They are hashed and processed through encrypted nodes.', icon: <Shield /> },
-                                        { title: 'Fast-Track Review', desc: 'Our dedicated verification team reviews applications within 24 business hours for uninterrupted trading.', icon: <Clock /> },
-                                        { title: 'Seller Tier-1 Access', desc: 'Removing identity caps unlocks unlimited listing capability and escrow-protected transfers.', icon: <Trophy /> }
-                                    ].map((benefit, i) => (
-                                        <div key={i} className="p-8 bg-zinc-900 border border-white/[0.05] rounded-[2rem] hover:border-red-500/20 transition-all">
-                                            <div className="w-12 h-12 rounded-xl bg-red-600/10 flex items-center justify-center text-red-500 mb-6">{benefit.icon}</div>
-                                            <p className="text-lg font-black text-white mb-2 tracking-tight">{benefit.title}</p>
-                                            <p className="text-gray-500 text-sm font-medium leading-relaxed">{benefit.desc}</p>
-                                        </div>
-                                    ))}
-                                </div>
                             </div>
-                        )}
+                        </div>
+                    )}
 
-                        {/* ── Alerts/Signals Tab ────────────────────────── */}
-                        {activeTab === 'alerts' && (
-                            <div className="space-y-8">
-                                <div className="flex items-center justify-between">
-                                    <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
-                                        <Bell className="w-6 h-6 text-red-500" /> System Signals
-                                    </h2>
-                                    <button className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-red-500 transition-colors">Mark all as read</button>
+                    {/* ── Insights (New Tab) ──────────────────────── */}
+                    {activeTab === 'analytics' && (
+                        <div className="space-y-6">
+                            <h2 className="text-2xl font-black flex items-center"><BarChart3 className="w-6 h-6 mr-3 text-yellow-400" /> Seller Insights</h2>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                {[
+                                    { label: 'Total Earnings', value: `₹${analytics?.totalSales.toLocaleString()}`, icon: Trophy, color: 'text-yellow-400' },
+                                    { label: 'Revenue Potential', value: `₹${analytics?.revenuePotential.toLocaleString()}`, icon: Target, color: 'text-blue-400', desc: 'Active bids - fees' },
+                                    { label: 'Sales Velocity', value: analytics?.recentSales, icon: Zap, color: 'text-orange-400', desc: 'Last 7 days' },
+                                    { label: 'Total Listings', value: myListings.length, icon: Package, color: 'text-purple-400' }
+                                ].map((item, i) => (
+                                    <div key={i} className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-lg">
+                                        <item.icon className={`w-8 h-8 ${item.color} mb-4`} />
+                                        <p className="text-gray-500 text-xs font-black uppercase tracking-widest">{item.label}</p>
+                                        <p className="text-3xl font-black text-white mt-1">{item.value}</p>
+                                        {item.desc && <p className="text-[10px] text-gray-600 font-bold mt-1">{item.desc}</p>}
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="grid lg:grid-cols-3 gap-6">
+                                <div className="lg:col-span-2 bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8">
+                                    <h3 className="font-black text-xl mb-6 flex items-center gap-2"><Activity className="w-5 h-5 text-yellow-400" /> Bids Received (Last 7 Days)</h3>
+                                    <div className="h-64 flex items-end justify-between gap-2 px-2">
+                                        {(analytics?.performance || [0, 0, 0, 0, 0, 0, 0]).map((h, i) => {
+                                            const daysAgo = 6 - i;
+                                            const label = daysAgo === 0 ? 'Today' : `D-${daysAgo}`;
+                                            return (
+                                                <div key={i} className="flex-1 space-y-2 group">
+                                                    <div className="relative h-full flex items-end">
+                                                        <motion.div
+                                                            initial={{ height: 0 }} animate={{ height: `${Math.max(h, 5)}%` }}
+                                                            className="w-full bg-gradient-to-t from-yellow-400/20 to-yellow-400 rounded-lg group-hover:to-yellow-300 transition-all cursor-pointer relative"
+                                                        >
+                                                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-yellow-400 text-black text-[10px] px-1.5 py-0.5 rounded font-black opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                                                {h > 5 ? h + '%' : '0'}
+                                                            </div>
+                                                        </motion.div>
+                                                    </div>
+                                                    <p className="text-center text-[10px] text-gray-600 font-bold">{label}</p>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <p className="text-center text-xs text-gray-500 mt-6 font-medium italic">Showing platform engagement score relative to your listings over last 7 days.</p>
                                 </div>
 
-                                <div className="space-y-4">
-                                    {notifications.length === 0 ? (
-                                        <div className="py-32 text-center bg-zinc-900/40 rounded-[3rem] border border-white/[0.05]">
-                                            <Bell className="w-16 h-16 text-gray-800 mx-auto mb-6" />
-                                            <p className="text-gray-600 font-bold uppercase tracking-[0.3em] text-xs">No signals received</p>
+                                <div className="space-y-6">
+                                    {/* Seller Level Card */}
+                                    <div className="bg-gradient-to-br from-yellow-500/10 to-amber-500/5 backdrop-blur-xl border border-yellow-500/20 rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-[0_10px_30px_-15px_rgba(250,204,21,0.3)]">
+                                        <div className="absolute -top-10 -right-10 text-yellow-500/10">
+                                            <Trophy className="w-40 h-40" />
                                         </div>
-                                    ) : notifications.map(n => (
-                                        <div key={n.id} className={`group bg-zinc-900/50 border rounded-[2rem] p-6 flex items-start gap-6 transition-all ${n.isRead ? 'border-white/[0.05] opacity-60' : 'border-red-500/30 bg-red-500/[0.02] shadow-[0_10px_30px_-15px_rgba(239,68,68,0.1)]'}`}>
-                                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0 transition-transform group-hover:scale-110 ${n.isRead ? 'bg-zinc-800 text-gray-500' : 'bg-red-600/20 text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.2)]'}`}>
-                                                {n.type === 'AUCTION_WON' ? '🏆' : n.type === 'OUTBID' ? '🔔' : '💬'}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between gap-4">
-                                                    <p className={`text-lg font-black tracking-tight ${n.isRead ? 'text-gray-300' : 'text-white'}`}>{n.title}</p>
-                                                    {!n.isRead && <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,1)] animate-ping" />}
+                                        <div className="relative z-10">
+                                            <div className="flex items-center gap-3 mb-4">
+                                                <div className="bg-yellow-400 text-black w-10 h-10 rounded-xl flex items-center justify-center font-black text-xl shadow-lg">
+                                                    {analytics?.sellerLevel?.level || 1}
                                                 </div>
-                                                <p className={`mt-2 text-sm font-medium leading-relaxed ${n.isRead ? 'text-gray-500' : 'text-gray-400'}`}>{n.body}</p>
-                                                <p className="mt-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-600">
-                                                    <Clock className="w-3 h-3" /> {new Date(n.createdAt).toLocaleString()}
+                                                <div>
+                                                    <h3 className="font-black text-white text-lg">Seller Level {analytics?.sellerLevel?.level || 1}</h3>
+                                                    <p className="text-xs font-bold text-yellow-400 uppercase tracking-widest">Premium Status</p>
+                                                </div>
+                                            </div>
+                                            <div className="mt-8">
+                                                <div className="flex justify-between text-xs font-bold mb-2">
+                                                    <span className="text-gray-400">Current</span>
+                                                    <span className="text-gray-400">Level {(analytics?.sellerLevel?.level || 1) + 1} (₹{(analytics?.sellerLevel?.nextTier || 10000).toLocaleString()})</span>
+                                                </div>
+                                                <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden shadow-inner border border-white/5">
+                                                    <motion.div
+                                                        initial={{ width: 0 }} animate={{ width: `${analytics?.sellerLevel?.progress || 0}%` }}
+                                                        className="h-full bg-gradient-to-r from-yellow-500 to-yellow-300"
+                                                    />
+                                                </div>
+                                                <p className="text-[10px] text-gray-500 font-bold mt-3 text-center">
+                                                    {analytics?.sellerLevel?.progress || 0}% towards next rank
                                                 </p>
                                             </div>
                                         </div>
-                                    ))}
+                                    </div>
+
+                                    {/* Audience Interest */}
+                                    <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8">
+                                        <h3 className="font-black text-xl mb-6">Audience Interest</h3>
+                                        <div className="space-y-6">
+                                            <div className="p-4 bg-zinc-950/60 rounded-2xl border border-white/5">
+                                                <div className="flex justify-between mb-2">
+                                                    <span className="text-sm font-bold text-gray-400">Winning Bids</span>
+                                                    <span className="text-sm font-black text-yellow-400">{myListings.filter(a => a.status === 'PAID' || a.status === 'SHIPPED').length}</span>
+                                                </div>
+                                                <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-yellow-400" style={{ width: '65%' }} />
+                                                </div>
+                                            </div>
+                                            <div className="p-4 bg-zinc-950/60 rounded-2xl border border-white/5">
+                                                <div className="flex justify-between mb-2">
+                                                    <span className="text-sm font-bold text-gray-400">Total Views</span>
+                                                    <span className="text-sm font-black text-blue-400">1.2K</span>
+                                                </div>
+                                                <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-blue-400" style={{ width: '80%' }} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        )}
+                        </div>
+                    )}
 
-                        {/* ── Performance Tab ─────────────────────────── */}
-                        {activeTab === 'analytics' && (
-                            <div className="py-20 text-center space-y-6">
-                                <BarChart3 className="w-24 h-24 text-red-500 mx-auto animate-pulse" />
-                                <h3 className="text-3xl font-black text-white tracking-tighter">Advanced Performance Metrics</h3>
-                                <p className="text-gray-500 max-w-sm mx-auto font-medium">We are currently aggregating high-frequency trading data for your account. Performance visualizations will be unlocked after your first confirmed sale.</p>
-                                <div className="inline-flex items-center gap-2 px-6 py-2 bg-red-600/10 border border-red-500/20 rounded-full">
-                                    <div className="w-2 h-2 bg-red-500 rounded-full animate-ping" />
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500">Live Backend Stream Active</span>
+                    {/* ── Orders ────────────────────────────────── */}
+                    {activeTab === 'orders' && (
+                        <div className="space-y-12">
+                            <h2 className="text-2xl font-black flex items-center text-white"><Trophy className="w-6 h-6 mr-3 text-yellow-400" /> Winner's Circle</h2>
+
+                            <div className="space-y-12">
+                                {/* Won Orders */}
+                                <div className="space-y-6">
+                                    <h3 className="text-sm font-black text-gray-200 px-2 uppercase tracking-[0.2em]">Items You Won</h3>
+                                    <div className="space-y-4">
+                                        {wonOrders.length === 0 ? (
+                                            <div className="text-center py-24 bg-zinc-900/40 rounded-[2.5rem] border border-white/[0.08] relative overflow-hidden group">
+                                                <Trophy className="absolute inset-0 m-auto w-40 h-40 text-white/[0.03] pointer-events-none group-hover:scale-110 transition-transform duration-1000" />
+                                                <p className="text-gray-500 font-bold uppercase tracking-widest text-xs relative z-10">No items in your collection yet.</p>
+                                            </div>
+                                        ) : wonOrders.map(order => (
+                                            <div key={order.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:border-yellow-400/30 transition-all gap-4 shadow-xl">
+                                                <div className="flex items-center gap-5">
+                                                    <div className="relative w-24 h-24 rounded-2xl overflow-hidden bg-zinc-800 shadow-md border border-white/5">
+                                                        <Image src={order.imageUrls[0] || ''} alt="" fill className="object-cover" sizes="96px" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-black text-white text-xl tracking-tight mb-1">{order.title}</h3>
+                                                        <p className="text-gray-500 text-xs font-bold mt-1 uppercase tracking-widest mb-3">Seller: {order.seller.fullName}</p>
+                                                        <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg border shadow-sm ${statusColor[order.status] || 'text-gray-400'}`}>{order.status}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-6">
+                                                    <p className="text-3xl font-black text-white">₹{Number(order.currentHighestBid).toLocaleString()}</p>
+                                                    <Link href={`/orders/${order.id}`} className="text-xs font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-8 py-3 rounded-xl transition-all shadow-[0_10px_20px_-10px_rgba(250,204,21,0.5)] active:scale-95">
+                                                        Track Order
+                                                    </Link>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Sold Orders */}
+                                <div className="space-y-6">
+                                    <h3 className="text-sm font-black text-gray-200 px-2 uppercase tracking-[0.2em]">Items You Sold</h3>
+                                    <div className="space-y-4">
+                                        {soldOrders.length === 0 ? (
+                                            <div className="text-center py-24 bg-zinc-900/40 rounded-[2.5rem] border border-white/[0.08] relative overflow-hidden group">
+                                                <Activity className="absolute inset-0 m-auto w-40 h-40 text-white/[0.03] pointer-events-none group-hover:scale-110 transition-transform duration-1000" />
+                                                <p className="text-gray-500 font-bold uppercase tracking-widest text-xs relative z-10">No sales transactions logged yet.</p>
+                                            </div>
+                                        ) : soldOrders.map(order => {
+                                            const winner = order.bids.find((b: any) => b.isWinning)?.bidder;
+                                            return (
+                                                <div key={order.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:border-green-400/30 transition-all gap-4 shadow-xl">
+                                                    <div className="flex items-center gap-5">
+                                                        <div className="relative w-24 h-24 rounded-2xl overflow-hidden bg-zinc-800 shadow-md border border-white/5">
+                                                            <Image src={order.imageUrls[0] || ''} alt="" fill className="object-cover" sizes="96px" />
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="font-black text-white text-xl tracking-tight mb-1">{order.title}</h3>
+                                                            <p className="text-gray-500 text-xs font-bold mt-1 uppercase tracking-widest mb-3">Buyer: {winner?.fullName || 'Winner'}</p>
+                                                            <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg border shadow-sm ${statusColor[order.status] || 'text-gray-400'}`}>{order.status}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-6">
+                                                        <p className="text-3xl font-black text-white">₹{Number(order.currentHighestBid).toLocaleString()}</p>
+                                                        <Link href={`/orders/${order.id}`} className="text-xs font-black text-white bg-white/10 hover:bg-white/20 px-8 py-3 rounded-xl transition-all shadow-sm active:scale-95">
+                                                            Manage Sale
+                                                        </Link>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             </div>
-                        )}
+                        </div>
+                    )}
 
-                    </motion.div>
-                </AnimatePresence>
-            </main>
+                    {/* ── Listings ─────────────────────────────── */}
+                    {activeTab === 'listings' && (
+                        <div className="space-y-6">
+                            <div className="flex items-center justify-between mb-8">
+                                <h2 className="text-2xl font-black flex items-center text-white"><Package className="w-6 h-6 mr-3 text-yellow-400" /> My Listings</h2>
+                                <Link href="/create-auction"
+                                    className="flex items-center gap-2 px-8 py-4 bg-white text-zinc-950 font-black rounded-2xl hover:bg-gray-200 transition-all shadow-xl active:scale-95">
+                                    <Plus className="w-5 h-5" /> New Auction
+                                </Link>
+                            </div>
+                            {myListings.length === 0 ? (
+                                <div className="text-center py-24 bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-[2.5rem] shadow-inner">
+                                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-8">
+                                        <Package className="w-10 h-10 text-white" />
+                                    </div>
+                                    <h3 className="text-2xl font-black text-white mb-3 tracking-tight">Got Rare Items?</h3>
+                                    <p className="text-gray-500 mb-8 max-w-sm mx-auto font-medium">Turn your collectibles into cash securely. Bidora handles the money, you handle the shipping.</p>
+                                    <Link href="/create-auction"
+                                        className="inline-flex items-center gap-3 bg-gradient-to-b from-yellow-400 to-yellow-500 text-zinc-950 px-8 py-4 border border-yellow-300 rounded-2xl font-black hover:-translate-y-1 transition-all duration-300 shadow-[0_10px_30px_-15px_rgba(250,204,21,0.6)]">
+                                        Start Your Journey <ArrowRight className="w-5 h-5" />
+                                    </Link>
+                                </div>
+                            ) : myListings.map(auction => (
+                                <div key={auction.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-[2.5rem] p-6 lg:p-8 flex flex-col sm:flex-row sm:items-center justify-between hover:border-white/20 hover:shadow-[0_20px_40px_-20px_rgba(0,0,0,0.8)] transition-all duration-500 gap-6">
+                                    <div className="flex items-center gap-6">
+                                        <div className="relative w-24 h-24 rounded-[1.5rem] overflow-hidden bg-zinc-800 shadow-xl border border-white/10 group">
+                                            <Image src={auction.imageUrls[0] || ''} alt="" fill className="object-cover group-hover:scale-110 transition-transform duration-700" sizes="96px" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-black text-white text-xl tracking-tight mb-2">{auction.title}</h3>
+                                            <p className="text-gray-500 text-xs font-bold mb-4 flex items-center gap-2">
+                                                <Activity className="w-4 h-4 text-yellow-400" /> {auction._count?.bids || 0} active bids · <Clock className="w-4 h-4" /> Ends {new Date(auction.endTime).toLocaleDateString()}
+                                            </p>
+                                            <span className={`text-[10px] uppercase font-black tracking-widest px-3 py-1.5 rounded-lg border inline-block shadow-sm ${statusColor[auction.status] || ''}`}>{auction.status}</span>
+                                        </div>
+                                    </div>
+                                    <div className="text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t border-white/5 sm:border-0 pt-6 sm:pt-0">
+                                        <div className="text-left sm:text-right">
+                                            <p className="text-[10px] text-gray-500 font-extrabold uppercase tracking-widest mb-1.5">Highest Bid</p>
+                                            <p className="text-3xl font-black text-white">₹{Number(auction.currentHighestBid).toLocaleString()}</p>
+                                        </div>
+                                        <Link href={`/auctions/${auction.id}`} className="text-xs font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-6 py-3 rounded-xl flex items-center justify-center gap-2 mt-4 transition-all shadow-md active:scale-95">
+                                            Manage Account <ArrowRight className="w-4 h-4" />
+                                        </Link>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* ── Notifications ────────────────────────── */}
+                    {activeTab === 'notifs' && (
+                        <div className="space-y-6">
+                            <div className="flex items-center justify-between mb-8">
+                                <h2 className="text-2xl font-black flex items-center text-white"><Bell className="w-6 h-6 mr-3 text-yellow-400" /> Notifications</h2>
+                                {unreadCount > 0 && (
+                                    <button onClick={markAllRead} className="text-xs font-black text-gray-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-6 py-2.5 rounded-xl border border-white/10">
+                                        Mark all read
+                                    </button>
+                                )}
+                            </div>
+                            {notifications.length === 0 ? (
+                                <div className="text-center py-24 bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-[2.5rem] shadow-inner">
+                                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-8">
+                                        <Bell className="w-10 h-10 text-gray-600" />
+                                    </div>
+                                    <h3 className="text-xl font-black text-white mb-2">Zero Alerts</h3>
+                                    <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px]">You're all caught up! No recent activity items.</p>
+                                </div>
+                            ) : notifications.map(n => (
+                                <div key={n.id} className={`group border rounded-[2rem] p-6 transition-all duration-500 relative overflow-hidden ${n.isRead ? 'bg-zinc-900/20 border-white/[0.06] hover:border-white/20' : 'bg-gradient-to-r from-yellow-400/[0.08] to-transparent border-yellow-400/40 shadow-[0_10px_30px_-15px_rgba(250,204,21,0.1)]'}`}>
+                                    <div className="flex items-start gap-6">
+                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0 transition-transform group-hover:scale-110 ${n.isRead ? 'bg-white/5 text-gray-400' : 'bg-yellow-400/20 text-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.2)]'}`}>
+                                            {
+                                                n.type === 'AUCTION_WON' ? '🏆' :
+                                                    n.type === 'OUTBID' ? '🔔' :
+                                                        n.type === 'PAYMENT_REQUIRED' ? '💳' :
+                                                            n.type === 'ITEM_SHIPPED' ? '📦' :
+                                                                n.type === 'DISPUTE_OPENED' ? '⚠️' : '💬'
+                                            }
+                                        </div>
+                                        <div className="flex-1 min-w-0 pt-1">
+                                            <div className="flex items-start justify-between gap-4">
+                                                <p className={`font-black tracking-tight text-lg ${n.isRead ? 'text-white/90' : 'text-yellow-400'}`}>{n.title}</p>
+                                                {!n.isRead && <span className="flex h-3 w-3 relative flex-shrink-0 mt-2">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+                                                </span>}
+                                            </div>
+                                            <p className={`text-base mt-2 leading-relaxed font-medium ${n.isRead ? 'text-gray-500' : 'text-gray-300'}`}>{n.body}</p>
+                                            <p className="text-gray-600 text-[10px] font-black uppercase tracking-[0.2em] mt-4 flex items-center gap-2">
+                                                <Clock className="w-3 h-3" /> {new Date(n.createdAt).toLocaleString()}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* ── Seller Verification ─────────────────────── */}
+                    {activeTab === 'verify' && (
+                        <div className="space-y-8">
+                            <h2 className="text-2xl font-black flex items-center text-white"><BadgeCheck className="w-6 h-6 mr-3 text-yellow-400" /> Seller Verification</h2>
+
+                            {/* Already verified */}
+                            {user.verifiedStatus !== 'BASIC' && (
+                                <div className="bg-gradient-to-br from-green-500/10 to-blue-500/10 border border-green-500/20 rounded-[2.5rem] p-10 sm:p-16 text-center relative overflow-hidden group shadow-2xl">
+                                    <div className="absolute inset-0 bg-green-400/5 blur-[120px] rounded-full group-hover:bg-green-400/10 transition-colors pointer-events-none" />
+                                    <CheckCircle2 className="w-24 h-24 text-green-400 mx-auto mb-8 drop-shadow-[0_0_20px_rgba(74,222,128,0.4)]" />
+                                    <h3 className="text-4xl font-black text-white mb-4 tracking-tighter">You are a {user.verifiedStatus === 'PREMIUM' ? '⭐ Premium' : '✅ Verified'} Seller!</h3>
+                                    <p className="text-gray-400 text-lg max-w-xl mx-auto font-medium leading-relaxed">Your authority is established. You can now create unlimited auctions and build your legacy in the marketplace. Your trust score is actively tracked.</p>
+                                </div>
+                            )}
+
+                            {/* Pending / Under Review Status Cards */}
+                            {user.verifiedStatus === 'BASIC' && verificationRequest && verificationRequest.status !== 'REJECTED' && (
+                                <div className={`border rounded-[2.5rem] p-10 sm:p-16 text-center shadow-2xl relative overflow-hidden group ${verificationRequest.status === 'UNDER_REVIEW'
+                                    ? 'bg-blue-500/5 border-blue-500/30'
+                                    : 'bg-orange-500/5 border-orange-500/30'
+                                    }`}>
+                                    <div className={`absolute top-0 right-0 w-64 h-64 blur-[100px] rounded-full pointer-events-none ${verificationRequest.status === 'UNDER_REVIEW' ? 'bg-blue-400/10' : 'bg-orange-400/10'}`} />
+
+                                    <div className="text-7xl mb-10 group-hover:scale-110 transition-transform duration-500 select-none">
+                                        {verificationRequest.status === 'UNDER_REVIEW' ? '🔍' : '⏳'}
+                                    </div>
+                                    <h3 className="text-4xl font-black text-white mb-4 tracking-tighter">
+                                        {verificationRequest.status === 'UNDER_REVIEW' ? 'Review in Progress' : 'Submission Received'}
+                                    </h3>
+                                    <p className="text-gray-400 text-lg max-w-xl mx-auto mb-10 font-medium leading-relaxed">
+                                        We received your application on <span className="text-white font-black">{new Date(verificationRequest.createdAt).toLocaleDateString()}</span>. Our compliance team is currently validating your documents.
+                                    </p>
+                                    <div className="flex items-center justify-center">
+                                        <span className={`px-8 py-3 rounded-2xl font-black uppercase tracking-[0.2em] text-xs border ${verificationRequest.status === 'UNDER_REVIEW'
+                                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                                            : 'bg-orange-500/10 text-orange-400 border-orange-500/30'
+                                            }`}>{verificationRequest.status.replace('_', ' ')}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Rejected - show reason then allow reapply */}
+                            {user.verifiedStatus === 'BASIC' && verificationRequest?.status === 'REJECTED' && (
+                                <div className="bg-red-500/[0.08] border border-red-500/30 rounded-[2rem] p-8 shadow-xl relative overflow-hidden">
+                                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-8">
+                                        <div className="w-20 h-20 bg-red-500/20 rounded-[1.5rem] flex items-center justify-center shrink-0 border border-red-500/30">
+                                            <XCircle className="w-10 h-10 text-red-500" />
+                                        </div>
+                                        <div className="text-center sm:text-left">
+                                            <h4 className="font-black text-2xl text-white mb-2 tracking-tight">Application Requires Attention</h4>
+                                            <div className="p-4 bg-zinc-950/60 border border-white/5 rounded-2xl mb-4">
+                                                <p className="text-red-400 text-base font-bold italic">"{verificationRequest.adminNotes || 'Your application did not meet our core requirements.'}"</p>
+                                            </div>
+                                            <p className="text-gray-500 text-sm font-bold uppercase tracking-widest leading-loose">Please review the reason above and update your information below for a high-priority re-evaluation.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Application Form */}
+                            {user.verifiedStatus === 'BASIC' && (!verificationRequest || verificationRequest.status === 'REJECTED') && (
+                                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-[2.5rem] p-8 sm:p-12 space-y-10 shadow-3xl">
+                                    <div>
+                                        <h3 className="font-black text-3xl text-white mb-3 tracking-tighter">Become a Trusted Seller</h3>
+                                        <p className="text-gray-400 text-lg font-medium leading-relaxed max-w-2xl">Establish your credibility on Bidora. Verified sellers enjoy higher listing limits, priority payouts, and a dedicated trust badge.</p>
+                                    </div>
+
+                                    <div className="grid sm:grid-cols-2 gap-8">
+                                        <div className="space-y-3">
+                                            <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Full Identity Name *</label>
+                                            <input
+                                                type="text" placeholder="As shown on official ID"
+                                                value={verificationForm.fullLegalName}
+                                                onChange={e => setVerificationForm(p => ({ ...p, fullLegalName: e.target.value }))}
+                                                className="w-full bg-zinc-950/60 border border-white/[0.1] rounded-2xl px-6 py-4 text-white text-base font-bold outline-none focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/5 transition-all placeholder:text-gray-800"
+                                            />
+                                        </div>
+                                        <div className="space-y-3">
+                                            <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Business Category *</label>
+                                            <div className="relative">
+                                                <select
+                                                    value={verificationForm.businessType}
+                                                    onChange={e => setVerificationForm(p => ({ ...p, businessType: e.target.value }))}
+                                                    className="w-full bg-zinc-950/60 border border-white/[0.1] rounded-2xl px-6 py-4 text-white text-base font-bold outline-none focus:border-yellow-400 transition-all appearance-none cursor-pointer"
+                                                >
+                                                    <option value="individual">Individual Collector</option>
+                                                    <option value="business">Registered Enterprise</option>
+                                                    <option value="dealer">Licensed Dealer</option>
+                                                </select>
+                                                <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-600 pointer-events-none" />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">PAN Identification Number</label>
+                                            <input
+                                                type="text" placeholder="ABCDE1234F"
+                                                value={verificationForm.panNumber}
+                                                onChange={e => setVerificationForm(p => ({ ...p, panNumber: e.target.value.toUpperCase() }))}
+                                                className="w-full bg-zinc-950/60 border border-white/[0.1] rounded-2xl px-6 py-4 text-white text-base font-black outline-none focus:border-yellow-400 transition-all font-mono tracking-widest placeholder:text-gray-800"
+                                            />
+                                        </div>
+                                        <div className="space-y-3">
+                                            <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Aadhaar (Last 4) *</label>
+                                            <input
+                                                type="text" placeholder="XXXX" maxLength={4}
+                                                value={verificationForm.aadhaarLast4}
+                                                onChange={e => setVerificationForm(p => ({ ...p, aadhaarLast4: e.target.value.replace(/\D/g, '') }))}
+                                                className="w-full bg-zinc-950/60 border border-white/[0.1] rounded-2xl px-6 py-4 text-white text-base font-black outline-none focus:border-yellow-400 transition-all font-mono tracking-[0.5em] placeholder:text-gray-800"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Portfolio & Intent Description *</label>
+                                        <textarea
+                                            rows={4} placeholder="What types of high-value items do you specialize in? (e.g., Luxury timepieces, investment-grade sneakers, vintage art)…"
+                                            value={verificationForm.description}
+                                            onChange={e => setVerificationForm(p => ({ ...p, description: e.target.value }))}
+                                            className="w-full bg-zinc-950/60 border border-white/[0.1] rounded-3xl px-6 py-5 text-white text-base font-medium outline-none focus:border-yellow-400 transition-all resize-none placeholder:text-gray-700 leading-relaxed"
+                                        />
+                                    </div>
+
+                                    <div className="bg-zinc-950/40 border border-white/[0.08] rounded-[2.5rem] p-8 sm:p-12 relative overflow-hidden">
+                                        <div className="absolute top-0 left-0 w-2 h-full bg-blue-500/40" />
+                                        <div className="flex items-center gap-3 mb-6">
+                                            <ShieldCheck className="w-8 h-8 text-blue-400" />
+                                            <h4 className="text-xl font-black text-white uppercase tracking-widest">Compliance Documents</h4>
+                                        </div>
+                                        <p className="text-gray-400 text-base font-medium leading-relaxed mb-10 max-w-2xl">
+                                            To maintain marketplace integrity, we require clear captures of your identity proofs and evidence of authentic asset ownership. <span className="text-blue-400 font-bold whitespace-nowrap underline decoration-blue-500/30 underline-offset-4">Encrypted & Secure.</span>
+                                        </p>
+
+                                        <div className="grid lg:grid-cols-2 gap-12">
+                                            {/* ID Proofs */}
+                                            <div className="space-y-6">
+                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] flex items-center gap-2">
+                                                    <BadgeCheck className="w-4 h-4" /> Identity Verification
+                                                </p>
+                                                <div className="flex flex-wrap gap-4">
+                                                    {verificationForm.documentUrls.split('\n').filter(Boolean).map((url, idx) => (
+                                                        <div key={idx} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-white/10 group shadow-2xl">
+                                                            <Image src={url} alt="ID Proof" fill className="object-cover" />
+                                                            <button
+                                                                onClick={() => setVerificationForm(p => ({ ...p, documentUrls: p.documentUrls.split('\n').filter((_, i) => i !== idx).join('\n') }))}
+                                                                className="absolute inset-0 bg-red-500/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
+                                                            >
+                                                                <Trash2 className="w-6 h-6 text-white" />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                    <label className="w-24 h-24 rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400/50 hover:bg-blue-400/5 transition-all group">
+                                                        <Plus className="w-6 h-6 text-gray-600 group-hover:text-blue-400 mb-1" />
+                                                        <span className="text-[9px] font-black text-gray-700 group-hover:text-blue-500">ADD ID</span>
+                                                        <input type="file" multiple accept="image/*" className="hidden" onChange={e => handleDocumentUpload(e, 'documentUrls')} />
+                                                    </label>
+                                                </div>
+                                                <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Valid: Govt ID / Passport / PAN Card</p>
+                                            </div>
+
+                                            {/* Asset Proofs */}
+                                            <div className="space-y-6">
+                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] flex items-center gap-2">
+                                                    <Hexagon className="w-4 h-4" /> Proof of Authentic Goods
+                                                </p>
+                                                <div className="flex flex-wrap gap-4">
+                                                    {verificationForm.assetUrls.split('\n').filter(Boolean).map((url, idx) => (
+                                                        <div key={idx} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-white/10 group shadow-2xl">
+                                                            <Image src={url} alt="Asset Proof" fill className="object-cover" />
+                                                            <button
+                                                                onClick={() => setVerificationForm(p => ({ ...p, assetUrls: p.assetUrls.split('\n').filter((_, i) => i !== idx).join('\n') }))}
+                                                                className="absolute inset-0 bg-red-500/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
+                                                            >
+                                                                <Trash2 className="w-6 h-6 text-white" />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                    <label className="w-24 h-24 rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400/50 hover:bg-blue-400/5 transition-all group">
+                                                        <Plus className="w-6 h-6 text-gray-600 group-hover:text-blue-400 mb-1" />
+                                                        <span className="text-[9px] font-black text-gray-700 group-hover:text-blue-500">ADD ASSET</span>
+                                                        <input type="file" multiple accept="image/*" className="hidden" onChange={e => handleDocumentUpload(e, 'assetUrls')} />
+                                                    </label>
+                                                </div>
+                                                <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Valid: Invoices / Certificates / Stock Photos</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {verificationMsg && (
+                                        <motion.p initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className={`text-sm font-black text-center px-4 py-6 rounded-2xl border ${verificationMsg.type === 'success'
+                                            ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                                            : 'bg-red-500/10 text-red-400 border-red-500/20'
+                                            }`}>{verificationMsg.text}</motion.p>
+                                    )}
+
+                                    <button
+                                        onClick={handleSubmitVerification}
+                                        disabled={submittingVerification}
+                                        className="w-full py-6 bg-gradient-to-b from-yellow-400 to-yellow-500 text-zinc-950 font-black rounded-2xl hover:scale-[1.01] hover:shadow-[0_20px_40px_-15px_rgba(250,204,21,0.5)] transition-all duration-500 disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-3 text-lg group active:scale-95"
+                                    >
+                                        {submittingVerification
+                                            ? <><span className="w-6 h-6 border-4 border-zinc-950/20 border-t-zinc-950 rounded-full animate-spin" /> VALIDATING APPLICATION…</>
+                                            : <><BadgeCheck className="w-6 h-6 group-hover:rotate-12 transition-transform" /> SUBMIT VERIFICATION APPLICATION</>
+                                        }
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Info cards */}
+                            <div className="grid sm:grid-cols-3 gap-6">
+                                {[
+                                    { icon: <ShieldCheck className="w-8 h-8 text-blue-400" />, title: 'Military Encryption', desc: 'Documents are hashed and stored in AES-256 encrypted vaults, accessible only during the 2FA-secured review cycle.' },
+                                    { icon: <Clock className="w-8 h-8 text-yellow-400" />, title: 'Expedited Review', desc: 'Our Bangalore & Mumbai dedicated compliance teams process applications around the clock for 24h approval.' },
+                                    { icon: <Trophy className="w-8 h-8 text-green-400" />, title: 'Global Selling', desc: 'Verification removes all payment caps and unlocks international wire transfers for high-ticket sneaker flips.' }
+                                ].map((item, i) => (
+                                    <div key={i} className="bg-zinc-900/40 border border-white/[0.08] rounded-[2rem] p-8 shadow-xl hover:border-white/20 transition-all group">
+                                        <div className="mb-6 group-hover:scale-110 transition-transform">{item.icon}</div>
+                                        <p className="font-black text-white text-lg mb-2 tracking-tight">{item.title}</p>
+                                        <p className="text-gray-500 text-sm font-medium leading-relaxed">{item.desc}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                </motion.div>
+            </AnimatePresence>
         </div>
     );
 }
