@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     'limited edition sneakers India'
   ],
   verification: {
-    google: 'orzF6xEuoPFrSWF-L7JStyUjL0QInR_VnpxD_O7N1oU',
+    google: 'orzF6xEuoPFrSWWM7uGSDo7GQpThx8IzZOyTo1eNng',
   },
 };
 
