@@ -27,10 +27,10 @@ router.get('/:id', optionalAuth, getAuctionById);
 router.use(authenticateJWT);
 
 router.post('/ai-auto-lister', requireRole(['SELLER', 'ADMIN', 'BUYER']), aiAutoLister);
-router.post('/', requireRole(['BUYER', 'SELLER', 'ADMIN']), requireEmailVerified, createAuction);
-router.patch('/:id', requireRole(['BUYER', 'SELLER', 'ADMIN']), requireEmailVerified, updateAuction);
-router.post('/:id/cancel', requireRole(['BUYER', 'SELLER', 'ADMIN']), requireEmailVerified, cancelAuction);
-router.post('/:id/auto-bid', requireEmailVerified, setAutoBid);
+router.post('/', requireRole(['BUYER', 'SELLER', 'ADMIN']), createAuction);
+router.patch('/:id', requireRole(['BUYER', 'SELLER', 'ADMIN']), updateAuction);
+router.post('/:id/cancel', requireRole(['BUYER', 'SELLER', 'ADMIN']), cancelAuction);
+router.post('/:id/auto-bid', setAutoBid);
 router.post('/:id/ask-ai', askProductAI);
 router.post('/:id/lume-suggestion', getLumeSuggestion);
 

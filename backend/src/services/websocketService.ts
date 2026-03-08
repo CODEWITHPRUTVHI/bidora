@@ -107,9 +107,10 @@ export const initWebSocket = async (server: HTTPServer) => {
 
         // ── PLACE BID ─────────────────────────────
         socket.on('place_bid', async (data: { auctionId: string; amount: number }) => {
-            if (!socket.data.user.isEmailVerified) {
-                return socket.emit('bid_error', { message: 'Please verify your email to place bids.' });
-            }
+            // Email verification check bypassed for now
+            // if (!user.isEmailVerified) {
+            //     return socket.emit('bid_error', { message: 'Please verify your email to place bids.' });
+            // }
             console.log(`[WS] ${userId} attempting bid: ${data.amount} on ${data.auctionId}`);
             const now = Date.now();
             if (socket.data.lastBidTime && now - socket.data.lastBidTime < 1000) {

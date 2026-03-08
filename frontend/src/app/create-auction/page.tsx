@@ -233,7 +233,7 @@ export default function CreateAuctionPage() {
                                     </div>
                                     <div className="text-sm">
                                         <p className="text-white font-bold mb-1">Upload High-Quality Photos</p>
-                                        <p className="text-gray-400 leading-relaxed">For the best results, use <strong className="text-yellow-400">1:1 (Square)</strong> or <strong className="text-yellow-400">4:5 (Portrait)</strong> aspect ratios. Clear lighting and neutral backgrounds increase bids by 30%.</p>
+                                        <p className="text-gray-400 leading-relaxed">Upload your photos in <strong className="text-yellow-400">any size or aspect ratio</strong>. Our system will automatically format them for the perfect presentation. Clear lighting and neutral backgrounds increase bids by 30%.</p>
                                     </div>
                                 </div>
 
@@ -277,8 +277,8 @@ export default function CreateAuctionPage() {
                                 ) : (
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                         {imageUrls.map((url, i) => (
-                                            <div key={i} className="relative aspect-square rounded-xl overflow-hidden border border-white/10 group">
-                                                <Image src={url} alt={`Preview ${i + 1}`} fill className="object-cover" sizes="(max-width: 640px) 50vw, 20vw" />
+                                            <div key={i} className="relative aspect-square rounded-xl overflow-hidden border border-white/10 group bg-black/50">
+                                                <Image src={url} alt={`Preview ${i + 1}`} fill className="object-contain" sizes="(max-width: 640px) 50vw, 20vw" />
                                                 <button onClick={() => removeImage(i)}
                                                     className="absolute top-2 right-2 w-8 h-8 bg-black/70 backdrop-blur-md rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 z-10">
                                                     <X className="w-4 h-4 text-white" />
@@ -408,8 +408,8 @@ export default function CreateAuctionPage() {
 
                                 <div className="bg-black/40 rounded-2xl border border-white/10 overflow-hidden">
                                     {imageUrls[0] && (
-                                        <div className="relative w-full h-52">
-                                            <Image src={imageUrls[0]} alt="Cover" fill className="object-cover" />
+                                        <div className="relative w-full h-52 bg-black/50">
+                                            <Image src={imageUrls[0]} alt="Cover" fill className="object-contain" />
                                         </div>
                                     )}
                                     <div className="p-6 space-y-4">
