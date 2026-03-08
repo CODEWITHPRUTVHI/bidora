@@ -5,9 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Flame, ArrowRight, Wallet, Activity, Package,
     TrendingUp, Star, Bell, Shield, LogOut, Plus, BarChart3, PieChart, Filter,
-    ChevronDown, ChevronLeft, ChevronRight, Trophy, Target, Zap, ShoppingBag, Tag,
+    ChevronLeft, ChevronRight, Trophy, Target, Zap, ShoppingBag, Tag,
     ArrowDownLeft, ArrowUpRight, CheckCircle2, XCircle, Clock, ArrowDownCircle, AlertTriangle,
-    FileText, Upload, UserCheck, BadgeCheck, X, ShieldCheck, Trash2, Hexagon
+    FileText, Upload, UserCheck, BadgeCheck, X
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/store/AuthContext';
@@ -73,7 +73,6 @@ export default function DashboardPage() {
     const [myListings, setMyListings] = useState<Auction[]>([]);
     const [transactions, setTransactions] = useState<Tx[]>([]);
     const [notifications, setNotifications] = useState<Notification[]>([]);
-    const [unreadCount, setUnreadCount] = useState(0);
     const [wallet, setWallet] = useState<{ walletBalance: number; pendingFunds: number; availableBalance: number } | null>(null);
     const [depositAmount, setDepositAmount] = useState('');
     const [depositing, setDepositing] = useState(false);
@@ -144,7 +143,6 @@ export default function DashboardPage() {
             setTxTotalPages(txRes.data.pagination?.pages || 1);
             setWallet(walletRes.data);
             setNotifications(notifRes.data.notifications || []);
-            setUnreadCount(notifRes.data.unreadCount || 0);
             setWonOrders(ordersRes.data.wonAuctions || []);
             setSoldOrders(ordersRes.data.soldAuctions || []);
             setAnalytics(analyticsRes.data);
@@ -235,7 +233,6 @@ export default function DashboardPage() {
     const markAllRead = async () => {
         await api.patch('/notifications/read-all');
         setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-        setUnreadCount(0);
     };
 
     const handleVerifySeller = async () => {
@@ -349,87 +346,76 @@ export default function DashboardPage() {
 
 
     return (
-        <div className="mx-auto px-3 sm:px-4 md:px-8 py-16 sm:py-24 w-full md:max-w-[90%] lg:max-w-[85%] relative min-h-screen bg-[#0a0a0a]">
+        <div className="container mx-auto px-3 sm:px-4 md:px-8 py-16 sm:py-24 max-w-7xl relative min-h-screen">
             <div className="absolute top-0 left-1/4 w-[40vw] h-[40vw] bg-yellow-500/5 blur-[150px] rounded-full pointer-events-none -z-10" />
 
 
 
 
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 bg-gradient-to-r from-zinc-900/80 to-zinc-900/40 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-6 sm:p-8 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] overflow-hidden">
-                <div className="w-full flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                    {/* Initials Avatar */}
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-yellow-400 rounded-full flex items-center justify-center text-zinc-950 text-2xl sm:text-3xl font-black shadow-[0_0_20px_rgba(250,204,21,0.3)] shrink-0">
-                        {user.fullName?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || 'B'}
-                    </div>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 bg-zinc-900/40 backdrop-blur-2xl border border-white/10 rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-8 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] overflow-hidden">
+                <div className="w-full">
+                    <p className="text-yellow-400 text-[10px] sm:text-sm font-black uppercase tracking-widest mb-1 sm:mb-2">Dashboard</p>
+                    <h1 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tighter mb-1 break-words">
+                        Hey, <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500 drop-shadow-[0_0_10px_rgba(250,204,21,0.3)]">{user.fullName?.split(' ')[0] || 'Bidder'}</span> 👋
+                    </h1>
+                    <div className="flex items-center flex-wrap gap-3 mt-3">
+                        <span className="flex items-center text-yellow-400 text-sm bg-black/40 px-3 py-1.5 rounded-full border border-white/5 shadow-inner">
+                            {[...Array(5)].map((_, i) => (
+                                <Star key={i} className={`w-3.5 h-3.5 ${i < Math.round(user.trustScore) ? 'fill-yellow-400 drop-shadow-[0_0_5px_rgba(250,204,21,0.5)]' : 'text-gray-600'}`} />
+                            ))}
+                            <span className="ml-2 font-bold text-white">{Number(user.trustScore).toFixed(1)}</span>
+                        </span>
 
-                    <div>
-                        <p className="text-yellow-400 text-[10px] sm:text-sm font-black uppercase tracking-widest mb-1 sm:mb-2">Dashboard</p>
-                        <h1 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tighter mb-1 break-words text-white">
-                            Hey, <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500 drop-shadow-[0_0_10px_rgba(250,204,21,0.3)]">{user.fullName?.split(' ')[0] || 'Bidder'}</span> 👋
-                        </h1>
-                        <div className="flex items-center flex-wrap gap-4 mt-4">
-                            <span className="flex items-center text-yellow-400 text-sm bg-black/40 px-3 py-1.5 rounded-full border border-white/10 shadow-inner">
-                                {[...Array(5)].map((_, i) => (
-                                    <Star key={i} className={`w-3.5 h-3.5 ${i < Math.round(user.trustScore) ? 'fill-yellow-400 drop-shadow-[0_0_5px_rgba(250,204,21,0.5)]' : 'text-gray-600'}`} />
-                                ))}
-                                <span className="ml-2 font-bold text-white">{Number(user.trustScore).toFixed(1)}</span>
+                        <span className={`flex items-center font-bold text-xs px-3 py-1.5 rounded-full border shadow-sm ${user.role === 'SELLER' ? 'text-blue-400 bg-blue-500/10 border-blue-500/20' : 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20'}`}>
+                            {user.role === 'SELLER' ? <Tag className="w-3.5 h-3.5 mr-1.5" /> : <ShoppingBag className="w-3.5 h-3.5 mr-1.5" />}
+                            {user.role}
+                        </span>
+
+                        {user.verifiedStatus !== 'BASIC' && (
+                            <span className="flex items-center font-bold text-blue-400 text-xs bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.2)]">
+                                <CheckCircle2 className="w-4 h-4 mr-1.5" /> Verified Seller
                             </span>
-
-                            <span className={`flex items-center font-bold text-xs px-3 py-1.5 rounded-full border border-white/10 shadow-sm ${user.role === 'SELLER' ? 'text-blue-400 bg-blue-500/10 border-blue-500/20' : 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20'}`}>
-                                {user.role === 'SELLER' ? <Tag className="w-3.5 h-3.5 mr-1.5" /> : <ShoppingBag className="w-3.5 h-3.5 mr-1.5" />}
-                                {user.role}
+                        )}
+                        {user.verifiedStatus === 'BASIC' && verificationRequest?.status === 'PENDING' && (
+                            <span className="flex items-center font-bold text-orange-400 text-xs bg-orange-500/10 border border-orange-500/20 px-3 py-1.5 rounded-full">
+                                <Clock className="w-3.5 h-3.5 mr-1.5" /> Verification Pending
                             </span>
-
-                            <div className="flex items-center gap-4 ml-0 sm:ml-2">
-                                {user.verifiedStatus !== 'BASIC' && (
-                                    <span className="flex items-center font-bold text-blue-400 text-xs bg-blue-500/10 border border-blue-500/20 px-4 py-2 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.2)]">
-                                        <CheckCircle2 className="w-4 h-4 mr-1.5" /> Verified Seller
-                                    </span>
-                                )}
-                                {user.verifiedStatus === 'BASIC' && verificationRequest?.status === 'PENDING' && (
-                                    <span className="flex items-center font-bold text-orange-400 text-xs bg-orange-500/10 border border-orange-500/20 px-4 py-2 rounded-full">
-                                        <Clock className="w-3.5 h-3.5 mr-1.5" /> Verification Pending
-                                    </span>
-                                )}
-                                {user.verifiedStatus === 'BASIC' && verificationRequest?.status === 'UNDER_REVIEW' && (
-                                    <span className="flex items-center font-bold text-blue-400 text-xs bg-blue-500/10 border border-blue-500/20 px-4 py-2 rounded-full">
-                                        <Shield className="w-3.5 h-3.5 mr-1.5" /> Under Review
-                                    </span>
-                                )}
-                                {user.verifiedStatus === 'BASIC' && (!verificationRequest || verificationRequest.status === 'REJECTED') && (
-                                    <button onClick={handleVerifySeller} className="flex items-center font-bold text-blue-400 text-xs bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 px-4 py-2 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.2)] transition-colors">
-                                        <Shield className="w-4 h-4 mr-1.5" /> {verificationRequest?.status === 'REJECTED' ? 'Reapply for Verification' : 'Get Verified Seller Status'}
-                                    </button>
-                                )}
-                            </div>
-                        </div>
+                        )}
+                        {user.verifiedStatus === 'BASIC' && verificationRequest?.status === 'UNDER_REVIEW' && (
+                            <span className="flex items-center font-bold text-blue-400 text-xs bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-full">
+                                <Shield className="w-3.5 h-3.5 mr-1.5" /> Under Review
+                            </span>
+                        )}
+                        {user.verifiedStatus === 'BASIC' && (!verificationRequest || verificationRequest.status === 'REJECTED') && (
+                            <button onClick={handleVerifySeller} className="flex items-center font-bold text-blue-400 text-xs bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 px-3 py-1.5 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.2)] transition-colors">
+                                <Shield className="w-4 h-4 mr-1.5" /> {verificationRequest?.status === 'REJECTED' ? 'Reapply for Verification' : 'Get Verified Seller Status'}
+                            </button>
+                        )}
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4 mt-8 md:mt-0 w-full md:w-auto">
-                    <div className="flex-1 md:flex-none text-left bg-zinc-950/60 border border-white/[0.08] border-l-yellow-400 border-l-[3px] rounded-2xl px-6 py-4 sm:py-5 shadow-2xl min-w-[200px]">
-                        <p className="text-gray-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-2">Available Balance</p>
-                        <p className="text-2xl sm:text-4xl font-black text-white tracking-tight drop-shadow-md truncate">₹{(wallet?.availableBalance || 0).toLocaleString()}</p>
+                <div className="flex items-center gap-4 mt-6 md:mt-0 w-full md:w-auto">
+                    <div className="flex-1 md:flex-none text-left bg-zinc-950/60 border border-white/10 rounded-2xl px-4 py-3 sm:py-4 shadow-inner min-w-0">
+                        <p className="text-gray-400 text-[9px] sm:text-xs font-bold uppercase tracking-wider mb-0.5 sm:mb-1">Available Balance</p>
+                        <p className="text-lg sm:text-3xl font-black text-white tracking-tight drop-shadow-md truncate">₹{(wallet?.availableBalance || 0).toLocaleString()}</p>
                     </div>
                 </div>
             </div>
 
             {/* Tab Bar - Enhanced scroll for mobile */}
-            <div className="relative border-b border-white/[0.08] mb-8">
-                <div className="flex flex-nowrap gap-2 overflow-x-auto hide-scrollbar scroll-smooth snap-x pb-4">
-                    {tabs.map(tab => {
-                        const Icon = tab.icon;
-                        return (
-                            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center gap-2.5 px-6 sm:px-8 py-3 sm:py-4 rounded-xl text-[12px] sm:text-base font-black transition-all duration-300 whitespace-nowrap snap-start ${activeTab === tab.id ? 'bg-yellow-400 text-zinc-950 shadow-[0_4px_20px_rgba(250,204,21,0.4)]' : 'text-gray-300 hover:text-white hover:bg-white/[0.05]'
-                                    }`}
-                            >
-                                <Icon className="w-5 h-5" /> {tab.label}
-                            </button>
-                        );
-                    })}
-                </div>
+            <div className="flex flex-nowrap gap-1.5 bg-zinc-900/60 p-1.5 rounded-2xl border border-white/10 mb-8 w-full overflow-x-auto hide-scrollbar scroll-smooth snap-x">
+                {tabs.map(tab => {
+                    const Icon = tab.icon;
+                    return (
+                        <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                            className={`flex items-center gap-1.5 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-sm font-bold transition-all duration-300 whitespace-nowrap snap-start ${activeTab === tab.id ? 'bg-gradient-to-b from-yellow-400 to-yellow-500 text-zinc-950 shadow-[0_4px_15px_rgba(250,204,21,0.3)]' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                }`}
+                        >
+                            <Icon className="w-3.5 h-3.5" /> {tab.label}
+                        </button>
+                    );
+                })}
             </div>
 
             {/* Tab Content */}
@@ -442,85 +428,84 @@ export default function DashboardPage() {
                     {/* ── Overview ── BENTO GRID ─────────────────────── */}
                     {activeTab === 'overview' && (
                         <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                {/* CARD: Wallet */}
-                                <div onClick={() => setActiveTab('wallet')} className="bg-zinc-900/40 backdrop-blur-3xl border border-white/[0.08] rounded-[2.5rem] p-8 flex flex-col justify-between items-center text-center group cursor-pointer hover:border-yellow-400/40 transition-all shadow-xl h-[280px]">
-                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em]">Available Funds</p>
-                                    <div className="flex flex-col items-center gap-2">
-                                        <Wallet className="w-8 h-8 text-yellow-400 mb-2" />
-                                        <p className="text-4xl font-black text-white tracking-tighter">₹{(wallet?.availableBalance || 0).toLocaleString()}</p>
-                                    </div>
-                                    <div className="w-full flex items-center justify-center gap-2 text-yellow-400 text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
-                                        Go To Wallet <ArrowUpRight className="w-3 h-3" />
+                            <div className="grid grid-cols-6 grid-rows-2 gap-4 h-auto md:h-[500px]">
+                                {/* MAIN TILE: Analytics Summary (2x2) */}
+                                <div className="col-span-6 md:col-span-4 row-span-2 bg-gradient-to-br from-zinc-900/40 to-black/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-8 relative overflow-hidden group shadow-2xl">
+                                    <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/5 blur-[100px] rounded-full pointer-events-none group-hover:bg-yellow-400/10 transition-colors" />
+
+                                    <div className="relative z-10 h-full flex flex-col">
+                                        <div className="flex justify-between items-start mb-8">
+                                            <div>
+                                                <p className="text-yellow-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Performance Analytics</p>
+                                                <h3 className="text-3xl font-black text-white tracking-tighter">Your Auction Growth</h3>
+                                            </div>
+                                            <div className="bg-white/5 p-3 rounded-2xl border border-white/10">
+                                                <TrendingUp className="w-6 h-6 text-yellow-400" />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-6 mt-auto">
+                                            <div className="bg-white/5 rounded-3xl p-6 border border-white/5 hover:border-white/10 transition-all">
+                                                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-2">Revenue Potential</p>
+                                                <p className="text-4xl font-black text-white tracking-tighter">₹{(analytics?.revenuePotential || 0).toLocaleString()}</p>
+                                                <div className="h-1 w-full bg-white/5 rounded-full mt-4 overflow-hidden">
+                                                    <motion.div initial={{ width: 0 }} animate={{ width: '65%' }} className="h-full bg-yellow-400" />
+                                                </div>
+                                            </div>
+                                            <div className="bg-white/5 rounded-3xl p-6 border border-white/5 hover:border-white/10 transition-all">
+                                                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-2">Total Sales</p>
+                                                <p className="text-4xl font-black text-white tracking-tighter">₹{(analytics?.totalSales || 0).toLocaleString()}</p>
+                                                <div className="h-1 w-full bg-white/5 rounded-full mt-4 overflow-hidden">
+                                                    <motion.div initial={{ width: 0 }} animate={{ width: '40%' }} className="h-full bg-blue-400" />
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* CARD: Active Bids */}
-                                <div onClick={() => setActiveTab('bids')} className="bg-zinc-900/40 backdrop-blur-3xl border border-white/[0.08] rounded-[2.5rem] p-8 flex flex-col justify-between items-center text-center group cursor-pointer hover:border-yellow-400/40 transition-all shadow-xl h-[280px]">
-                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em]">Active Bids</p>
-                                    <div className="flex flex-col items-center gap-2">
-                                        <Activity className="w-8 h-8 text-yellow-400 mb-2" />
-                                        <p className="text-5xl font-black text-white tracking-tighter">{myBids.length}</p>
+                                {/* SECONDARY TILE: Wallet (2x1) */}
+                                <div className="col-span-6 md:col-span-2 row-span-1 bg-zinc-900/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 flex flex-col justify-between group cursor-pointer hover:border-blue-400/30 transition-all shadow-xl">
+                                    <div className="flex justify-between items-start">
+                                        <div className="p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20">
+                                            <Wallet className="w-6 h-6 text-blue-400" />
+                                        </div>
+                                        <ArrowUpRight className="w-5 h-5 text-gray-600 group-hover:text-blue-400 transition-colors" />
                                     </div>
-                                    <div className="w-full flex items-center justify-center gap-2 text-yellow-400 text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
-                                        Track Bids <ArrowUpRight className="w-3 h-3" />
-                                    </div>
-                                </div>
-
-                                {/* CARD: Revenue Potential */}
-                                <div className="bg-zinc-900/40 backdrop-blur-3xl border border-white/[0.08] rounded-[2.5rem] p-8 flex flex-col justify-between items-center text-center group transition-all shadow-xl h-[280px]">
-                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em]">Revenue Potential</p>
-                                    <div className="flex flex-col items-center gap-2">
-                                        <TrendingUp className="w-8 h-8 text-yellow-400 mb-2" />
-                                        <p className="text-4xl font-black text-white tracking-tighter">₹{(analytics?.revenuePotential || 0).toLocaleString()}</p>
-                                    </div>
-                                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                                        <motion.div initial={{ width: 0 }} animate={{ width: '65%' }} className="h-full bg-yellow-400" />
-                                    </div>
-                                </div>
-
-                                {/* CARD: Total Sales */}
-                                <div className="bg-zinc-900/40 backdrop-blur-3xl border border-white/[0.08] rounded-[2.5rem] p-8 flex flex-col justify-between items-center text-center group transition-all shadow-xl h-[280px]">
-                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em]">Total Sales</p>
-                                    <div className="flex flex-col items-center gap-2">
-                                        <Package className="w-8 h-8 text-yellow-400 mb-2" />
-                                        <p className="text-4xl font-black text-white tracking-tighter">₹{(analytics?.totalSales || 0).toLocaleString()}</p>
-                                    </div>
-                                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                                        <motion.div initial={{ width: 0 }} animate={{ width: '40%' }} className="h-full bg-yellow-400" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* GROWTH CHART SECTION */}
-                            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden">
-                                <div className="flex justify-between items-start mb-10">
                                     <div>
-                                        <p className="text-yellow-400 text-xs font-black uppercase tracking-[0.25em] mb-3">PERFORMANCE ANALYTICS</p>
-                                        <h3 className="text-3xl font-black text-white tracking-tighter">Your Auction Growth</h3>
-                                    </div>
-                                    <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
-                                        <BarChart3 className="w-8 h-8 text-yellow-400" />
+                                        <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Available Funds</p>
+                                        <p className="text-3xl font-black text-white tracking-tighter">₹{(wallet?.availableBalance || 0).toLocaleString()}</p>
                                     </div>
                                 </div>
 
-                                <div className="h-[220px] bg-zinc-950/40 rounded-3xl border border-white/[0.06] flex items-center justify-center relative group">
-                                    {/* Empty State Centered */}
-                                    <div className="flex flex-col items-center text-center opacity-40 group-hover:opacity-60 transition-opacity">
-                                        <TrendingUp className="w-12 h-12 text-gray-400 mb-4 stroke-1" />
-                                        <p className="text-gray-400 text-sm font-bold uppercase tracking-widest">Your auction story starts here</p>
+                                {/* THIRD TILE: Active Bids Count (1x1) */}
+                                <div className="col-span-3 md:col-span-1 row-span-1 bg-zinc-900/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 flex flex-col justify-between group shadow-xl">
+                                    <div className="p-3 bg-green-500/10 rounded-2xl border border-green-500/20 w-fit">
+                                        <Activity className="w-5 h-5 text-green-400" />
                                     </div>
+                                    <div>
+                                        <h4 className="text-4xl font-black text-white tracking-tighter">{myBids.length}</h4>
+                                        <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Active Bids</p>
+                                    </div>
+                                </div>
 
-                                    <div className="absolute inset-x-8 bottom-8 h-px bg-white/5" />
+                                {/* FOURTH TILE: Listings Count (1x1) */}
+                                <div className="col-span-3 md:col-span-1 row-span-1 bg-zinc-900/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 flex flex-col justify-between group shadow-xl">
+                                    <div className="p-3 bg-orange-500/10 rounded-2xl border border-orange-500/20 w-fit">
+                                        <Package className="w-5 h-5 text-orange-400" />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-4xl font-black text-white tracking-tighter">{myListings.length}</h4>
+                                        <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Listings</p>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden mt-8">
+                            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden">
                                 <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-400/20 to-transparent" />
-                                <h3 className="font-black text-xl mb-6 flex items-center gap-3 text-white"><Activity className="w-5 h-5 text-yellow-400" /> Recent Bidding Activity</h3>
-                                <div className="space-y-6">
+                                <h3 className="font-black text-xl mb-6 flex items-center gap-3"><Activity className="w-5 h-5 text-yellow-400" /> Recent Bidding Activity</h3>
+                                <div className="space-y-4">
                                     {myBids.slice(0, 3).map(bid => (
-                                        <div key={bid.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-6 bg-zinc-950/40 rounded-3xl border border-white/[0.05] hover:border-yellow-400/20 transition-all hover:bg-zinc-950/60 group">
+                                        <div key={bid.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-zinc-950/40 rounded-3xl border border-white/5 hover:border-yellow-400/20 transition-all hover:bg-zinc-950/60 group">
                                             <div className="flex items-center gap-5">
                                                 <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-white/5 shadow-inner">
                                                     <Image src={bid.auction.imageUrls[0] || ''} alt="" fill className="object-cover group-hover:scale-110 transition-transform duration-500" sizes="64px" />
@@ -550,22 +535,22 @@ export default function DashboardPage() {
                     {/* ── My Bids ──────────────────────────────── */}
                     {activeTab === 'bids' && (
                         <div className="space-y-4">
-                            <h2 className="text-2xl font-black mb-6 flex items-center text-white"><TrendingUp className="w-6 h-6 mr-3 text-yellow-400" /> My Active Bids</h2>
+                            <h2 className="text-2xl font-black mb-6 flex items-center"><TrendingUp className="w-6 h-6 mr-3 text-yellow-400" /> My Active Bids</h2>
                             {myBids.length === 0 ? (
-                                <div className="text-center py-20 bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-3xl shadow-inner">
+                                <div className="text-center py-20 bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl shadow-inner">
                                     <div className="w-16 h-16 bg-yellow-400/10 rounded-full flex items-center justify-center mx-auto mb-6">
                                         <TrendingUp className="w-8 h-8 text-yellow-400" />
                                     </div>
                                     <h3 className="text-2xl font-black text-white mb-2 tracking-tight">No Bids Placed Yet</h3>
                                     <p className="text-gray-400 mb-6 max-w-sm mx-auto">You haven't participated in any auctions recently. Discover rare items and place your first bid!</p>
-                                    <Link href="/" className="inline-flex items-center gap-2 bg-yellow-400 text-zinc-950 px-6 py-3 rounded-xl font-black hover:bg-yellow-300 transition-colors shadow-[0_10px_20px_-10px_rgba(250,204,21,0.5)]">
+                                    <Link href="/" className="inline-flex items-center gap-2 bg-yellow-400 text-black px-6 py-3 rounded-xl font-bold hover:bg-yellow-300 transition-colors shadow-[0_10px_20px_-10px_rgba(250,204,21,0.5)]">
                                         Explore Live Auctions <ArrowRight className="w-4 h-4" />
                                     </Link>
                                 </div>
                             ) : myBids.map(bid => (
-                                <div key={bid.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:border-yellow-400/30 hover:shadow-[0_15px_30px_-15px_rgba(0,0,0,0.8)] transition-all duration-300 gap-4">
+                                <div key={bid.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:border-yellow-400/30 hover:shadow-[0_15px_30px_-15px_rgba(0,0,0,0.8)] transition-all duration-300 gap-4">
                                     <div className="flex items-center gap-5">
-                                        <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-zinc-800 shadow-md border border-white/5">
+                                        <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-zinc-800 shadow-md">
                                             <Image src={bid.auction.imageUrls[0] || ''} alt="" fill className="object-cover" sizes="80px" />
                                         </div>
                                         <div>
@@ -583,7 +568,7 @@ export default function DashboardPage() {
                                             <p className="text-3xl font-black text-yellow-400 drop-shadow-sm">₹{Number(bid.amount).toLocaleString()}</p>
                                         </div>
                                         <Link href={`/auctions/${bid.auction.id}`}
-                                            className="text-sm font-black text-zinc-950 bg-white hover:bg-gray-200 px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all sm:mt-4 shadow-md active:scale-95">
+                                            className="text-sm font-bold text-black bg-white hover:bg-gray-200 px-4 py-2 rounded-xl flex items-center gap-2 transition-colors sm:mt-4 shadow-md">
                                             View Page <ArrowRight className="w-4 h-4" />
                                         </Link>
                                     </div>
@@ -597,76 +582,56 @@ export default function DashboardPage() {
                         <div className="space-y-6">
                             <div className="grid md:grid-cols-2 gap-6">
                                 {/* Deposit Card */}
-                                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-3xl p-6 sm:p-7 relative overflow-hidden shadow-2xl">
+                                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-4 sm:p-8 relative overflow-hidden shadow-[0_15px_40px_-15px_rgba(0,0,0,0.5)]">
                                     <div className="absolute top-0 right-0 w-48 h-48 bg-yellow-400/10 blur-[80px] rounded-full pointer-events-none" />
-                                    <div className="flex items-center gap-3 mb-6">
-                                        <Wallet className="w-8 h-8 text-yellow-400 drop-shadow-md" />
-                                        <h3 className="font-black text-white text-lg">Deposit Wallet</h3>
-                                    </div>
-                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Available Balance</p>
-                                    <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-2 tracking-tighter drop-shadow-md truncate">₹{(wallet?.availableBalance || 0).toLocaleString()}</h2>
-                                    <p className="text-gray-400 text-base font-black flex items-center gap-2 mb-8">
-                                        <Shield className="w-4 h-4 text-blue-400" /> Pending Escrow: ₹{(wallet?.pendingFunds || 0).toLocaleString()}
-                                    </p>
+                                    <Wallet className="w-8 h-8 text-yellow-400 mb-5 drop-shadow-md" />
+                                    <p className="text-gray-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1">Available Balance</p>
+                                    <h2 className="text-2xl sm:text-3xl lg:text-5xl font-black text-white mb-2 tracking-tighter drop-shadow-md truncate">₹{(wallet?.availableBalance || 0).toLocaleString()}</h2>
+                                    <p className="text-gray-500 text-[10px] sm:text-sm font-medium mb-6 sm:mb-8">Pending Escrow: ₹{(wallet?.pendingFunds || 0).toLocaleString()}</p>
 
-                                    <div className="space-y-3">
-                                        <label className="block text-gray-500 text-[10px] font-black uppercase tracking-widest">Amount to Deposit</label>
-                                        <div className="flex items-center gap-3">
-                                            <div className="relative flex-1">
-                                                <Plus className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-yellow-400" />
-                                                <input
-                                                    type="number" placeholder="Min ₹100"
-                                                    value={depositAmount} onChange={e => setDepositAmount(e.target.value)}
-                                                    className="w-full bg-zinc-950/60 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-white text-base font-black outline-none focus:border-yellow-400 transition-all placeholder:text-gray-700 hover:bg-zinc-950/80"
-                                                />
-                                            </div>
-                                            <button onClick={handleDepositRequest} disabled={depositing}
-                                                className="shrink-0 px-8 py-4 bg-yellow-400 text-zinc-950 font-black rounded-2xl hover:bg-yellow-300 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl text-sm whitespace-nowrap active:scale-95">
-                                                {depositing ? <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <TrendingUp className="w-4 h-4" />}
-                                                Deposit
-                                            </button>
-                                        </div>
+                                    <p className="text-gray-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-3">Deposit Funds</p>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="number" placeholder="Min ₹100"
+                                            value={depositAmount} onChange={e => setDepositAmount(e.target.value)}
+                                            className="flex-1 bg-zinc-950/50 border border-white/10 rounded-xl px-3 py-3 text-white text-sm font-bold outline-none focus:border-yellow-400/50 transition-all placeholder:text-gray-600 min-w-0"
+                                        />
+                                        <button onClick={handleDepositRequest} disabled={depositing}
+                                            className="shrink-0 px-4 py-3 bg-yellow-400 text-black font-black rounded-xl hover:bg-yellow-300 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-lg text-xs sm:text-sm whitespace-nowrap">
+                                            {depositing ? <span className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <Plus className="w-4 h-4" />}
+                                            Deposit
+                                        </button>
                                     </div>
                                     {depositMsg && (
-                                        <p className={`mt-4 text-xs font-black px-4 py-4 rounded-xl border ${depositMsg.type === 'success' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                                        <p className={`mt-4 text-[11px] sm:text-sm font-bold px-4 py-3 rounded-xl transition-colors ${depositMsg.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
                                             {depositMsg.text}
                                         </p>
                                     )}
                                 </div>
 
                                 {/* Withdraw Card */}
-                                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-3xl p-6 sm:p-7 relative overflow-hidden shadow-2xl">
+                                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-4 sm:p-8 relative overflow-hidden shadow-[0_15px_40px_-15px_rgba(0,0,0,0.5)]">
                                     <div className="absolute top-0 right-0 w-48 h-48 bg-blue-400/10 blur-[80px] rounded-full pointer-events-none" />
-                                    <div className="flex items-center gap-3 mb-6">
-                                        <ArrowDownCircle className="w-8 h-8 text-blue-400 drop-shadow-md" />
-                                        <h3 className="font-black text-white text-lg">Payouts</h3>
-                                    </div>
-                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Funds Ready for Payout</p>
-                                    <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-2 tracking-tighter drop-shadow-md truncate">₹{(wallet?.availableBalance || 0).toLocaleString()}</h2>
-                                    <p className="text-blue-400 text-base font-black flex items-center gap-2 mb-8">
-                                        <Activity className="w-4 h-4" /> Credits in 2-3 working days
-                                    </p>
+                                    <ArrowDownCircle className="w-8 h-8 text-blue-400 mb-5 drop-shadow-md" />
+                                    <p className="text-gray-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1">Withdraw Balance</p>
+                                    <h2 className="text-2xl sm:text-3xl lg:text-5xl font-black text-white mb-2 tracking-tighter drop-shadow-md truncate">₹{(wallet?.availableBalance || 0).toLocaleString()}</h2>
+                                    <p className="text-gray-500 text-[10px] sm:text-sm font-medium mb-6 sm:mb-8">Credited in 2-3 business days</p>
 
-                                    <div className="space-y-3">
-                                        <label className="block text-gray-500 text-[10px] font-black uppercase tracking-widest">Withdrawal Amount</label>
-                                        <div className="flex items-center gap-3">
-                                            <div className="relative flex-1">
-                                                <ArrowUpRight className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400" />
-                                                <input
-                                                    type="number" placeholder="Min ₹100"
-                                                    value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)}
-                                                    className="w-full bg-zinc-950/60 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-white text-base font-black outline-none focus:border-blue-400 transition-all placeholder:text-gray-700 hover:bg-zinc-950/80"
-                                                />
-                                            </div>
-                                            <button onClick={handleWithdraw} disabled={withdrawing}
-                                                className="shrink-0 px-8 py-4 bg-zinc-800 border border-white/10 text-white font-black rounded-2xl hover:bg-zinc-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl text-sm whitespace-nowrap active:scale-95">
-                                                {withdrawing ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <ArrowRight className="w-4 h-4" />}
-                                                Withdraw
-                                            </button>
-                                        </div>
+                                    <p className="text-gray-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-3">Withdraw Amount</p>
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <input
+                                            type="number" placeholder="Min ₹100"
+                                            value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)}
+                                            className="flex-1 bg-zinc-950/50 border border-white/10 rounded-xl px-3 py-3 text-white text-sm font-bold outline-none focus:border-blue-400/50 transition-all placeholder:text-gray-600 min-w-0"
+                                        />
+                                        <button onClick={handleWithdraw} disabled={withdrawing}
+                                            className="shrink-0 px-4 py-3 bg-white text-black font-black rounded-xl hover:bg-gray-200 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-lg text-xs sm:text-sm whitespace-nowrap">
+                                            {withdrawing ? <span className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <ArrowDownCircle className="w-4 h-4" />}
+                                            Withdraw
+                                        </button>
                                     </div>
                                     {withdrawMsg && (
-                                        <p className={`mt-4 text-xs font-black px-4 py-4 rounded-xl border ${withdrawMsg.type === 'success' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                                        <p className={`mt-4 text-[11px] sm:text-sm font-bold px-4 py-3 rounded-xl transition-colors ${withdrawMsg.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
                                             {withdrawMsg.text}
                                         </p>
                                     )}
@@ -678,54 +643,52 @@ export default function DashboardPage() {
                     {/* ── Ledger (New Tab) ───────────────────────── */}
                     {activeTab === 'tx' && (
                         <div className="space-y-6">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-2">
-                                <h2 className="text-2xl font-black flex items-center text-white"><Clock className="w-6 h-6 mr-3 text-yellow-400" /> Transaction Ledger</h2>
-                                <div className="flex items-center gap-2 bg-zinc-900 border border-white/[0.08] p-1.5 rounded-2xl">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+                                <h2 className="text-2xl font-black flex items-center"><Clock className="w-6 h-6 mr-3 text-yellow-400" /> Transaction Ledger</h2>
+                                <div className="flex items-center gap-2 bg-zinc-900/60 p-1 rounded-xl border border-white/10">
                                     {['', 'DEPOSIT', 'WITHDRAWAL', 'ESCROW_HELD'].map(f => (
                                         <button key={f} onClick={() => { setTxFilter(f); setTxPage(1); }}
-                                            className={`px-4 py-2 rounded-xl text-xs font-black transition-all duration-300 ${txFilter === f ? 'bg-yellow-400 text-zinc-950 shadow-[0_4px_10px_rgba(250,204,21,0.3)]' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
-                                            {f || 'All History'}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${txFilter === f ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}>
+                                            {f || 'All'}
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
-                            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-[2.5rem] p-6 sm:p-10 shadow-2xl">
+                            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8 shadow-[0_15px_40px_-15px_rgba(0,0,0,0.5)]">
                                 {transactions.length === 0 ? (
-                                    <div className="text-center py-20 bg-zinc-950/20 rounded-3xl border border-dashed border-white/10">
+                                    <div className="text-center py-20">
                                         <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
-                                            <Filter className="w-8 h-8 text-gray-700" />
+                                            <Filter className="w-8 h-8 text-gray-600" />
                                         </div>
-                                        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">No records found matching these criteria</p>
+                                        <p className="text-gray-500">No transactions found matching your filter.</p>
                                     </div>
                                 ) : (
                                     <div className="overflow-x-auto">
-                                        <table className="w-full text-left border-collapse">
+                                        <table className="w-full text-left">
                                             <thead>
-                                                <tr className="border-b border-white/[0.08]">
-                                                    <th className="pb-6 text-xs font-black text-gray-500 uppercase tracking-widest pl-4">Type</th>
-                                                    <th className="pb-6 text-xs font-black text-gray-500 uppercase tracking-widest hidden md:table-cell">Timestamp</th>
-                                                    <th className="pb-6 text-xs font-black text-gray-500 uppercase tracking-widest lg:table-cell">Activity Log</th>
-                                                    <th className="pb-6 text-xs font-black text-gray-500 uppercase tracking-widest text-right pr-4">Amount</th>
+                                                <tr className="border-b border-white/5">
+                                                    <th className="pb-4 text-xs font-black text-gray-500 uppercase tracking-widest">Type</th>
+                                                    <th className="pb-4 text-xs font-black text-gray-500 uppercase tracking-widest hidden md:table-cell">Date</th>
+                                                    <th className="pb-4 text-xs font-black text-gray-500 uppercase tracking-widest lg:table-cell">Description</th>
+                                                    <th className="pb-4 text-xs font-black text-gray-500 uppercase tracking-widest text-right">Amount</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-white/[0.04]">
-                                                {transactions.map((tx, idx) => (
-                                                    <tr key={tx.id} className={`group transition-colors h-20 ${idx % 2 === 0 ? 'bg-white/[0.01]' : 'bg-transparent'} hover:bg-white/[0.03]`}>
-                                                        <td className="py-2 pl-4">
+                                            <tbody className="divide-y divide-white/5">
+                                                {transactions.map(tx => (
+                                                    <tr key={tx.id} className="group hover:bg-white/[0.02] transition-colors">
+                                                        <td className="py-4">
                                                             <div className="flex items-center gap-3">
-                                                                <div className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/5 ${tx.type === 'DEPOSIT' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                                                                    tx.type === 'WITHDRAWAL' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                                                                        'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                                                                    }`}>
-                                                                    {tx.type.replace('_', ' ')}
+                                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${Number(tx.amount) > 0 ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
+                                                                    {Number(tx.amount) > 0 ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
                                                                 </div>
+                                                                <span className="font-bold text-sm text-white">{tx.type.replace('_', ' ')}</span>
                                                             </div>
                                                         </td>
-                                                        <td className="py-2 text-sm text-gray-400 font-medium hidden md:table-cell">{new Date(tx.createdAt).toLocaleDateString()} · {new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                                                        <td className="py-2 text-sm text-gray-300 font-bold lg:table-cell max-w-md truncate">{tx.description}</td>
-                                                        <td className={`py-2 text-right font-black pr-4 text-lg ${Number(tx.amount) > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                            {Number(tx.amount) > 0 ? '+' : '-'}₹{Math.abs(Number(tx.amount)).toLocaleString()}
+                                                        <td className="py-4 text-sm text-gray-500 hidden md:table-cell">{new Date(tx.createdAt).toLocaleDateString()}</td>
+                                                        <td className="py-4 text-sm text-gray-400 lg:table-cell max-w-xs truncate">{tx.description}</td>
+                                                        <td className={`py-4 text-right font-black ${Number(tx.amount) > 0 ? 'text-green-400' : 'text-white'}`}>
+                                                            {Number(tx.amount) > 0 ? '+' : ''}₹{Math.abs(Number(tx.amount)).toLocaleString()}
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -736,16 +699,16 @@ export default function DashboardPage() {
 
                                 {/* Pagination */}
                                 {txTotalPages > 1 && (
-                                    <div className="flex items-center justify-between mt-10 pt-10 border-t border-white/[0.08]">
-                                        <p className="text-xs text-gray-500 font-black uppercase tracking-widest">Page {txPage} of {txTotalPages}</p>
-                                        <div className="flex gap-3">
+                                    <div className="flex items-center justify-between mt-8 pt-8 border-t border-white/5">
+                                        <p className="text-xs text-gray-500">Page {txPage} of {txTotalPages}</p>
+                                        <div className="flex gap-2">
                                             <button disabled={txPage === 1} onClick={() => setTxPage(p => p - 1)}
-                                                className="p-3 border border-white/10 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30 transition-all active:scale-90">
-                                                <ChevronLeft className="w-6 h-6" />
+                                                className="p-2 border border-white/10 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30">
+                                                <ChevronLeft className="w-5 h-5" />
                                             </button>
                                             <button disabled={txPage === txTotalPages} onClick={() => setTxPage(p => p + 1)}
-                                                className="p-3 border border-white/10 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30 transition-all active:scale-90">
-                                                <ChevronRight className="w-6 h-6" />
+                                                className="p-2 border border-white/10 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30">
+                                                <ChevronRight className="w-5 h-5" />
                                             </button>
                                         </div>
                                     </div>
@@ -867,34 +830,33 @@ export default function DashboardPage() {
 
                     {/* ── Orders ────────────────────────────────── */}
                     {activeTab === 'orders' && (
-                        <div className="space-y-12">
-                            <h2 className="text-2xl font-black flex items-center text-white"><Trophy className="w-6 h-6 mr-3 text-yellow-400" /> Winner's Circle</h2>
+                        <div className="space-y-6">
+                            <h2 className="text-2xl font-black flex items-center"><Trophy className="w-6 h-6 mr-3 text-yellow-400" /> Winner's Circle</h2>
 
-                            <div className="space-y-12">
+                            <div className="space-y-8">
                                 {/* Won Orders */}
-                                <div className="space-y-6">
-                                    <h3 className="text-sm font-black text-gray-200 px-2 uppercase tracking-[0.2em]">Items You Won</h3>
+                                <div>
+                                    <h3 className="text-lg font-bold text-gray-400 mb-4 px-2 uppercase tracking-widest text-xs">Items You Won</h3>
                                     <div className="space-y-4">
                                         {wonOrders.length === 0 ? (
-                                            <div className="text-center py-24 bg-zinc-900/40 rounded-[2.5rem] border border-white/[0.08] relative overflow-hidden group">
-                                                <Trophy className="absolute inset-0 m-auto w-40 h-40 text-white/[0.03] pointer-events-none group-hover:scale-110 transition-transform duration-1000" />
-                                                <p className="text-gray-500 font-bold uppercase tracking-widest text-xs relative z-10">No items in your collection yet.</p>
+                                            <div className="text-center py-12 bg-zinc-950/40 rounded-[2rem] border border-white/5">
+                                                <p className="text-gray-500 font-medium italic">No won auctions yet.</p>
                                             </div>
                                         ) : wonOrders.map(order => (
-                                            <div key={order.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:border-yellow-400/30 transition-all gap-4 shadow-xl">
+                                            <div key={order.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:border-yellow-400/30 transition-all gap-4">
                                                 <div className="flex items-center gap-5">
-                                                    <div className="relative w-24 h-24 rounded-2xl overflow-hidden bg-zinc-800 shadow-md border border-white/5">
-                                                        <Image src={order.imageUrls[0] || ''} alt="" fill className="object-cover" sizes="96px" />
+                                                    <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-zinc-800 shadow-md">
+                                                        <Image src={order.imageUrls[0] || ''} alt="" fill className="object-cover" sizes="80px" />
                                                     </div>
                                                     <div>
-                                                        <h3 className="font-black text-white text-xl tracking-tight mb-1">{order.title}</h3>
-                                                        <p className="text-gray-500 text-xs font-bold mt-1 uppercase tracking-widest mb-3">Seller: {order.seller.fullName}</p>
-                                                        <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg border shadow-sm ${statusColor[order.status] || 'text-gray-400'}`}>{order.status}</span>
+                                                        <h3 className="font-bold text-white text-lg tracking-tight mb-1">{order.title}</h3>
+                                                        <p className="text-gray-500 text-xs font-medium mb-3">Seller: {order.seller.fullName}</p>
+                                                        <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border shadow-sm ${statusColor[order.status] || 'text-gray-400'}`}>{order.status}</span>
                                                     </div>
                                                 </div>
-                                                <div className="text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-6">
-                                                    <p className="text-3xl font-black text-white">₹{Number(order.currentHighestBid).toLocaleString()}</p>
-                                                    <Link href={`/orders/${order.id}`} className="text-xs font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-8 py-3 rounded-xl transition-all shadow-[0_10px_20px_-10px_rgba(250,204,21,0.5)] active:scale-95">
+                                                <div className="text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-4">
+                                                    <p className="text-2xl font-black text-white">₹{Number(order.currentHighestBid).toLocaleString()}</p>
+                                                    <Link href={`/orders/${order.id}`} className="text-xs font-bold text-black bg-yellow-400 hover:bg-yellow-300 px-6 py-2.5 rounded-xl transition-colors shadow-lg">
                                                         Track Order
                                                     </Link>
                                                 </div>
@@ -904,31 +866,30 @@ export default function DashboardPage() {
                                 </div>
 
                                 {/* Sold Orders */}
-                                <div className="space-y-6">
-                                    <h3 className="text-sm font-black text-gray-200 px-2 uppercase tracking-[0.2em]">Items You Sold</h3>
+                                <div>
+                                    <h3 className="text-lg font-bold text-gray-400 mb-4 px-2 uppercase tracking-widest text-xs">Items You Sold</h3>
                                     <div className="space-y-4">
                                         {soldOrders.length === 0 ? (
-                                            <div className="text-center py-24 bg-zinc-900/40 rounded-[2.5rem] border border-white/[0.08] relative overflow-hidden group">
-                                                <Activity className="absolute inset-0 m-auto w-40 h-40 text-white/[0.03] pointer-events-none group-hover:scale-110 transition-transform duration-1000" />
-                                                <p className="text-gray-500 font-bold uppercase tracking-widest text-xs relative z-10">No sales transactions logged yet.</p>
+                                            <div className="text-center py-12 bg-zinc-950/40 rounded-[2rem] border border-white/5">
+                                                <p className="text-gray-500 font-medium italic">No items sold yet.</p>
                                             </div>
                                         ) : soldOrders.map(order => {
                                             const winner = order.bids.find((b: any) => b.isWinning)?.bidder;
                                             return (
-                                                <div key={order.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:border-green-400/30 transition-all gap-4 shadow-xl">
+                                                <div key={order.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:border-green-400/30 transition-all gap-4">
                                                     <div className="flex items-center gap-5">
-                                                        <div className="relative w-24 h-24 rounded-2xl overflow-hidden bg-zinc-800 shadow-md border border-white/5">
-                                                            <Image src={order.imageUrls[0] || ''} alt="" fill className="object-cover" sizes="96px" />
+                                                        <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-zinc-800 shadow-md">
+                                                            <Image src={order.imageUrls[0] || ''} alt="" fill className="object-cover" sizes="80px" />
                                                         </div>
                                                         <div>
-                                                            <h3 className="font-black text-white text-xl tracking-tight mb-1">{order.title}</h3>
-                                                            <p className="text-gray-500 text-xs font-bold mt-1 uppercase tracking-widest mb-3">Buyer: {winner?.fullName || 'Winner'}</p>
-                                                            <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg border shadow-sm ${statusColor[order.status] || 'text-gray-400'}`}>{order.status}</span>
+                                                            <h3 className="font-bold text-white text-lg tracking-tight mb-1">{order.title}</h3>
+                                                            <p className="text-gray-500 text-xs font-medium mb-3">Buyer: {winner?.fullName || 'Winner'}</p>
+                                                            <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border shadow-sm ${statusColor[order.status] || 'text-gray-400'}`}>{order.status}</span>
                                                         </div>
                                                     </div>
-                                                    <div className="text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-6">
-                                                        <p className="text-3xl font-black text-white">₹{Number(order.currentHighestBid).toLocaleString()}</p>
-                                                        <Link href={`/orders/${order.id}`} className="text-xs font-black text-white bg-white/10 hover:bg-white/20 px-8 py-3 rounded-xl transition-all shadow-sm active:scale-95">
+                                                    <div className="text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-4">
+                                                        <p className="text-2xl font-black text-white">₹{Number(order.currentHighestBid).toLocaleString()}</p>
+                                                        <Link href={`/orders/${order.id}`} className="text-xs font-bold text-white bg-white/10 hover:bg-white/20 px-6 py-2.5 rounded-xl transition-colors shadow-sm">
                                                             Manage Sale
                                                         </Link>
                                                     </div>
@@ -943,47 +904,45 @@ export default function DashboardPage() {
 
                     {/* ── Listings ─────────────────────────────── */}
                     {activeTab === 'listings' && (
-                        <div className="space-y-6">
-                            <div className="flex items-center justify-between mb-8">
-                                <h2 className="text-2xl font-black flex items-center text-white"><Package className="w-6 h-6 mr-3 text-yellow-400" /> My Listings</h2>
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-2xl font-black flex items-center"><Package className="w-6 h-6 mr-3 text-yellow-400" /> My Listings</h2>
                                 <Link href="/create-auction"
-                                    className="flex items-center gap-2 px-8 py-4 bg-white text-zinc-950 font-black rounded-2xl hover:bg-gray-200 transition-all shadow-xl active:scale-95">
-                                    <Plus className="w-5 h-5" /> New Auction
+                                    className="flex items-center gap-2 px-6 py-3 bg-white text-black font-black rounded-xl hover:bg-gray-200 transition-colors shadow-lg">
+                                    <Plus className="w-4 h-4" /> New Auction
                                 </Link>
                             </div>
                             {myListings.length === 0 ? (
-                                <div className="text-center py-24 bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-[2.5rem] shadow-inner">
-                                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-8">
-                                        <Package className="w-10 h-10 text-white" />
+                                <div className="text-center py-20 bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl shadow-inner">
+                                    <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                                        <Package className="w-8 h-8 text-white" />
                                     </div>
-                                    <h3 className="text-2xl font-black text-white mb-3 tracking-tight">Got Rare Items?</h3>
-                                    <p className="text-gray-500 mb-8 max-w-sm mx-auto font-medium">Turn your collectibles into cash securely. Bidora handles the money, you handle the shipping.</p>
+                                    <h3 className="text-2xl font-black text-white mb-2 tracking-tight">Got Rare Items?</h3>
+                                    <p className="text-gray-400 mb-6 max-w-sm mx-auto">Turn your collectibles into cash securely. Escrow handles the money, you handle the shipping.</p>
                                     <Link href="/create-auction"
-                                        className="inline-flex items-center gap-3 bg-gradient-to-b from-yellow-400 to-yellow-500 text-zinc-950 px-8 py-4 border border-yellow-300 rounded-2xl font-black hover:-translate-y-1 transition-all duration-300 shadow-[0_10px_30px_-15px_rgba(250,204,21,0.6)]">
-                                        Start Your Journey <ArrowRight className="w-5 h-5" />
+                                        className="inline-flex items-center gap-2 bg-gradient-to-b from-yellow-400 to-yellow-500 text-zinc-950 px-6 py-3 border border-yellow-300 rounded-xl font-black hover:-translate-y-1 transition-all duration-300 shadow-[0_10px_20px_-10px_rgba(250,204,21,0.5)]">
+                                        Create Your First Auction <ArrowRight className="w-4 h-4" />
                                     </Link>
                                 </div>
                             ) : myListings.map(auction => (
-                                <div key={auction.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-[2.5rem] p-6 lg:p-8 flex flex-col sm:flex-row sm:items-center justify-between hover:border-white/20 hover:shadow-[0_20px_40px_-20px_rgba(0,0,0,0.8)] transition-all duration-500 gap-6">
-                                    <div className="flex items-center gap-6">
-                                        <div className="relative w-24 h-24 rounded-[1.5rem] overflow-hidden bg-zinc-800 shadow-xl border border-white/10 group">
-                                            <Image src={auction.imageUrls[0] || ''} alt="" fill className="object-cover group-hover:scale-110 transition-transform duration-700" sizes="96px" />
+                                <div key={auction.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:border-white/20 hover:shadow-[0_15px_30px_-15px_rgba(0,0,0,0.8)] transition-all duration-300 gap-4">
+                                    <div className="flex items-center gap-5">
+                                        <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-zinc-800 shadow-md">
+                                            <Image src={auction.imageUrls[0] || ''} alt="" fill className="object-cover" sizes="80px" />
                                         </div>
                                         <div>
-                                            <h3 className="font-black text-white text-xl tracking-tight mb-2">{auction.title}</h3>
-                                            <p className="text-gray-500 text-xs font-bold mb-4 flex items-center gap-2">
-                                                <Activity className="w-4 h-4 text-yellow-400" /> {auction._count?.bids || 0} active bids · <Clock className="w-4 h-4" /> Ends {new Date(auction.endTime).toLocaleDateString()}
-                                            </p>
-                                            <span className={`text-[10px] uppercase font-black tracking-widest px-3 py-1.5 rounded-lg border inline-block shadow-sm ${statusColor[auction.status] || ''}`}>{auction.status}</span>
+                                            <h3 className="font-bold text-white text-lg tracking-tight mb-1">{auction.title}</h3>
+                                            <p className="text-gray-500 text-xs font-medium mb-3">{auction._count?.bids || 0} active bids · Ends {new Date(auction.endTime).toLocaleDateString()}</p>
+                                            <span className={`text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-md border inline-block shadow-sm ${statusColor[auction.status] || ''}`}>{auction.status}</span>
                                         </div>
                                     </div>
-                                    <div className="text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t border-white/5 sm:border-0 pt-6 sm:pt-0">
-                                        <div className="text-left sm:text-right">
-                                            <p className="text-[10px] text-gray-500 font-extrabold uppercase tracking-widest mb-1.5">Highest Bid</p>
-                                            <p className="text-3xl font-black text-white">₹{Number(auction.currentHighestBid).toLocaleString()}</p>
+                                    <div className="text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t border-white/5 sm:border-0 pt-4 sm:pt-0 mt-2 sm:mt-0">
+                                        <div>
+                                            <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Highest Bid</p>
+                                            <p className="text-2xl font-black text-white">₹{Number(auction.currentHighestBid).toLocaleString()}</p>
                                         </div>
-                                        <Link href={`/auctions/${auction.id}`} className="text-xs font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-6 py-3 rounded-xl flex items-center justify-center gap-2 mt-4 transition-all shadow-md active:scale-95">
-                                            Manage Account <ArrowRight className="w-4 h-4" />
+                                        <Link href={`/auctions/${auction.id}`} className="text-xs font-bold text-black bg-yellow-400 hover:bg-yellow-300 px-4 py-2 rounded-lg flex items-center justify-end gap-2 mt-2 sm:mt-3 transition-colors shadow-sm">
+                                            Manage <ArrowRight className="w-3 h-3" />
                                         </Link>
                                     </div>
                                 </div>
@@ -993,27 +952,26 @@ export default function DashboardPage() {
 
                     {/* ── Notifications ────────────────────────── */}
                     {activeTab === 'notifs' && (
-                        <div className="space-y-6">
-                            <div className="flex items-center justify-between mb-8">
-                                <h2 className="text-2xl font-black flex items-center text-white"><Bell className="w-6 h-6 mr-3 text-yellow-400" /> Notifications</h2>
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-2xl font-black flex items-center"><Bell className="w-6 h-6 mr-3 text-yellow-400" /> Notifications</h2>
                                 {unreadCount > 0 && (
-                                    <button onClick={markAllRead} className="text-xs font-black text-gray-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-6 py-2.5 rounded-xl border border-white/10">
+                                    <button onClick={markAllRead} className="text-sm font-bold text-gray-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl">
                                         Mark all read
                                     </button>
                                 )}
                             </div>
                             {notifications.length === 0 ? (
-                                <div className="text-center py-24 bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-[2.5rem] shadow-inner">
-                                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-8">
-                                        <Bell className="w-10 h-10 text-gray-600" />
+                                <div className="text-center py-20 bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl shadow-inner">
+                                    <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                                        <Bell className="w-8 h-8 text-gray-500" />
                                     </div>
-                                    <h3 className="text-xl font-black text-white mb-2">Zero Alerts</h3>
-                                    <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px]">You're all caught up! No recent activity items.</p>
+                                    <p className="text-gray-400 font-medium">You're all caught up! No new notifications.</p>
                                 </div>
                             ) : notifications.map(n => (
-                                <div key={n.id} className={`group border rounded-[2rem] p-6 transition-all duration-500 relative overflow-hidden ${n.isRead ? 'bg-zinc-900/20 border-white/[0.06] hover:border-white/20' : 'bg-gradient-to-r from-yellow-400/[0.08] to-transparent border-yellow-400/40 shadow-[0_10px_30px_-15px_rgba(250,204,21,0.1)]'}`}>
-                                    <div className="flex items-start gap-6">
-                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0 transition-transform group-hover:scale-110 ${n.isRead ? 'bg-white/5 text-gray-400' : 'bg-yellow-400/20 text-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.2)]'}`}>
+                                <div key={n.id} className={`border rounded-3xl p-5 transition-all duration-300 ${n.isRead ? 'bg-zinc-900/40 backdrop-blur-xl border-white/10 hover:border-white/20' : 'bg-gradient-to-r from-yellow-400/10 to-transparent border-yellow-400/30'}`}>
+                                    <div className="flex items-start gap-4">
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 ${n.isRead ? 'bg-white/5' : 'bg-yellow-400/20 shadow-[0_0_15px_rgba(250,204,21,0.2)]'}`}>
                                             {
                                                 n.type === 'AUCTION_WON' ? '🏆' :
                                                     n.type === 'OUTBID' ? '🔔' :
@@ -1024,16 +982,14 @@ export default function DashboardPage() {
                                         </div>
                                         <div className="flex-1 min-w-0 pt-1">
                                             <div className="flex items-start justify-between gap-4">
-                                                <p className={`font-black tracking-tight text-lg ${n.isRead ? 'text-white/90' : 'text-yellow-400'}`}>{n.title}</p>
-                                                {!n.isRead && <span className="flex h-3 w-3 relative flex-shrink-0 mt-2">
+                                                <p className={`font-black tracking-tight text-base ${n.isRead ? 'text-white' : 'text-yellow-400'}`}>{n.title}</p>
+                                                {!n.isRead && <span className="flex h-3 w-3 relative flex-shrink-0 mt-1">
                                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
                                                     <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
                                                 </span>}
                                             </div>
-                                            <p className={`text-base mt-2 leading-relaxed font-medium ${n.isRead ? 'text-gray-500' : 'text-gray-300'}`}>{n.body}</p>
-                                            <p className="text-gray-600 text-[10px] font-black uppercase tracking-[0.2em] mt-4 flex items-center gap-2">
-                                                <Clock className="w-3 h-3" /> {new Date(n.createdAt).toLocaleString()}
-                                            </p>
+                                            <p className={`text-sm mt-1 leading-relaxed ${n.isRead ? 'text-gray-400' : 'text-gray-300'}`}>{n.body}</p>
+                                            <p className="text-gray-600 text-[11px] font-bold uppercase tracking-wider mt-3">{new Date(n.createdAt).toLocaleString()}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1043,38 +999,31 @@ export default function DashboardPage() {
 
                     {/* ── Seller Verification ─────────────────────── */}
                     {activeTab === 'verify' && (
-                        <div className="space-y-8">
-                            <h2 className="text-2xl font-black flex items-center text-white"><BadgeCheck className="w-6 h-6 mr-3 text-yellow-400" /> Seller Verification</h2>
+                        <div className="space-y-6">
+                            <h2 className="text-2xl font-black flex items-center"><BadgeCheck className="w-6 h-6 mr-3 text-yellow-400" /> Seller Verification</h2>
 
                             {/* Already verified */}
                             {user.verifiedStatus !== 'BASIC' && (
-                                <div className="bg-gradient-to-br from-green-500/10 to-blue-500/10 border border-green-500/20 rounded-[2.5rem] p-10 sm:p-16 text-center relative overflow-hidden group shadow-2xl">
-                                    <div className="absolute inset-0 bg-green-400/5 blur-[120px] rounded-full group-hover:bg-green-400/10 transition-colors pointer-events-none" />
-                                    <CheckCircle2 className="w-24 h-24 text-green-400 mx-auto mb-8 drop-shadow-[0_0_20px_rgba(74,222,128,0.4)]" />
-                                    <h3 className="text-4xl font-black text-white mb-4 tracking-tighter">You are a {user.verifiedStatus === 'PREMIUM' ? '⭐ Premium' : '✅ Verified'} Seller!</h3>
-                                    <p className="text-gray-400 text-lg max-w-xl mx-auto font-medium leading-relaxed">Your authority is established. You can now create unlimited auctions and build your legacy in the marketplace. Your trust score is actively tracked.</p>
+                                <div className="bg-gradient-to-br from-green-500/10 to-blue-500/10 border border-green-500/20 rounded-3xl p-8 text-center">
+                                    <CheckCircle2 className="w-16 h-16 text-green-400 mx-auto mb-4" />
+                                    <h3 className="text-2xl font-black text-white mb-2">You are a {user.verifiedStatus === 'PREMIUM' ? '⭐ Premium' : '✅ Verified'} Seller!</h3>
+                                    <p className="text-gray-400">You can create and list auctions. Your buyer trust score is actively tracked.</p>
                                 </div>
                             )}
 
-                            {/* Pending / Under Review Status Cards */}
+                            {/* Pending / Under Review */}
                             {user.verifiedStatus === 'BASIC' && verificationRequest && verificationRequest.status !== 'REJECTED' && (
-                                <div className={`border rounded-[2.5rem] p-10 sm:p-16 text-center shadow-2xl relative overflow-hidden group ${verificationRequest.status === 'UNDER_REVIEW'
-                                    ? 'bg-blue-500/5 border-blue-500/30'
-                                    : 'bg-orange-500/5 border-orange-500/30'
+                                <div className={`border rounded-3xl p-8 text-center ${verificationRequest.status === 'UNDER_REVIEW'
+                                    ? 'bg-blue-500/5 border-blue-500/20'
+                                    : 'bg-orange-500/5 border-orange-500/20'
                                     }`}>
-                                    <div className={`absolute top-0 right-0 w-64 h-64 blur-[100px] rounded-full pointer-events-none ${verificationRequest.status === 'UNDER_REVIEW' ? 'bg-blue-400/10' : 'bg-orange-400/10'}`} />
-
-                                    <div className="text-7xl mb-10 group-hover:scale-110 transition-transform duration-500 select-none">
-                                        {verificationRequest.status === 'UNDER_REVIEW' ? '🔍' : '⏳'}
-                                    </div>
-                                    <h3 className="text-4xl font-black text-white mb-4 tracking-tighter">
-                                        {verificationRequest.status === 'UNDER_REVIEW' ? 'Review in Progress' : 'Submission Received'}
+                                    <div className="text-5xl mb-4">{verificationRequest.status === 'UNDER_REVIEW' ? '🔍' : '⏳'}</div>
+                                    <h3 className="text-2xl font-black text-white mb-2">
+                                        {verificationRequest.status === 'UNDER_REVIEW' ? 'Under Admin Review' : 'Application Pending'}
                                     </h3>
-                                    <p className="text-gray-400 text-lg max-w-xl mx-auto mb-10 font-medium leading-relaxed">
-                                        We received your application on <span className="text-white font-black">{new Date(verificationRequest.createdAt).toLocaleDateString()}</span>. Our compliance team is currently validating your documents.
-                                    </p>
-                                    <div className="flex items-center justify-center">
-                                        <span className={`px-8 py-3 rounded-2xl font-black uppercase tracking-[0.2em] text-xs border ${verificationRequest.status === 'UNDER_REVIEW'
+                                    <p className="text-gray-400 mb-4">Your application was submitted on {new Date(verificationRequest.createdAt).toLocaleDateString()}. Our team reviews within 24–48 hours.</p>
+                                    <div className="flex items-center justify-center gap-3 text-sm">
+                                        <span className={`px-4 py-2 rounded-full font-bold border ${verificationRequest.status === 'UNDER_REVIEW'
                                             ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
                                             : 'bg-orange-500/10 text-orange-400 border-orange-500/30'
                                             }`}>{verificationRequest.status.replace('_', ' ')}</span>
@@ -1084,17 +1033,13 @@ export default function DashboardPage() {
 
                             {/* Rejected - show reason then allow reapply */}
                             {user.verifiedStatus === 'BASIC' && verificationRequest?.status === 'REJECTED' && (
-                                <div className="bg-red-500/[0.08] border border-red-500/30 rounded-[2rem] p-8 shadow-xl relative overflow-hidden">
-                                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-8">
-                                        <div className="w-20 h-20 bg-red-500/20 rounded-[1.5rem] flex items-center justify-center shrink-0 border border-red-500/30">
-                                            <XCircle className="w-10 h-10 text-red-500" />
-                                        </div>
-                                        <div className="text-center sm:text-left">
-                                            <h4 className="font-black text-2xl text-white mb-2 tracking-tight">Application Requires Attention</h4>
-                                            <div className="p-4 bg-zinc-950/60 border border-white/5 rounded-2xl mb-4">
-                                                <p className="text-red-400 text-base font-bold italic">"{verificationRequest.adminNotes || 'Your application did not meet our core requirements.'}"</p>
-                                            </div>
-                                            <p className="text-gray-500 text-sm font-bold uppercase tracking-widest leading-loose">Please review the reason above and update your information below for a high-priority re-evaluation.</p>
+                                <div className="bg-red-500/5 border border-red-500/20 rounded-3xl p-6 mb-4">
+                                    <div className="flex items-start gap-4">
+                                        <XCircle className="w-8 h-8 text-red-400 flex-shrink-0" />
+                                        <div>
+                                            <h4 className="font-black text-white mb-1">Previous Application Rejected</h4>
+                                            <p className="text-red-300 text-sm">{verificationRequest.adminNotes || 'Your application did not meet our requirements.'}</p>
+                                            <p className="text-gray-500 text-xs mt-2">You can reapply with better documentation below.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1102,163 +1047,149 @@ export default function DashboardPage() {
 
                             {/* Application Form */}
                             {user.verifiedStatus === 'BASIC' && (!verificationRequest || verificationRequest.status === 'REJECTED') && (
-                                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] rounded-[2.5rem] p-8 sm:p-12 space-y-10 shadow-3xl">
+                                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8 space-y-6">
                                     <div>
-                                        <h3 className="font-black text-3xl text-white mb-3 tracking-tighter">Become a Trusted Seller</h3>
-                                        <p className="text-gray-400 text-lg font-medium leading-relaxed max-w-2xl">Establish your credibility on Bidora. Verified sellers enjoy higher listing limits, priority payouts, and a dedicated trust badge.</p>
+                                        <h3 className="font-black text-xl text-white mb-1">Apply for Seller Verification</h3>
+                                        <p className="text-gray-400 text-sm">Complete this form to request seller access. Our admin team will review your documents within 24–48 hours.</p>
                                     </div>
 
-                                    <div className="grid sm:grid-cols-2 gap-8">
-                                        <div className="space-y-3">
-                                            <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Full Identity Name *</label>
+                                    <div className="grid sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Full Legal Name *</label>
                                             <input
-                                                type="text" placeholder="As shown on official ID"
+                                                type="text" placeholder="As shown on your ID"
                                                 value={verificationForm.fullLegalName}
                                                 onChange={e => setVerificationForm(p => ({ ...p, fullLegalName: e.target.value }))}
-                                                className="w-full bg-zinc-950/60 border border-white/[0.1] rounded-2xl px-6 py-4 text-white text-base font-bold outline-none focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/5 transition-all placeholder:text-gray-800"
+                                                className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-yellow-400/50 transition-all"
                                             />
                                         </div>
-                                        <div className="space-y-3">
-                                            <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Business Category *</label>
-                                            <div className="relative">
-                                                <select
-                                                    value={verificationForm.businessType}
-                                                    onChange={e => setVerificationForm(p => ({ ...p, businessType: e.target.value }))}
-                                                    className="w-full bg-zinc-950/60 border border-white/[0.1] rounded-2xl px-6 py-4 text-white text-base font-bold outline-none focus:border-yellow-400 transition-all appearance-none cursor-pointer"
-                                                >
-                                                    <option value="individual">Individual Collector</option>
-                                                    <option value="business">Registered Enterprise</option>
-                                                    <option value="dealer">Licensed Dealer</option>
-                                                </select>
-                                                <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-600 pointer-events-none" />
-                                            </div>
+                                        <div>
+                                            <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Account Type *</label>
+                                            <select
+                                                value={verificationForm.businessType}
+                                                onChange={e => setVerificationForm(p => ({ ...p, businessType: e.target.value }))}
+                                                className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-yellow-400/50 transition-all"
+                                            >
+                                                <option value="individual">Individual Seller</option>
+                                                <option value="business">Registered Business</option>
+                                                <option value="dealer">Antique / Art Dealer</option>
+                                            </select>
                                         </div>
-                                        <div className="space-y-3">
-                                            <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">PAN Identification Number</label>
+                                        <div>
+                                            <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">PAN Number</label>
                                             <input
                                                 type="text" placeholder="ABCDE1234F"
                                                 value={verificationForm.panNumber}
                                                 onChange={e => setVerificationForm(p => ({ ...p, panNumber: e.target.value.toUpperCase() }))}
-                                                className="w-full bg-zinc-950/60 border border-white/[0.1] rounded-2xl px-6 py-4 text-white text-base font-black outline-none focus:border-yellow-400 transition-all font-mono tracking-widest placeholder:text-gray-800"
+                                                className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-yellow-400/50 transition-all font-mono"
                                             />
                                         </div>
-                                        <div className="space-y-3">
-                                            <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Aadhaar (Last 4) *</label>
+                                        <div>
+                                            <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Aadhaar Last 4 Digits</label>
                                             <input
                                                 type="text" placeholder="XXXX" maxLength={4}
                                                 value={verificationForm.aadhaarLast4}
                                                 onChange={e => setVerificationForm(p => ({ ...p, aadhaarLast4: e.target.value.replace(/\D/g, '') }))}
-                                                className="w-full bg-zinc-950/60 border border-white/[0.1] rounded-2xl px-6 py-4 text-white text-base font-black outline-none focus:border-yellow-400 transition-all font-mono tracking-[0.5em] placeholder:text-gray-800"
+                                                className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-yellow-400/50 transition-all font-mono"
                                             />
                                         </div>
                                     </div>
 
-                                    <div className="space-y-3">
-                                        <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Portfolio & Intent Description *</label>
+                                    <div>
+                                        <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">What do you plan to sell? *</label>
                                         <textarea
-                                            rows={4} placeholder="What types of high-value items do you specialize in? (e.g., Luxury timepieces, investment-grade sneakers, vintage art)…"
+                                            rows={3} placeholder="Describe the types of items you plan to list (e.g., vintage watches, rare books, artwork)…"
                                             value={verificationForm.description}
                                             onChange={e => setVerificationForm(p => ({ ...p, description: e.target.value }))}
-                                            className="w-full bg-zinc-950/60 border border-white/[0.1] rounded-3xl px-6 py-5 text-white text-base font-medium outline-none focus:border-yellow-400 transition-all resize-none placeholder:text-gray-700 leading-relaxed"
+                                            className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-yellow-400/50 transition-all resize-none"
                                         />
                                     </div>
 
-                                    <div className="bg-zinc-950/40 border border-white/[0.08] rounded-[2.5rem] p-8 sm:p-12 relative overflow-hidden">
-                                        <div className="absolute top-0 left-0 w-2 h-full bg-blue-500/40" />
-                                        <div className="flex items-center gap-3 mb-6">
-                                            <ShieldCheck className="w-8 h-8 text-blue-400" />
-                                            <h4 className="text-xl font-black text-white uppercase tracking-widest">Compliance Documents</h4>
-                                        </div>
-                                        <p className="text-gray-400 text-base font-medium leading-relaxed mb-10 max-w-2xl">
-                                            To maintain marketplace integrity, we require clear captures of your identity proofs and evidence of authentic asset ownership. <span className="text-blue-400 font-bold whitespace-nowrap underline decoration-blue-500/30 underline-offset-4">Encrypted & Secure.</span>
+                                    <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 sm:p-6">
+                                        <p className="text-blue-400 text-xs font-black uppercase tracking-widest mb-3">📎 Document Upload Instructions</p>
+                                        <p className="text-gray-400 text-sm leading-relaxed mb-6">
+                                            Upload your ID proofs and asset ownership documents below. <strong className="text-blue-400">Selected files are automatically uploaded</strong> to our secure server.
                                         </p>
-
-                                        <div className="grid lg:grid-cols-2 gap-12">
+                                        <div className="grid sm:grid-cols-2 gap-8">
                                             {/* ID Proofs */}
-                                            <div className="space-y-6">
-                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] flex items-center gap-2">
-                                                    <BadgeCheck className="w-4 h-4" /> Identity Verification
-                                                </p>
-                                                <div className="flex flex-wrap gap-4">
+                                            <div className="space-y-4">
+                                                <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">ID Proofs (Aadhaar / PAN / Passport)</label>
+                                                <div className="flex flex-wrap gap-2 mb-3">
                                                     {verificationForm.documentUrls.split('\n').filter(Boolean).map((url, idx) => (
-                                                        <div key={idx} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-white/10 group shadow-2xl">
+                                                        <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-white/10 group">
                                                             <Image src={url} alt="ID Proof" fill className="object-cover" />
                                                             <button
                                                                 onClick={() => setVerificationForm(p => ({ ...p, documentUrls: p.documentUrls.split('\n').filter((_, i) => i !== idx).join('\n') }))}
-                                                                className="absolute inset-0 bg-red-500/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
+                                                                className="absolute inset-0 bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                                                             >
-                                                                <Trash2 className="w-6 h-6 text-white" />
+                                                                <X className="w-4 h-4 text-white" />
                                                             </button>
                                                         </div>
                                                     ))}
-                                                    <label className="w-24 h-24 rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400/50 hover:bg-blue-400/5 transition-all group">
-                                                        <Plus className="w-6 h-6 text-gray-600 group-hover:text-blue-400 mb-1" />
-                                                        <span className="text-[9px] font-black text-gray-700 group-hover:text-blue-500">ADD ID</span>
+                                                    <label className="w-16 h-16 rounded-lg border-2 border-dashed border-white/10 flex items-center justify-center cursor-pointer hover:border-blue-400/50 hover:bg-white/5 transition-all">
+                                                        <Plus className="w-5 h-5 text-gray-500" />
                                                         <input type="file" multiple accept="image/*" className="hidden" onChange={e => handleDocumentUpload(e, 'documentUrls')} />
                                                     </label>
                                                 </div>
-                                                <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Valid: Govt ID / Passport / PAN Card</p>
+                                                <p className="text-[10px] text-gray-500">Supported: JPG, PNG, PDF images</p>
                                             </div>
 
                                             {/* Asset Proofs */}
-                                            <div className="space-y-6">
-                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] flex items-center gap-2">
-                                                    <Hexagon className="w-4 h-4" /> Proof of Authentic Goods
-                                                </p>
-                                                <div className="flex flex-wrap gap-4">
+                                            <div className="space-y-4">
+                                                <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Asset / Ownership Proofs</label>
+                                                <div className="flex flex-wrap gap-2 mb-3">
                                                     {verificationForm.assetUrls.split('\n').filter(Boolean).map((url, idx) => (
-                                                        <div key={idx} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-white/10 group shadow-2xl">
+                                                        <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-white/10 group">
                                                             <Image src={url} alt="Asset Proof" fill className="object-cover" />
                                                             <button
                                                                 onClick={() => setVerificationForm(p => ({ ...p, assetUrls: p.assetUrls.split('\n').filter((_, i) => i !== idx).join('\n') }))}
-                                                                className="absolute inset-0 bg-red-500/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
+                                                                className="absolute inset-0 bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                                                             >
-                                                                <Trash2 className="w-6 h-6 text-white" />
+                                                                <X className="w-4 h-4 text-white" />
                                                             </button>
                                                         </div>
                                                     ))}
-                                                    <label className="w-24 h-24 rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400/50 hover:bg-blue-400/5 transition-all group">
-                                                        <Plus className="w-6 h-6 text-gray-600 group-hover:text-blue-400 mb-1" />
-                                                        <span className="text-[9px] font-black text-gray-700 group-hover:text-blue-500">ADD ASSET</span>
+                                                    <label className="w-16 h-16 rounded-lg border-2 border-dashed border-white/10 flex items-center justify-center cursor-pointer hover:border-blue-400/50 hover:bg-white/5 transition-all">
+                                                        <Plus className="w-5 h-5 text-gray-500" />
                                                         <input type="file" multiple accept="image/*" className="hidden" onChange={e => handleDocumentUpload(e, 'assetUrls')} />
                                                     </label>
                                                 </div>
-                                                <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Valid: Invoices / Certificates / Stock Photos</p>
+                                                <p className="text-[10px] text-gray-500">Invoices, certificates, or physical location proofs</p>
                                             </div>
                                         </div>
                                     </div>
 
                                     {verificationMsg && (
-                                        <motion.p initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className={`text-sm font-black text-center px-4 py-6 rounded-2xl border ${verificationMsg.type === 'success'
+                                        <p className={`text-sm font-bold px-4 py-3 rounded-xl border ${verificationMsg.type === 'success'
                                             ? 'bg-green-500/10 text-green-400 border-green-500/20'
                                             : 'bg-red-500/10 text-red-400 border-red-500/20'
-                                            }`}>{verificationMsg.text}</motion.p>
+                                            }`}>{verificationMsg.text}</p>
                                     )}
 
                                     <button
                                         onClick={handleSubmitVerification}
                                         disabled={submittingVerification}
-                                        className="w-full py-6 bg-gradient-to-b from-yellow-400 to-yellow-500 text-zinc-950 font-black rounded-2xl hover:scale-[1.01] hover:shadow-[0_20px_40px_-15px_rgba(250,204,21,0.5)] transition-all duration-500 disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-3 text-lg group active:scale-95"
+                                        className="w-full py-4 bg-gradient-to-b from-yellow-400 to-yellow-500 text-zinc-950 font-black rounded-2xl hover:-translate-y-0.5 transition-all duration-300 shadow-[0_10px_20px_-10px_rgba(250,204,21,0.5)] disabled:opacity-50 disabled:hover:translate-y-0 flex items-center justify-center gap-2 text-base"
                                     >
                                         {submittingVerification
-                                            ? <><span className="w-6 h-6 border-4 border-zinc-950/20 border-t-zinc-950 rounded-full animate-spin" /> VALIDATING APPLICATION…</>
-                                            : <><BadgeCheck className="w-6 h-6 group-hover:rotate-12 transition-transform" /> SUBMIT VERIFICATION APPLICATION</>
+                                            ? <><span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> Submitting…</>
+                                            : <><BadgeCheck className="w-5 h-5" /> Submit Verification Application</>
                                         }
                                     </button>
                                 </div>
                             )}
 
                             {/* Info cards */}
-                            <div className="grid sm:grid-cols-3 gap-6">
+                            <div className="grid sm:grid-cols-3 gap-4">
                                 {[
-                                    { icon: <ShieldCheck className="w-8 h-8 text-blue-400" />, title: 'Military Encryption', desc: 'Documents are hashed and stored in AES-256 encrypted vaults, accessible only during the 2FA-secured review cycle.' },
-                                    { icon: <Clock className="w-8 h-8 text-yellow-400" />, title: 'Expedited Review', desc: 'Our Bangalore & Mumbai dedicated compliance teams process applications around the clock for 24h approval.' },
-                                    { icon: <Trophy className="w-8 h-8 text-green-400" />, title: 'Global Selling', desc: 'Verification removes all payment caps and unlocks international wire transfers for high-ticket sneaker flips.' }
+                                    { icon: '🔒', title: 'Secure KYC', desc: 'Your documents are reviewed only by our verified admin team and are never shared.' },
+                                    { icon: '⚡', title: '24-48 Hours', desc: 'Fast review process. Most applications are reviewed by the next business day.' },
+                                    { icon: '🏆', title: 'Unlock Selling', desc: 'Once verified, you can list unlimited auctions and receive payouts directly to your bank.' }
                                 ].map((item, i) => (
-                                    <div key={i} className="bg-zinc-900/40 border border-white/[0.08] rounded-[2rem] p-8 shadow-xl hover:border-white/20 transition-all group">
-                                        <div className="mb-6 group-hover:scale-110 transition-transform">{item.icon}</div>
-                                        <p className="font-black text-white text-lg mb-2 tracking-tight">{item.title}</p>
-                                        <p className="text-gray-500 text-sm font-medium leading-relaxed">{item.desc}</p>
+                                    <div key={i} className="bg-zinc-900/40 border border-white/10 rounded-2xl p-5">
+                                        <p className="text-3xl mb-3">{item.icon}</p>
+                                        <p className="font-black text-white mb-1">{item.title}</p>
+                                        <p className="text-gray-500 text-xs leading-relaxed">{item.desc}</p>
                                     </div>
                                 ))}
                             </div>
