@@ -7,7 +7,7 @@ import {
     TrendingUp, Star, Bell, Shield, LogOut, Plus, BarChart3, PieChart, Filter,
     ChevronLeft, ChevronRight, Trophy, Target, Zap, ShoppingBag, Tag,
     ArrowDownLeft, ArrowUpRight, CheckCircle2, XCircle, Clock, ArrowDownCircle, AlertTriangle,
-    FileText, Upload, UserCheck, BadgeCheck, X
+    FileText, Upload, UserCheck, BadgeCheck, X, Sparkles, Loader2
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/store/AuthContext';
