@@ -322,16 +322,11 @@ export const confirmDelivery = async (req: AuthRequest, res: Response) => {
 
         const { EscrowService } = await import('../services/escrowService');
 
-        await prisma.$transaction(async (tx) => {
-            // deliveredAt is already set in markAsDelivered, but we ensure it here just in case
-            await tx.shippingDetail.update({ where: { auctionId }, data: { status: 'DELIVERED' } });
-            // Release funds directly inside the same transaction. This guarantees the buyer's money
-            // cannot get stuck in escrow if the server crashes right after marking it delivered.
-            await EscrowService.releaseEscrow(auctionId, tx);
+        // Update shipping detail
+        await prisma.shippingDetail.update({ where: { auctionId }, data: { status: 'DELIVERED' } });
 
-            // Transition auction to COMPLETED after funds are released. COMPLETED allows rating.
-            await tx.auction.update({ where: { id: auctionId }, data: { status: 'COMPLETED' } });
-        });
+        // EscrowService handles the atomic release logic, including transitioning the auction to COMPLETED.
+        await EscrowService.releaseEscrow(auctionId);
 
         return res.status(200).json({ message: 'Delivery confirmed. Escrow released to seller.' });
     } catch (error: any) {

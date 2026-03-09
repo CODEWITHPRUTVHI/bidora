@@ -63,79 +63,86 @@ export class FraudService {
     }
 
     /**
-     * Analyzes an auction's bid history for shill bidding patterns using Google GenAI.
-     * Looks for unrealistic timing, immediate retaliation by new accounts, etc.
+     * Patent Candidate 3: Real-Time Interaction-Graph Fraud Detection
+     * Analyzes latency, cadence, and seller-bidder interaction density to detect Shill Bidding.
      */
     static async analyzeForShillBidding(auctionId: string): Promise<boolean> {
         try {
             const auction = await prisma.auction.findUnique({
                 where: { id: auctionId },
                 include: {
-                    seller: { select: { id: true, trustScore: true, suspiciousFlags: true } },
                     bids: {
-                        orderBy: { createdAt: 'asc' },
-                        include: { bidder: { select: { id: true, trustScore: true, suspiciousFlags: true } } }
+                        orderBy: { createdAt: 'desc' },
+                        take: 10,
+                        select: { bidderId: true, createdAt: true, amount: true }
                     }
                 }
             });
 
-            if (!auction || auction.bids.length < 4) return false; // Need sufficient data points
+            if (!auction || auction.bids.length < 3) return false;
 
-            // Only run if GEMINI_API_KEY is available
-            if (!process.env.GEMINI_API_KEY) return false;
+            const latestBid = auction.bids[0];
+            const bidderId = latestBid.bidderId;
+            const sellerId = auction.sellerId;
 
-            const { GoogleGenAI } = require('@google/genai');
-            const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+            // 1. Latency & Cadence Tracking
+            // Calculate millisecond latency between the last 3 bids
+            let cadenceAnomalyScore = 0;
+            if (auction.bids.length >= 3) {
+                const latency1 = auction.bids[0].createdAt.getTime() - auction.bids[1].createdAt.getTime();
+                const latency2 = auction.bids[1].createdAt.getTime() - auction.bids[2].createdAt.getTime();
 
-            const prompt = `
-            Analyze the following auction bidding history for "Shill Bidding" (the seller using secondary accounts to artificially drive up the price).
-            
-            Context: Shill bidding often involves new accounts or accounts with low trust scores rapidly increasing the price, frequently alternating with genuine bidders, or placing bids immediately after a genuine bid without strategic reason.
-            
-            Auction ID: ${auction.id}
-            Seller ID: ${auction.seller.id}
-            Seller Trust Score: ${auction.seller.trustScore.toString()}/5
-            Current Price: ₹${auction.currentHighestBid.toString()}
-            
-            Bids Chronological History:
-            ${auction.bids.map(b => `[${b.createdAt.toISOString()}] Bidder ${b.bidder.id} (Trust: ${b.bidder.trustScore.toString()}) placed bid of ₹${b.amount.toString()}`).join('\n')}
-            
-            Respond STRICTLY in JSON format with the following schema:
-            {
-                "isShillBidding": boolean,
-                "confidenceScore": number (0-100),
-                "suspectBidderId": "string or null",
-                "reasoning": "short explanation of the detected pattern"
+                // If latency is extremely low (bot-like) or identical (scripted), increase anomaly score
+                if (latency1 < 500) cadenceAnomalyScore += 50;
+                if (Math.abs(latency1 - latency2) < 100) cadenceAnomalyScore += 30; // Suspiciously rhythmic
             }
-            `;
 
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: prompt,
-                config: {
-                    responseMimeType: "application/json",
-                }
+            // 2. Interaction Mapping (Seller-Bidder Edge Weight)
+            // Calculate how often this bidder interacts with this specific seller
+            const allBidsByBidder = await prisma.bid.findMany({
+                where: { bidderId },
+                select: { auction: { select: { sellerId: true } }, isWinning: true }
             });
 
-            const resultText = response.text;
-            if (!resultText) return false;
+            const totalBids = allBidsByBidder.length;
+            const bidsOnThisSeller = allBidsByBidder.filter(b => b.auction.sellerId === sellerId).length;
+            const winsOnThisSeller = allBidsByBidder.filter(b => b.auction.sellerId === sellerId && b.isWinning).length;
 
-            const result = JSON.parse(resultText);
+            let interactionEdgeWeight = 0;
 
-            if (result.isShillBidding && result.confidenceScore >= 85 && result.suspectBidderId) {
-                console.log(`[GenAI Fraud Engine] Shill Bidding Detected! Confidence: ${result.confidenceScore}%`);
+            if (totalBids > 5) {
+                const affinityPercentage = bidsOnThisSeller / totalBids;
+                const winRate = winsOnThisSeller / bidsOnThisSeller;
+
+                // High affinity (bids almost exclusively on this seller) + Low win rate (drives up price but never buys)
+                if (affinityPercentage > 0.7 && winRate < 0.1) {
+                    interactionEdgeWeight += 80;
+                } else if (affinityPercentage > 0.5) {
+                    interactionEdgeWeight += 40;
+                }
+            }
+
+            // 3. Shadow Banning / Flagging Logic
+            const totalFraudScore = cadenceAnomalyScore + interactionEdgeWeight;
+
+            if (totalFraudScore >= 80) {
+                console.log(`[Interaction Graph] Shill Bidding Detected! Bidder: ${bidderId}, Score: ${totalFraudScore}`);
+
                 await FraudService.flagUser(
-                    result.suspectBidderId,
-                    `AI Detection (Confidence ${result.confidenceScore}%): ${result.reasoning}`,
+                    bidderId,
+                    `Interaction Graph Flag: Cadence Anomaly (${cadenceAnomalyScore}) + Affinity Edge (${interactionEdgeWeight})`,
                     'SHILL_BID_PATTERN',
                     auctionId
                 );
+
+                // In a full implementation, we would emit a Redis event here to update the WebSocket state,
+                // instructing the socket server to "shadow ban" this user in real-time.
                 return true;
             }
 
             return false;
         } catch (error) {
-            console.error('[FraudService] GenAI Shill Detection error:', error);
+            console.error('[FraudService] Interaction Graph Detection error:', error);
             return false;
         }
     }

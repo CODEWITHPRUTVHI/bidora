@@ -137,6 +137,8 @@ export default function LiveAuctionPage() {
     const [lastBidderId, setLastBidderId] = useState<string | null>(null);
     const [streakCount, setStreakCount] = useState(0);
     const [pulseEffect, setPulseEffect] = useState(false);
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [isFollowLoading, setIsFollowLoading] = useState(false);
 
     const socketRef = useRef<Socket | null>(null);
     const { time, urgent } = useCountdown(auction?.endTime ?? null);
@@ -158,8 +160,11 @@ export default function LiveAuctionPage() {
                 time: new Date(b.createdAt).toLocaleTimeString(),
                 user: b.bidder?.fullName ? `${b.bidder.fullName.charAt(0)}***` : 'Anon'
             })));
+            if (user && a.seller?.id) {
+                api.get(`/social/status/${a.seller.id}`).then(r => setIsFollowing(r.data.isFollowing)).catch(() => { });
+            }
         }).catch(() => setMessage({ type: 'error', text: 'Failed to load auction.' }));
-    }, [id]);
+    }, [id, user]);
 
     // ── WebSocket ─────────────────────────────────────────────
     useEffect(() => {
@@ -375,6 +380,27 @@ export default function LiveAuctionPage() {
             setMessage({ type: 'error', text: 'Failed to update watchlist.' });
         } finally {
             setIsWatchingLoading(false);
+        }
+    };
+
+    const toggleFollow = async () => {
+        if (!user) return router.push('/auth');
+        if (!auction) return;
+        setIsFollowLoading(true);
+        try {
+            if (isFollowing) {
+                await api.delete(`/social/unfollow/${auction.seller.id}`);
+                setIsFollowing(false);
+                setMessage({ type: 'success', text: 'Unfollowed seller' });
+            } else {
+                await api.post(`/social/follow/${auction.seller.id}`);
+                setIsFollowing(true);
+                setMessage({ type: 'success', text: 'Now following seller!' });
+            }
+        } catch (e: any) {
+            setMessage({ type: 'error', text: e.response?.data?.error || 'Action failed' });
+        } finally {
+            setIsFollowLoading(false);
         }
     };
 
@@ -656,10 +682,10 @@ export default function LiveAuctionPage() {
                     <div className="bg-zinc-900/40 backdrop-blur-2xl border border-white/10 p-6 rounded-[2rem] flex items-center justify-between hover:bg-zinc-900/60 transition-colors shadow-inner">
                         <div>
                             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1.5">Seller</p>
-                            <p className="text-white font-black text-xl flex items-center gap-2">
+                            <Link href={`/u/${auction.seller.id}`} className="text-white font-black text-xl flex items-center gap-2 hover:text-yellow-400 transition-colors">
                                 <div className="w-6 h-6 bg-white/10 rounded-full flex items-center justify-center text-xs pb-0.5">👤</div>
                                 {auction.seller.fullName || 'Anonymous'}
-                            </p>
+                            </Link>
                             <div className="flex items-center text-yellow-400 mt-2">
                                 {[...Array(5)].map((_, i) => (
                                     <Star key={i} className={`w-4 h-4 ${i < Math.round(Number(auction.seller.trustScore)) ? 'fill-yellow-400 drop-shadow-[0_0_5px_rgba(250,204,21,0.5)]' : 'text-gray-600'}`} />
@@ -667,11 +693,25 @@ export default function LiveAuctionPage() {
                                 <span className="text-white font-bold text-sm ml-2">{Number(auction.seller.trustScore).toFixed(1)}</span>
                             </div>
                         </div>
-                        {auction.seller.verifiedStatus !== 'BASIC' && (
-                            <span className="bg-blue-500/10 text-blue-400 text-xs font-black uppercase tracking-widest px-4 py-2 rounded-xl border border-blue-500/20 flex items-center shadow-lg">
-                                <CheckCircle2 className="w-4 h-4 mr-2" /> Verified
-                            </span>
-                        )}
+                        <div className="flex flex-col items-end gap-2">
+                            {auction.seller.verifiedStatus !== 'BASIC' && (
+                                <span className="bg-blue-500/10 text-blue-400 text-xs font-black uppercase tracking-widest px-4 py-2 rounded-xl border border-blue-500/20 flex items-center shadow-lg">
+                                    <CheckCircle2 className="w-4 h-4 mr-2" /> Verified
+                                </span>
+                            )}
+                            {user?.id !== auction.seller.id && (
+                                <button
+                                    onClick={toggleFollow}
+                                    disabled={isFollowLoading}
+                                    className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${isFollowing
+                                        ? 'bg-zinc-800 text-gray-400 border border-white/10 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20'
+                                        : 'bg-yellow-400 text-black hover:bg-yellow-300 shadow-[0_0_15px_rgba(250,204,21,0.3)]'
+                                        }`}
+                                >
+                                    {isFollowLoading ? '...' : (isFollowing ? 'Following' : 'Follow Seller')}
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -858,14 +898,16 @@ export default function LiveAuctionPage() {
                 </div>
             </div>
 
-            {!isLive && (
-                <div className="mt-16 border-t border-white/10 pt-12">
-                    <h2 className="text-2xl font-black text-white mb-8 flex items-center gap-3">
-                        <Star className="w-6 h-6 text-yellow-400 fill-yellow-400" /> Seller Reviews
-                    </h2>
-                    <RatingSection sellerId={auction.seller.id} sellerName={auction.seller.fullName || 'Seller'} auctionId={auction.id} showForm={auction.status === 'COMPLETED' && !!user} canRateUserId={user && user.id !== auction.seller.id ? auction.seller.id : undefined} canRateUserName={user && user.id !== auction.seller.id ? (auction.seller.fullName || 'Seller') : 'Seller'} />
-                </div>
-            )}
+            {
+                !isLive && (
+                    <div className="mt-16 border-t border-white/10 pt-12">
+                        <h2 className="text-2xl font-black text-white mb-8 flex items-center gap-3">
+                            <Star className="w-6 h-6 text-yellow-400 fill-yellow-400" /> Seller Reviews
+                        </h2>
+                        <RatingSection sellerId={auction.seller.id} sellerName={auction.seller.fullName || 'Seller'} auctionId={auction.id} showForm={auction.status === 'COMPLETED' && !!user} canRateUserId={user && user.id !== auction.seller.id ? auction.seller.id : undefined} canRateUserName={user && user.id !== auction.seller.id ? (auction.seller.fullName || 'Seller') : 'Seller'} />
+                    </div>
+                )
+            }
 
             <AnimatePresence>
                 {isLive && !isSeller && (
@@ -880,6 +922,6 @@ export default function LiveAuctionPage() {
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
+        </div >
     );
 }

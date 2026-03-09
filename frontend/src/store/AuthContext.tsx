@@ -13,6 +13,7 @@ export interface User {
     walletBalance: number;
     pendingFunds: number;
     avatarUrl: string | null;
+    collectorBadge?: string;
 }
 
 interface AuthContextType {

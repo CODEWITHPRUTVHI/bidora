@@ -22,6 +22,7 @@ model User {
   suspiciousFlags       Int                         @default(0)
   isSuspended           Boolean                     @default(false)
   isEmailVerified       Boolean                     @default(false)
+  collectorBadge        String?                     @default("NOVICE") // NOVICE, SILVER, GOLD, ELITE
   verificationCode      String?
   verificationExpiresAt DateTime?
   lastLoginAt           DateTime?
@@ -44,10 +45,26 @@ model User {
   shippingAddresses     ShippingAddress[]
   walletTransactions    WalletTransaction[]
   watchlist             Watchlist[]
+  followers             Follow[]                    @relation("Followers")
+  following             Follow[]                    @relation("Following")
 
   @@index([role])
   @@index([trustScore])
   @@index([isSuspended])
+}
+
+model Follow {
+  id          String   @id @default(uuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower    User     @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("Followers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
 }
 
 model RefreshToken {

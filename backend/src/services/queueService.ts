@@ -56,9 +56,7 @@ export const initQueueWorker = async () => {
                 }
             }
         }, {
-            connection: redisConnection,
-            // Prevent BullMQ from automatically retrying connection indefinitely in a loud way
-            connectionRecheckInterval: 30000
+            connection: redisConnection
         });
 
         worker.on('failed', (job: Job | undefined, err: Error) => {
@@ -80,38 +78,46 @@ export const initQueueWorker = async () => {
  * Schedule an auction to go live and to end.
  */
 export const scheduleAuctionEvents = async (auctionId: string, startTime: Date, endTime: Date) => {
-    const startDelay = Math.max(0, startTime.getTime() - Date.now());
-    const endDelay = Math.max(0, endTime.getTime() - Date.now());
+    try {
+        const startDelay = Math.max(0, startTime.getTime() - Date.now());
+        const endDelay = Math.max(0, endTime.getTime() - Date.now());
 
-    // Schedule Start
-    await auctionQueue.add(`start-${auctionId}`, { auctionId, type: 'AUCTION_START' }, {
-        delay: startDelay,
-        jobId: `start-${auctionId}`,
-        removeOnComplete: true
-    });
+        // Schedule Start
+        await auctionQueue.add(`start-${auctionId}`, { auctionId, type: 'AUCTION_START' }, {
+            delay: startDelay,
+            jobId: `start-${auctionId}`,
+            removeOnComplete: true
+        });
 
-    // Schedule End
-    await auctionQueue.add(`end-${auctionId}`, { auctionId, type: 'AUCTION_END' }, {
-        delay: endDelay,
-        jobId: `end-${auctionId}`,
-        removeOnComplete: true
-    });
+        // Schedule End
+        await auctionQueue.add(`end-${auctionId}`, { auctionId, type: 'AUCTION_END' }, {
+            delay: endDelay,
+            jobId: `end-${auctionId}`,
+            removeOnComplete: true
+        });
 
-    console.log(`[Queue] Scheduled events for ${auctionId} (Start in ${startDelay}ms, End in ${endDelay}ms)`);
+        console.log(`[Queue] Scheduled events for ${auctionId} (Start in ${startDelay}ms, End in ${endDelay}ms)`);
+    } catch (err) {
+        console.warn(`[Queue Warning] Could not schedule events for ${auctionId}. Is Redis running?`, err);
+    }
 };
 
 /**
  * Reschedule an auction end event (e.g. after anti-sniping extension).
  */
 export const rescheduleAuctionEnd = async (auctionId: string, newEndTime: Date) => {
-    const delay = Math.max(0, newEndTime.getTime() - Date.now());
+    try {
+        const delay = Math.max(0, newEndTime.getTime() - Date.now());
 
-    // BullMQ will overwrite the job with the same jobId
-    await auctionQueue.add(`end-${auctionId}`, { auctionId, type: 'AUCTION_END' }, {
-        delay,
-        jobId: `end-${auctionId}`,
-        removeOnComplete: true
-    });
+        // BullMQ will overwrite the job with the same jobId
+        await auctionQueue.add(`end-${auctionId}`, { auctionId, type: 'AUCTION_END' }, {
+            delay,
+            jobId: `end-${auctionId}`,
+            removeOnComplete: true
+        });
 
-    console.log(`[Queue] Rescheduled end for ${auctionId} in ${delay}ms`);
+        console.log(`[Queue] Rescheduled end for ${auctionId} in ${delay}ms`);
+    } catch (err) {
+        console.warn(`[Queue Warning] Could not reschedule end for ${auctionId}. Is Redis running?`, err);
+    }
 };

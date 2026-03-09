@@ -15,6 +15,7 @@ import api from '@/lib/axios';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { io } from 'socket.io-client';
 // @ts-ignore
 import { load } from '@cashfreepayments/cashfree-js';
 
@@ -64,6 +65,69 @@ const statusColor: Record<string, string> = {
 };
 
 // ─────────────────────────────────────────────
+const EscrowTimeline = ({ escrowPayment, role }: { escrowPayment: any, role: 'buyer' | 'seller' }) => {
+    if (!escrowPayment) return null;
+
+    const isShipped = ['IN_TRANSIT', 'AUTHENTICATED', 'DELIVERED'].includes(escrowPayment.logisticsStep);
+    const isAuthenticated = ['AUTHENTICATED', 'DELIVERED'].includes(escrowPayment.logisticsStep);
+    const isDelivered = escrowPayment.logisticsStep === 'DELIVERED';
+
+    const steps = [
+        { label: 'Payment Held', desc: 'Secure in Escrow', active: true, done: true },
+        {
+            label: 'Shipped',
+            desc: role === 'seller' ? 'Tranche 1 (10%)' : 'In Transit',
+            active: isShipped,
+            done: isShipped
+        },
+        {
+            label: 'Authenticated',
+            desc: role === 'seller' ? 'Platform Fee' : 'Verified',
+            active: isAuthenticated,
+            done: isAuthenticated
+        },
+        {
+            label: 'Delivered',
+            desc: role === 'seller' ? 'Final Payout' : 'Order Complete',
+            active: isDelivered,
+            done: isDelivered
+        }
+    ];
+
+    return (
+        <div className="w-full mt-2 pt-5 border-t border-white/5">
+            <h4 className="text-xs font-bold text-gray-400 mb-5 uppercase tracking-widest flex items-center">
+                <Shield className="w-4 h-4 mr-2 text-yellow-400" /> Escrow Status
+            </h4>
+            <div className="flex items-start justify-between relative px-2">
+                <div className="absolute top-4 left-4 right-4 h-0.5 bg-white/10 -z-10" />
+                <div
+                    className="absolute top-4 left-4 h-0.5 bg-yellow-400 -z-10 transition-all duration-500"
+                    style={{ width: `${(steps.filter(s => s.active).length - 1) * 33.33}%` }}
+                />
+
+                {steps.map((step, idx) => (
+                    <div key={idx} className="flex flex-col items-center gap-3 z-10 w-1/4">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-colors 
+                            ${step.active ? 'bg-yellow-400 border-yellow-400 text-black shadow-[0_0_15px_rgba(250,204,21,0.5)]' : 'bg-zinc-900 border-white/20 text-gray-600'}`}>
+                            {step.done ? <CheckCircle2 className="w-5 h-5" /> : <Clock className="w-4 h-4" />}
+                        </div>
+                        <div className="text-center">
+                            <p className={`text-xs font-bold ${step.active ? 'text-white' : 'text-gray-500'}`}>
+                                {step.label}
+                            </p>
+                            <p className="text-[10px] text-gray-500 mt-1 leading-tight whitespace-nowrap">
+                                {step.desc}
+                            </p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+// ─────────────────────────────────────────────
 export default function DashboardPage() {
     const [activeTab, setActiveTab] = useState('overview');
     const { user, logout, refreshUser, loading: authLoading } = useAuth();
@@ -76,6 +140,8 @@ export default function DashboardPage() {
     const [wallet, setWallet] = useState<{ walletBalance: number; pendingFunds: number; availableBalance: number } | null>(null);
     const [depositAmount, setDepositAmount] = useState('');
     const [depositing, setDepositing] = useState(false);
+    const [hypeFeed, setHypeFeed] = useState<any[]>([]);
+    const [fetchingFeed, setFetchingFeed] = useState(false);
     const [depositMsg, setDepositMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [paymentSessionId, setPaymentSessionId] = useState('');
     const [withdrawAmount, setWithdrawAmount] = useState('');
@@ -155,6 +221,38 @@ export default function DashboardPage() {
         }).finally(() => setLoading(false));
     }, [user, authLoading, txPage, txFilter]);
 
+    useEffect(() => {
+        let socket: any = null;
+
+        if (activeTab === 'feed') {
+            fetchFeed();
+
+            // Set up real-time websocket
+            socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5000');
+            socket.on('hype_event', (event: any) => {
+                setHypeFeed(prev => [event, ...prev].slice(0, 50)); // Keep latest 50
+            });
+        }
+
+        return () => {
+            if (socket) {
+                socket.off('hype_event');
+                socket.disconnect();
+            }
+        };
+    }, [activeTab]);
+
+    const fetchFeed = async () => {
+        setFetchingFeed(true);
+        try {
+            const res = await api.get('/social/feed');
+            setHypeFeed(res.data.feed);
+        } catch (err) {
+            console.error('Failed to fetch feed', err);
+        } finally {
+            setFetchingFeed(false);
+        }
+    };
 
     const handleDepositRequest = async () => {
         if (!depositAmount || Number(depositAmount) < 100) {
@@ -338,7 +436,8 @@ export default function DashboardPage() {
         { id: 'listings', label: 'Sales', icon: Package },
         { id: 'analytics', label: 'Stats', icon: BarChart3 },
         { id: 'verify', label: user.verifiedStatus !== 'BASIC' ? 'Verified ✓' : 'Get Verified', icon: BadgeCheck },
-        { id: 'notifs', label: `Alerts${unreadCount > 0 ? ` (${unreadCount})` : ''}`, icon: Bell }
+        { id: 'notifs', label: `Alerts${unreadCount > 0 ? ` (${unreadCount})` : ''}`, icon: Bell },
+        { id: 'feed', label: 'Hype Feed', icon: Sparkles }
     ].filter(t => {
         if (t.id === 'analytics' && user.verifiedStatus === 'BASIC' && user.role !== 'SELLER') return false;
         return true;
@@ -371,6 +470,12 @@ export default function DashboardPage() {
                             {user.role === 'SELLER' ? <Tag className="w-3.5 h-3.5 mr-1.5" /> : <ShoppingBag className="w-3.5 h-3.5 mr-1.5" />}
                             {user.role}
                         </span>
+
+                        {user.collectorBadge && user.collectorBadge !== 'NOVICE' && (
+                            <span className="flex items-center font-bold text-amber-500 text-xs bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                                <Trophy className="w-4 h-4 mr-1.5" /> {user.collectorBadge} COLLECTOR
+                            </span>
+                        )}
 
                         {user.verifiedStatus !== 'BASIC' && (
                             <span className="flex items-center font-bold text-blue-400 text-xs bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.2)]">
@@ -843,23 +948,26 @@ export default function DashboardPage() {
                                                 <p className="text-gray-500 font-medium italic">No won auctions yet.</p>
                                             </div>
                                         ) : wonOrders.map(order => (
-                                            <div key={order.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:border-yellow-400/30 transition-all gap-4">
-                                                <div className="flex items-center gap-5">
-                                                    <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-zinc-800 shadow-md">
-                                                        <Image src={order.imageUrls[0] || ''} alt="" fill className="object-cover" sizes="80px" />
+                                            <div key={order.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col hover:border-yellow-400/30 transition-all gap-4">
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                    <div className="flex items-center gap-5">
+                                                        <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-zinc-800 shadow-md flex-shrink-0">
+                                                            <Image src={order.imageUrls[0] || ''} alt="" fill className="object-cover" sizes="80px" />
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="font-bold text-white text-lg tracking-tight mb-1">{order.title}</h3>
+                                                            <p className="text-gray-500 text-xs font-medium mb-3">Seller: {order.seller.fullName}</p>
+                                                            <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border shadow-sm ${statusColor[order.status] || 'text-gray-400'}`}>{order.status}</span>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <h3 className="font-bold text-white text-lg tracking-tight mb-1">{order.title}</h3>
-                                                        <p className="text-gray-500 text-xs font-medium mb-3">Seller: {order.seller.fullName}</p>
-                                                        <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border shadow-sm ${statusColor[order.status] || 'text-gray-400'}`}>{order.status}</span>
+                                                    <div className="text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-4">
+                                                        <p className="text-2xl font-black text-white">₹{Number(order.currentHighestBid).toLocaleString()}</p>
+                                                        <Link href={`/orders/${order.id}`} className="text-xs font-bold text-black bg-yellow-400 hover:bg-yellow-300 px-6 py-2.5 rounded-xl transition-colors shadow-lg">
+                                                            Track Order
+                                                        </Link>
                                                     </div>
                                                 </div>
-                                                <div className="text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-4">
-                                                    <p className="text-2xl font-black text-white">₹{Number(order.currentHighestBid).toLocaleString()}</p>
-                                                    <Link href={`/orders/${order.id}`} className="text-xs font-bold text-black bg-yellow-400 hover:bg-yellow-300 px-6 py-2.5 rounded-xl transition-colors shadow-lg">
-                                                        Track Order
-                                                    </Link>
-                                                </div>
+                                                {order.escrowPayment && <EscrowTimeline escrowPayment={order.escrowPayment} role="buyer" />}
                                             </div>
                                         ))}
                                     </div>
@@ -876,23 +984,26 @@ export default function DashboardPage() {
                                         ) : soldOrders.map(order => {
                                             const winner = order.bids.find((b: any) => b.isWinning)?.bidder;
                                             return (
-                                                <div key={order.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:border-green-400/30 transition-all gap-4">
-                                                    <div className="flex items-center gap-5">
-                                                        <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-zinc-800 shadow-md">
-                                                            <Image src={order.imageUrls[0] || ''} alt="" fill className="object-cover" sizes="80px" />
+                                                <div key={order.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col hover:border-green-400/30 transition-all gap-4">
+                                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                        <div className="flex items-center gap-5">
+                                                            <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-zinc-800 shadow-md flex-shrink-0">
+                                                                <Image src={order.imageUrls[0] || ''} alt="" fill className="object-cover" sizes="80px" />
+                                                            </div>
+                                                            <div>
+                                                                <h3 className="font-bold text-white text-lg tracking-tight mb-1">{order.title}</h3>
+                                                                <p className="text-gray-500 text-xs font-medium mb-3">Buyer: {winner?.fullName || 'Winner'}</p>
+                                                                <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border shadow-sm ${statusColor[order.status] || 'text-gray-400'}`}>{order.status}</span>
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            <h3 className="font-bold text-white text-lg tracking-tight mb-1">{order.title}</h3>
-                                                            <p className="text-gray-500 text-xs font-medium mb-3">Buyer: {winner?.fullName || 'Winner'}</p>
-                                                            <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border shadow-sm ${statusColor[order.status] || 'text-gray-400'}`}>{order.status}</span>
+                                                        <div className="text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-4">
+                                                            <p className="text-2xl font-black text-white">₹{Number(order.currentHighestBid).toLocaleString()}</p>
+                                                            <Link href={`/orders/${order.id}`} className="text-xs font-bold text-white bg-white/10 hover:bg-white/20 px-6 py-2.5 rounded-xl transition-colors shadow-sm">
+                                                                Manage Sale
+                                                            </Link>
                                                         </div>
                                                     </div>
-                                                    <div className="text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-4">
-                                                        <p className="text-2xl font-black text-white">₹{Number(order.currentHighestBid).toLocaleString()}</p>
-                                                        <Link href={`/orders/${order.id}`} className="text-xs font-bold text-white bg-white/10 hover:bg-white/20 px-6 py-2.5 rounded-xl transition-colors shadow-sm">
-                                                            Manage Sale
-                                                        </Link>
-                                                    </div>
+                                                    {order.escrowPayment && <EscrowTimeline escrowPayment={order.escrowPayment} role="seller" />}
                                                 </div>
                                             );
                                         })}
@@ -947,6 +1058,53 @@ export default function DashboardPage() {
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    )}
+
+                    {/* ── Hype Feed ────────────────────────────── */}
+                    {activeTab === 'feed' && (
+                        <div className="space-y-6">
+                            <h2 className="text-2xl font-black flex items-center gap-3">
+                                <Sparkles className="w-6 h-6 text-yellow-400" /> Live Social Hype
+                            </h2>
+                            <div className="space-y-4">
+                                {fetchingFeed ? (
+                                    <div className="flex justify-center py-10"><Loader2 className="animate-spin text-yellow-400" /></div>
+                                ) : hypeFeed.length === 0 ? (
+                                    <div className="text-center py-20 bg-zinc-900/40 rounded-3xl border border-white/10">
+                                        <p className="text-gray-500">No recent hype events. Be the first to bid!</p>
+                                    </div>
+                                ) : hypeFeed.map((item: any) => (
+                                    <div key={item.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 p-5 rounded-3xl flex items-center gap-4 hover:border-white/20 transition-all">
+                                        <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-yellow-400/20 bg-zinc-800">
+                                            {item.userAvatar ? <Image src={item.userAvatar} alt="" width={48} height={48} /> : <div className="w-full h-full flex items-center justify-center text-xl">👤</div>}
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-bold text-white flex items-center flex-wrap gap-x-1">
+                                                <Link href={`/u/${item.userId}`} className="text-yellow-400 hover:text-yellow-300 hover:underline transition-all">
+                                                    {item.userName}
+                                                </Link>
+                                                {item.userBadge && item.userBadge !== 'NOVICE' && (
+                                                    <span className="text-[10px] bg-amber-500/10 text-amber-500 border border-amber-500/20 px-1.5 py-0.5 rounded-sm flex items-center">
+                                                        <Trophy className="w-3 h-3 mr-1" /> {item.userBadge}
+                                                    </span>
+                                                )}
+                                                <span>{item.action}</span>
+                                                <span className="text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded font-black whitespace-nowrap">
+                                                    {item.target}
+                                                </span>
+                                            </p>
+                                            <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mt-1.5 flex items-center gap-2">
+                                                {item.type === 'BID' ? <TrendingUp className="w-3 h-3 text-green-400" /> : item.type === 'WIN' ? <Star className="w-3 h-3 text-yellow-400" /> : <UserCheck className="w-3 h-3 text-blue-400" />}
+                                                {item.type} {item.type !== 'FOLLOW' && `· ₹${Number(item.amount).toLocaleString()}`} · {new Date(item.timestamp).toLocaleTimeString()}
+                                            </p>
+                                        </div>
+                                        {item.type !== 'FOLLOW' && (
+                                            <Link href={`/auctions/${item.targetId}`} className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-white transition-all shadow-sm">View</Link>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
 

@@ -309,7 +309,7 @@ export default function LiveBidsGrid() {
                                 </Link>
                                 <Link href="/dashboard?tab=notifs"
                                     className="px-8 py-4 bg-white/5 border border-white/10 text-white font-black rounded-2xl hover:bg-white/10 transition-all">
-                                    MANTAGE ALERTS
+                                    MANAGE ALERTS
                                 </Link>
                             </div>
                         </motion.div>

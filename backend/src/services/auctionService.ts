@@ -6,6 +6,7 @@ import { FraudService } from './fraudService';
 import { WalletService } from './walletService';
 import { rescheduleAuctionEnd } from './queueService';
 import { CacheService } from './cacheService';
+import { SocialService } from './socialService';
 
 
 const ANTI_SNIPE_WINDOW_SECONDS = 10;
@@ -47,6 +48,26 @@ export class AuctionService {
     static async placeBidWithOutbidInfo(auctionId: string, bidderId: string, amount: number) {
         const result = await this._placeBidCore(auctionId, bidderId, amount);
 
+        // Live Social Hype: Broadcast significant bids (e.g., > ₹500)
+        if (amount >= 500) {
+            prisma.user.findUnique({
+                where: { id: bidderId },
+                select: { fullName: true, avatarUrl: true }
+            }).then(bidder => {
+                if (bidder) {
+                    SocialService.broadcastHype({
+                        userName: bidder.fullName,
+                        userAvatar: bidder.avatarUrl,
+                        action: 'placed a bid on',
+                        target: result.result.updatedAuction.title,
+                        targetId: auctionId,
+                        amount: amount,
+                        type: 'BID'
+                    });
+                }
+            }).catch(console.error);
+        }
+
         // Asynchronously check for shill bidding after a successful bid
         // We do not await this to avoid blocking the bid response time
         FraudService.analyzeForShillBidding(auctionId).catch(console.error);
@@ -73,7 +94,7 @@ export class AuctionService {
             // 2. Read the precisely locked auction state
             const auction = await tx.auction.findUnique({
                 where: { id: auctionId },
-                select: { id: true, currentHighestBid: true, endTime: true, status: true, sellerId: true, bidIncrement: true, startingPrice: true }
+                select: { id: true, title: true, currentHighestBid: true, endTime: true, status: true, sellerId: true, bidIncrement: true, startingPrice: true }
             });
 
             if (!auction) throw new Error('Auction not found');
@@ -123,15 +144,43 @@ export class AuctionService {
             }
             // ──────────────────────────────────────────────────
 
-            // 5. Anti-sniping
+            // 5. Dynamic Velocity-Based Anti-Sniping (Patent Candidate 1)
             let newEndTime = new Date(auction.endTime);
 
             const timeRemaining = (newEndTime.getTime() - Date.now()) / 1000;
             let extended = false;
 
             if (timeRemaining <= ANTI_SNIPE_WINDOW_SECONDS) {
-                newEndTime = new Date(newEndTime.getTime() + ANTI_SNIPE_EXTENSION_SECONDS * 1000);
+                // Calculate Bid Velocity (V) and Bidder Density (D) in the last 15 seconds
+                const fifteenSecondsAgo = new Date(Date.now() - 15000);
+                const recentBids = await tx.bid.findMany({
+                    where: {
+                        auctionId,
+                        createdAt: { gte: fifteenSecondsAgo }
+                    },
+                    select: { bidderId: true }
+                });
+
+                const bidVelocity = recentBids.length + 1; // Include this current bid
+                const uniqueBidders = new Set(recentBids.map(b => b.bidderId));
+                uniqueBidders.add(bidderId);
+                const bidderDensity = uniqueBidders.size;
+
+                // Dynamic Extension Logic
+                let dynamicExtensionSeconds = ANTI_SNIPE_EXTENSION_SECONDS; // Default 10s
+
+                if (bidVelocity > 5 && bidderDensity > 2) {
+                    // High contention: Calculate longer extension based on density
+                    dynamicExtensionSeconds = Math.min(60, 10 + (bidVelocity * 2) + (bidderDensity * 5));
+                } else if (bidVelocity > 2) {
+                    // Medium contention
+                    dynamicExtensionSeconds = 20;
+                }
+
+                newEndTime = new Date(newEndTime.getTime() + dynamicExtensionSeconds * 1000);
                 extended = true;
+
+                console.log(`[Anti-Snipe Dynamic] Auction ${auctionId}: V=${bidVelocity}, D=${bidderDensity} -> Extended by ${dynamicExtensionSeconds}s`);
             }
 
             // 6. Unset previous winning bid flag
