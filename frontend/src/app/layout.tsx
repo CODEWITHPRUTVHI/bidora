@@ -51,6 +51,20 @@ export const metadata: Metadata = {
     'sneaker drops India',
     'limited edition sneakers India'
   ],
+  manifest: '/manifest.json',
+  themeColor: '#facc15',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: 'cover',
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Bidora',
+  },
   verification: {
     google: 'orzF6xEuoPFrSWWM7uGSDo7GQpThx8IzZOyTo1eNng',
   },
