@@ -5,18 +5,14 @@ import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ArrowLeft, Share2, Heart, ShieldCheck as Shield, Clock as Timer, TrendingUp,
-    CheckCircle2, AlertTriangle, Package, Zap, Activity, Info, Sparkles, Loader2, MessageSquare, Star, Clock
+    CheckCircle2, AlertTriangle, Package, Zap, Activity, Loader2, MessageSquare, Star
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { io, Socket } from 'socket.io-client';
 import api from '@/lib/axios';
 import { useAuth } from '@/store/AuthContext';
-import ARPreview from '@/components/ARPreview';
 import SwipeToBid from '@/components/SwipeToBid';
-import LumeAssistant from '@/components/LumeAssistant';
-import AIAssistant from '@/components/AIAssistant';
-import VoiceBidding from '@/components/VoiceBidding';
 import RatingSection from '@/components/RatingSection';
 import AuthenticityBadge from '@/components/AuthenticityBadge';
 import LivePulseFeed from '@/components/LivePulseFeed';
@@ -575,7 +571,6 @@ export default function LiveAuctionPage() {
                             className="w-full h-full object-cover transition-transform duration-700 group-hover/gallery:scale-110"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/60 via-transparent to-transparent pointer-events-none" />
-                        <ARPreview />
                         {auction.imageUrls.length > 1 && (
                             <>
                                 <button
@@ -621,63 +616,60 @@ export default function LiveAuctionPage() {
                     </div>
 
                     {auction.imageUrls.length > 1 && (
-                        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                        <div className="flex gap-2 sm:gap-4 overflow-x-auto pb-2 scrollbar-hide">
                             {auction.imageUrls.map((url, i) => (
                                 <button key={i} onClick={() => setActiveImage(i)}
-                                    className={`relative w-24 h-24 rounded-2xl overflow-hidden border-2 transition-all flex-shrink-0 shadow-sm ${activeImage === i ? 'border-yellow-400 scale-105 shadow-[0_10px_20px_-10px_rgba(250,204,21,0.5)]' : 'border-white/10 opacity-60 hover:opacity-100 hover:border-white/30'}`}>
-                                    <Image src={url} alt="" fill className="object-cover" sizes="96px" />
+                                    className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 ${activeImage === i ? 'border-yellow-400 scale-105 shadow-[0_6px_15px_-5px_rgba(250,204,21,0.5)]' : 'border-white/10 opacity-60 hover:opacity-100 hover:border-white/30'}`}>
+                                    <Image src={url} alt="" fill className="object-cover" sizes="80px" />
                                 </button>
                             ))}
                         </div>
                     )}
 
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                         <LivePulseFeed />
                         <div>
-                            <p className="inline-block bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-4">{auction.category.name}</p>
-                            <h1 className="text-4xl md:text-5xl font-black text-white mb-6 leading-tight tracking-tighter drop-shadow-sm">{auction.title}</h1>
-                            <div className="flex flex-wrap gap-2 mb-6">
-                                <div className={`px-4 py-1.5 rounded-full text-[10px] font-black tracking-[0.2em] uppercase flex items-center gap-2 shadow-lg ${urgent ? 'bg-red-500 text-white animate-pulse' : 'bg-green-500 text-white'}`}>
-                                    <Activity className="w-3 h-3" />
-                                    {auction.status}
+                            <p className="inline-block bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-3">{auction.category.name}</p>
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white mb-4 leading-tight tracking-tighter">{auction.title}</h1>
+                            {/* Status badges - scrollable row on mobile */}
+                            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide mb-4">
+                                <div className={`flex-shrink-0 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase flex items-center gap-1.5 ${urgent ? 'bg-red-500 text-white animate-pulse' : 'bg-green-500/20 text-green-400 border border-green-500/30'}`}>
+                                    <Activity className="w-3 h-3" />{auction.status}
                                 </div>
-                                <div className={`px-4 py-1.5 rounded-full text-[10px] font-black tracking-[0.2em] uppercase flex items-center gap-2 shadow-lg backdrop-blur-md border ${wsConnected ? 'bg-yellow-400/20 text-yellow-400 border-yellow-400/30' : 'bg-zinc-800 text-gray-500 border-white/5'}`}>
-                                    <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-yellow-400 animate-pulse' : (isConnecting ? 'bg-blue-400 animate-spin border-t-transparent' : 'bg-gray-600')}`} />
-                                    {wsConnected ? 'LIVE FEED ACTIVE' : (isConnecting ? 'CONNECTING...' : 'LIVE FEED OFFLINE')}
+                                <div className={`flex-shrink-0 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase flex items-center gap-1.5 border ${wsConnected ? 'bg-yellow-400/10 text-yellow-400 border-yellow-400/20' : 'bg-zinc-800 text-gray-500 border-white/5'}`}>
+                                    <div className={`w-1.5 h-1.5 rounded-full ${wsConnected ? 'bg-yellow-400 animate-pulse' : 'bg-gray-600'}`} />
+                                    {wsConnected ? 'LIVE' : 'OFFLINE'}
                                 </div>
                                 {viewers > 0 && (
-                                    <div className="px-4 py-1.5 rounded-full text-[10px] font-black tracking-[0.2em] uppercase flex items-center gap-2 shadow-lg backdrop-blur-md border bg-blue-500/20 text-blue-400 border-blue-500/30">
-                                        <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-                                        {viewers} PEOPLE WATCHING
+                                    <div className="flex-shrink-0 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase flex items-center gap-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                                        {viewers} watching
                                     </div>
                                 )}
                             </div>
-
-                            <div className="flex flex-wrap gap-4">
-                                <div className="flex items-center text-blue-400 font-bold bg-blue-500/10 px-4 py-2 rounded-xl text-sm border border-blue-500/20 shadow-sm">
-                                    <CheckCircle2 className="w-4 h-4 mr-2" /> Escrow Protected
-                                </div>
-                                <div className="flex items-center text-gray-300 font-semibold text-sm bg-zinc-900/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-sm">
-                                    <Package className="w-4 h-4 mr-2 text-gray-500" /> Shipping: <span className="text-white ml-1">₹{Number(auction.shippingCost).toLocaleString()}</span>
-                                </div>
-                                <div className="flex items-center text-gray-300 font-semibold text-sm bg-zinc-900/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-sm">
-                                    <span className="text-gray-500 mr-2">👁</span> {auction.viewCount.toLocaleString()} views
-                                </div>
+                            {/* Info pills */}
+                            <div className="flex flex-wrap gap-2">
+                                <span className="flex items-center gap-1.5 text-blue-400 font-semibold bg-blue-500/10 px-3 py-1.5 rounded-lg text-xs border border-blue-500/20">
+                                    <CheckCircle2 className="w-3.5 h-3.5" /> Escrow Protected
+                                </span>
+                                <span className="flex items-center gap-1.5 text-gray-400 font-semibold bg-zinc-900/60 px-3 py-1.5 rounded-lg text-xs border border-white/10">
+                                    <Package className="w-3.5 h-3.5" /> Ship ₹{Number(auction.shippingCost).toLocaleString()}
+                                </span>
+                                <span className="flex items-center gap-1.5 text-gray-400 font-semibold bg-zinc-900/60 px-3 py-1.5 rounded-lg text-xs border border-white/10">
+                                    👁 {auction.viewCount.toLocaleString()}
+                                </span>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-zinc-900/40 backdrop-blur-2xl border border-white/10 p-8 rounded-[2rem] shadow-inner mb-6">
-                        <h3 className="font-black text-xl mb-4 flex items-center text-white tracking-tight">
-                            <Shield className="w-5 h-5 mr-3 text-yellow-400" /> Item Description
+                    <div className="bg-zinc-900/40 backdrop-blur-2xl border border-white/10 p-5 sm:p-8 rounded-[1.5rem] sm:rounded-[2rem] shadow-inner mb-4">
+                        <h3 className="font-black text-base sm:text-xl mb-3 flex items-center text-white tracking-tight">
+                            <Shield className="w-4 h-4 mr-2 text-yellow-400" /> Item Description
                         </h3>
-                        <p className="text-gray-300 leading-relaxed text-lg">{auction.description}</p>
+                        <p className="text-gray-300 leading-relaxed text-sm sm:text-base">{auction.description}</p>
                     </div>
 
-                    <div className="space-y-4">
-                        <AuthenticityBadge />
-                        <LumeAssistant auctionId={id} onApply={(amt) => setBidAmount(amt)} />
-                    </div>
+                    <AuthenticityBadge />
 
                     <div className="bg-zinc-900/40 backdrop-blur-2xl border border-white/10 p-6 rounded-[2rem] flex items-center justify-between hover:bg-zinc-900/60 transition-colors shadow-inner">
                         <div>
@@ -726,35 +718,35 @@ export default function LiveAuctionPage() {
                 </div>
 
                 <div className="w-full lg:w-2/5">
-                    <div className="sticky top-32 space-y-6">
-                        <div className="bg-zinc-950/80 backdrop-blur-3xl border border-white/10 p-8 md:p-10 rounded-[2.5rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.8)] relative overflow-hidden group">
+                    <div className="sticky top-20 space-y-4 lg:space-y-6">
+                        <div className="bg-zinc-950/80 backdrop-blur-3xl border border-white/10 p-5 sm:p-8 rounded-[1.5rem] sm:rounded-[2.5rem] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.7)] relative overflow-hidden group">
                             <div className={`absolute top-0 left-0 w-full h-1.5 ${urgent ? 'bg-gradient-to-r from-red-600 via-red-500 to-red-600' : 'bg-gradient-to-r from-yellow-500 via-yellow-400 to-yellow-500'}`} />
                             <div className={`absolute -top-32 -right-32 w-64 h-64 rounded-full blur-[100px] pointer-events-none opacity-20 group-hover:opacity-40 transition-opacity ${urgent ? 'bg-red-500' : 'bg-yellow-400'}`} />
 
-                            <div className="flex flex-col gap-6 relative z-10">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-2">Current Highest Bid</p>
+                            <div className="flex flex-col gap-4 sm:gap-6 relative z-10">
+                                <div className="flex justify-between items-start gap-3">
+                                    <div className="min-w-0">
+                                        <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Current Highest Bid</p>
                                         <AnimatePresence mode="wait">
                                             <motion.h2
                                                 key={auction.currentHighestBid}
-                                                initial={{ scale: 1.2, color: '#facc15' }}
+                                                initial={{ scale: 1.1, color: '#facc15' }}
                                                 animate={{ scale: 1, color: '#ffffff' }}
                                                 exit={{ scale: 0.9, opacity: 0 }}
                                                 transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-                                                className="text-5xl md:text-6xl font-black text-white tracking-tighter drop-shadow-md"
+                                                className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tighter"
                                             >
                                                 ₹{Number(auction.currentHighestBid).toLocaleString()}
                                             </motion.h2>
                                         </AnimatePresence>
-                                        <p className="text-gray-500 text-xs mt-3 font-semibold bg-white/5 inline-block px-3 py-1 rounded-lg">Starting Price: ₹{Number(auction.startingPrice).toLocaleString()}</p>
+                                        <p className="text-gray-500 text-[10px] mt-2 font-semibold">Start: ₹{Number(auction.startingPrice).toLocaleString()}</p>
                                     </div>
 
-                                    <div className={`text-right px-5 py-4 rounded-2xl border shadow-lg backdrop-blur-md transition-all duration-300 ${urgent ? 'bg-red-950/50 border-red-500/60 shadow-red-500/20 ring-2 ring-red-500/20 scale-105' : 'bg-zinc-900/80 border-white/10 shadow-black/50'}`}>
-                                        <p className={`text-[10px] font-black uppercase tracking-widest mb-1.5 flex items-center justify-end ${urgent ? 'text-red-400' : 'text-gray-400'}`}>
-                                            <Timer className={`w-4 h-4 mr-1.5 ${urgent ? 'animate-spin-slow' : ''}`} /> Ends In
+                                    <div className={`flex-shrink-0 text-right px-3 py-3 sm:px-5 sm:py-4 rounded-xl sm:rounded-2xl border shadow-lg backdrop-blur-md transition-all duration-300 ${urgent ? 'bg-red-950/50 border-red-500/60 ring-1 ring-red-500/20 scale-105' : 'bg-zinc-900/80 border-white/10'}`}>
+                                        <p className={`text-[9px] font-black uppercase tracking-widest mb-1 flex items-center justify-end ${urgent ? 'text-red-400' : 'text-gray-400'}`}>
+                                            <Timer className="w-3 h-3 mr-1" /> Ends In
                                         </p>
-                                        <p className={`text-2xl md:text-3xl font-black tabular-nums tracking-tight ${urgent ? 'text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'text-white drop-shadow-sm'}`}>{time}</p>
+                                        <p className={`text-lg sm:text-2xl font-black tabular-nums tracking-tight ${urgent ? 'text-red-500' : 'text-white'}`}>{time}</p>
                                     </div>
                                 </div>
 
@@ -782,9 +774,9 @@ export default function LiveAuctionPage() {
                                         )}
                                     </div>
 
-                                    <div className="flex items-center justify-center gap-1 mt-6 bg-white/5 p-1.5 rounded-2xl border border-white/5">
+                                    <div className="flex items-center justify-center gap-0.5 sm:gap-1 mt-4 bg-white/5 p-1 rounded-xl border border-white/5">
                                         {['🔥', '🤯', '🚀', '💎', '🤝'].map(emoji => (
-                                            <button key={emoji} onClick={() => sendReaction(emoji)} className="p-3 text-2xl hover:bg-white/10 rounded-xl transition-all hover:scale-125 active:scale-90">{emoji}</button>
+                                            <button key={emoji} onClick={() => sendReaction(emoji)} className="p-2 sm:p-3 text-lg sm:text-2xl hover:bg-white/10 rounded-lg transition-all hover:scale-125 active:scale-90">{emoji}</button>
                                         ))}
                                     </div>
                                 </div>
@@ -792,27 +784,23 @@ export default function LiveAuctionPage() {
 
                             <AnimatePresence>
                                 {message && (
-                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className={`mt-4 mb-4 px-4 py-3 rounded-xl text-sm font-semibold ${message.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : message.type === 'error' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'}`}>{message.text}</motion.div>
+                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className={`mt-3 mb-3 px-4 py-3 rounded-xl text-sm font-semibold ${message.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : message.type === 'error' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'}`}>{message.text}</motion.div>
                                 )}
                             </AnimatePresence>
 
                             {isLive && !isSeller ? (
                                 <>
-                                    <div id="bid-input-container" className="bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 mb-5 mt-4 flex items-center shadow-inner focus-within:ring-2 focus-within:ring-yellow-400/30 focus-within:border-yellow-400/50 transition-all">
-                                        <span className="text-gray-500 text-2xl font-black mr-3">₹</span>
-                                        <input type="number" value={bidAmount} min={minNext} step={Number(auction.bidIncrement)} onChange={e => setBidAmount(Math.round(Number(e.target.value)))} className="flex-1 bg-transparent text-3xl font-black text-white focus:outline-none placeholder:text-gray-600" />
-                                        <span className="text-gray-500 text-[10px] font-bold uppercase tracking-widest bg-black/40 px-3 py-1.5 rounded-lg border border-white/5">{currentBidAmt === 0 ? `Starts at ₹${Math.round(minNext).toLocaleString('en-IN')}` : `Min: ₹${Math.round(minNext).toLocaleString('en-IN')}`}</span>
+                                    <div id="bid-input-container" className="bg-zinc-900/60 border border-white/10 rounded-xl p-4 mb-4 mt-3 flex items-center gap-2 focus-within:ring-2 focus-within:ring-yellow-400/30 focus-within:border-yellow-400/50 transition-all">
+                                        <span className="text-gray-500 text-xl font-black">₹</span>
+                                        <input type="number" value={bidAmount} min={minNext} step={Number(auction.bidIncrement)} onChange={e => setBidAmount(Math.round(Number(e.target.value)))} className="flex-1 bg-transparent text-2xl sm:text-3xl font-black text-white focus:outline-none min-w-0" />
+                                        <span className="text-gray-500 text-[9px] font-bold uppercase tracking-wider bg-black/40 px-2 py-1 rounded-lg border border-white/5 whitespace-nowrap flex-shrink-0">{currentBidAmt === 0 ? `Min ₹${Math.round(minNext).toLocaleString('en-IN')}` : `≥₹${Math.round(minNext).toLocaleString('en-IN')}`}</span>
                                     </div>
 
-                                    <div className="grid grid-cols-3 gap-3 mb-8">
+                                    <div className="grid grid-cols-3 gap-2 mb-5">
                                         {[minNext, minNext + 500, minNext + 2000].map(amount => (
-                                            <button key={amount} onClick={() => setBidAmount(Math.round(amount))} className="bg-zinc-800/50 backdrop-blur-md border border-white/10 text-sm py-3 px-3 rounded-xl hover:bg-yellow-400/10 hover:border-yellow-400/40 hover:text-yellow-400 transition-all text-gray-300 font-bold shadow-sm active:scale-95">₹{Math.round(amount).toLocaleString('en-IN')}</button>
+                                            <button key={amount} onClick={() => setBidAmount(Math.round(amount))} className="bg-zinc-800/50 border border-white/10 text-xs sm:text-sm py-2.5 px-2 rounded-xl hover:bg-yellow-400/10 hover:border-yellow-400/40 hover:text-yellow-400 transition-all text-gray-300 font-bold active:scale-95">₹{Math.round(amount).toLocaleString('en-IN')}</button>
                                         ))}
                                     </div>
-
-                                    {isLive && user?.id !== auction.bids[0]?.bidderId && (
-                                        <VoiceBidding minBid={minNext} currentBid={currentBidAmt} onRecognizedBid={(amount) => setBidAmount(amount)} />
-                                    )}
 
                                     {availableBalance < bidAmount && (
                                         <div className="mb-4 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center justify-between">
@@ -834,34 +822,17 @@ export default function LiveAuctionPage() {
                                         </div>
                                     ) : null}
 
-                                    <div className="mt-8 pt-6 border-t border-white/10 relative">
-                                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-zinc-950 px-4 text-gray-500 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
-                                            <TrendingUp className="w-3 h-3 text-blue-400" /> Smart Auto-Bid
+                                    <div className="mt-5 pt-5 border-t border-white/10 relative">
+                                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-zinc-950 px-3 text-gray-500 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest">
+                                            <TrendingUp className="w-3 h-3 text-blue-400" /> Auto-Bid
                                         </div>
-                                        <div className="flex gap-3">
-                                            <div className="flex-1 bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-xl px-4 py-3 flex items-center focus-within:border-blue-500/50 focus-within:ring-1 focus-within:ring-blue-500/20 transition-all shadow-inner">
-                                                <span className="text-gray-500 font-bold mr-2">₹</span>
-                                                <input type="number" value={maxBid} onChange={e => setMaxBid(e.target.value)} placeholder="Set max auto-bid limit…" className="bg-transparent text-white font-bold outline-none flex-1 min-w-0 placeholder:text-gray-600" />
+                                        <div className="flex gap-2">
+                                            <div className="flex-1 bg-zinc-900/60 border border-white/10 rounded-xl px-3 py-2.5 flex items-center focus-within:border-blue-500/50 transition-all">
+                                                <span className="text-gray-500 font-bold mr-2 text-sm">₹</span>
+                                                <input type="number" value={maxBid} onChange={e => setMaxBid(e.target.value)} placeholder="Max auto-bid…" className="bg-transparent text-white font-bold outline-none flex-1 min-w-0 placeholder:text-gray-600 text-sm" />
                                             </div>
-                                            <button onClick={setAutoBid} className="px-6 py-3 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-xl text-sm font-black hover:bg-blue-500 hover:text-white transition-all shadow-[0_0_15px_rgba(59,130,246,0.15)] hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] whitespace-nowrap">Activate</button>
+                                            <button onClick={setAutoBid} className="px-4 py-2.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-xl text-xs font-black hover:bg-blue-500 hover:text-white transition-all whitespace-nowrap">Activate</button>
                                         </div>
-
-                                        {/* Lume AI Assistant Integration */}
-                                        <LumeAssistant
-                                            auctionId={id}
-                                            onApply={(amount) => {
-                                                setMaxBid(amount.toString());
-                                                // Trigger a small highlight effect on the input
-                                                const input = document.querySelector('input[placeholder="Set max auto-bid limit…"]') as HTMLInputElement;
-                                                if (input) {
-                                                    input.style.transition = 'all 0.5s ease';
-                                                    input.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
-                                                    setTimeout(() => {
-                                                        input.style.backgroundColor = 'transparent';
-                                                    }, 1000);
-                                                }
-                                            }}
-                                        />
                                     </div>
                                 </>
                             ) : (
