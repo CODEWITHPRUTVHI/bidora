@@ -185,8 +185,16 @@ export default function Navbar() {
                         </Link>
                     )}
 
-                    {/* My Orders Quick Link */}
-                    {user && (
+                    {/* Analytics Link (Sellers only) */}
+                    {user?.role === 'SELLER' && (
+                        <Link href="/analytics" className="hidden lg:flex items-center gap-2 text-gray-300 hover:text-white transition-colors px-3 py-1.5 rounded-full hover:bg-white/5 border border-transparent hover:border-white/10">
+                            <ShoppingBag className="w-4 h-4 text-yellow-400" />
+                            <span className="font-semibold text-sm">Analytics</span>
+                        </Link>
+                    )}
+
+                    {/* Orders Quick Link (Buyers) */}
+                    {user && user.role !== 'SELLER' && (
                         <Link href="/dashboard?tab=orders" className="hidden lg:flex items-center gap-2 text-gray-300 hover:text-white transition-colors px-3 py-1.5 rounded-full hover:bg-white/5 border border-transparent hover:border-white/10">
                             <ShoppingBag className="w-4 h-4 text-yellow-400" />
                             <span className="font-semibold text-sm">Orders</span>
