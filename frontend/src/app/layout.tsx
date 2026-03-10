@@ -12,6 +12,11 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://bidora.me',
   },
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon-32x32.png',
+    apple: '/apple-touch-icon.png',
+  },
   openGraph: {
     title: 'Bidora — Where Rare Lands | India\'s Sneaker Auction Platform',
     description: 'Hunt, bid, and win verified rare sneakers. Only real. Only Bidora.',
