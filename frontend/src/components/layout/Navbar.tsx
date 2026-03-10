@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, Wallet, Bell, Menu, Flame, Shield, X, ShoppingBag } from 'lucide-react';
+import { Search, Wallet, Bell, Menu, Flame, Shield, X, ShoppingBag, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,6 +12,7 @@ export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
     const [unread, setUnread] = useState(0);
+    const [unreadMessages, setUnreadMessages] = useState(0);
     const [notifs, setNotifs] = useState<any[]>([]);
     const [showNotifs, setShowNotifs] = useState(false);
     const { user, logout } = useAuth();
@@ -47,6 +48,13 @@ export default function Navbar() {
             setNotifs(prev => [n, ...prev].slice(0, 5));
             setUnread(prev => prev + 1);
         });
+
+        socket.on('new_message', () => {
+            setUnreadMessages(prev => prev + 1);
+        });
+
+        // Fetch initial unread message count
+        api.get('/messages/unread-count').then(r => setUnreadMessages(r.data.count ?? 0)).catch(() => {});
 
         return () => socket.disconnect();
     }, [user?.id]);
@@ -165,6 +173,18 @@ export default function Navbar() {
                         </div>
                     )}
 
+                    {/* Inbox Icon */}
+                    {user && (
+                        <Link href="/inbox" onClick={() => setUnreadMessages(0)} className="relative p-2 text-gray-400 hover:text-white transition-colors hover:bg-white/5 rounded-full hidden sm:flex items-center justify-center">
+                            <MessageCircle className="w-5 h-5" />
+                            {unreadMessages > 0 && (
+                                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-yellow-400 text-black text-[10px] font-black rounded-full flex items-center justify-center">
+                                    {unreadMessages > 9 ? '9+' : unreadMessages}
+                                </span>
+                            )}
+                        </Link>
+                    )}
+
                     {/* My Orders Quick Link */}
                     {user && (
                         <Link href="/dashboard?tab=orders" className="hidden lg:flex items-center gap-2 text-gray-300 hover:text-white transition-colors px-3 py-1.5 rounded-full hover:bg-white/5 border border-transparent hover:border-white/10">
@@ -251,6 +271,13 @@ export default function Navbar() {
                                             <Link href="/dashboard?tab=orders" onClick={() => setMenuOpen(false)} className="flex items-center gap-4 text-lg font-bold text-gray-300 hover:text-white p-4 bg-white/5 rounded-2xl border border-white/5">
                                                 <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">🛍️</div>
                                                 My Orders
+                                            </Link>
+                                            <Link href="/inbox" onClick={() => { setMenuOpen(false); setUnreadMessages(0); }} className="flex items-center gap-4 text-lg font-bold text-gray-300 hover:text-white p-4 bg-white/5 rounded-2xl border border-white/5">
+                                                <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center relative">
+                                                    💬
+                                                    {unreadMessages > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 text-black text-[10px] font-black rounded-full flex items-center justify-center">{unreadMessages}</span>}
+                                                </div>
+                                                Messages
                                             </Link>
                                         </>
                                     )}

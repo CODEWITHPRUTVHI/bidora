@@ -700,16 +700,26 @@ export default function LiveAuctionPage() {
                                 </span>
                             )}
                             {user?.id !== auction.seller.id && (
-                                <button
-                                    onClick={toggleFollow}
-                                    disabled={isFollowLoading}
-                                    className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${isFollowing
-                                        ? 'bg-zinc-800 text-gray-400 border border-white/10 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20'
-                                        : 'bg-yellow-400 text-black hover:bg-yellow-300 shadow-[0_0_15px_rgba(250,204,21,0.3)]'
-                                        }`}
-                                >
-                                    {isFollowLoading ? '...' : (isFollowing ? 'Following' : 'Follow Seller')}
-                                </button>
+                                <div className="flex items-center gap-2 flex-wrap mt-2">
+                                    <button
+                                        onClick={toggleFollow}
+                                        disabled={isFollowLoading}
+                                        className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${isFollowing
+                                            ? 'bg-zinc-800 text-gray-400 border border-white/10 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20'
+                                            : 'bg-yellow-400 text-black hover:bg-yellow-300 shadow-[0_0_15px_rgba(250,204,21,0.3)]'
+                                            }`}
+                                    >
+                                        {isFollowLoading ? '...' : (isFollowing ? 'Following' : 'Follow Seller')}
+                                    </button>
+                                    {user && (
+                                        <Link
+                                            href={`/inbox?with=${auction.seller.id}`}
+                                            className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest bg-white/10 border border-white/10 text-gray-300 hover:bg-white/20 hover:text-white transition-all"
+                                        >
+                                            <MessageSquare className="w-3.5 h-3.5" /> Message Seller
+                                        </Link>
+                                    )}
+                                </div>
                             )}
                         </div>
                     </div>
