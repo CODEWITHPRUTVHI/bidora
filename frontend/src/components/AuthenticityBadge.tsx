@@ -4,7 +4,7 @@ import React from 'react';
 import { ShieldCheck, CheckCircle2, ShieldAlert, Sparkles, Fingerprint } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export default function AuthenticityBadge({ level = 'VERIFIED' }: { level?: 'VERIFIED' | 'PREMIUM' | 'AI_SCANNED' }) {
+export default function AuthenticityBadge({ level = 'VERIFIED' }: { level?: 'VERIFIED' | 'PREMIUM' | 'AUTHENTICATED' }) {
     return (
         <div className="flex flex-col gap-3">
             <motion.div
@@ -42,7 +42,7 @@ export default function AuthenticityBadge({ level = 'VERIFIED' }: { level?: 'VER
                 <div className="mt-4 pt-4 border-t border-white/5 grid grid-cols-2 gap-3 relative z-10">
                     <div className="flex items-center gap-2">
                         <Fingerprint className="w-3 h-3 text-blue-500" />
-                        <span className="text-[9px] font-bold text-gray-400 uppercase">AI-Scan Active</span>
+                        <span className="text-[9px] font-bold text-gray-400 uppercase">Expert Authenticated</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <Sparkles className="w-3 h-3 text-yellow-500" />

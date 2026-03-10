@@ -58,8 +58,14 @@ export const getTransactions = async (req: AuthRequest, res: Response) => {
 // ─────────────────────────────────────────────
 export const deposit = async (req: AuthRequest, res: Response) => {
     try {
+        const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+        if (user?.role !== 'ADMIN') {
+            return res.status(403).json({ error: 'Manual deposit restricted. Please use the secure payment gateway.' });
+        }
+
         const amount = Number(req.body.amount);
         if (!amount || amount <= 0) return res.status(400).json({ error: 'Amount must be positive' });
+
         if (amount > 500000) return res.status(400).json({ error: 'Maximum deposit is ₹5,00,000' });
 
         const result = await prisma.$transaction(async (tx) => {

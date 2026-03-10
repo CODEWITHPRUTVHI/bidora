@@ -6,13 +6,23 @@ import { motion } from 'framer-motion';
 import {
     Package, Truck, CheckCircle2, Clock, MapPin, Shield,
     ArrowLeft, Star, AlertTriangle, Phone, ExternalLink,
-    Upload, X, Loader2, Plus
+    Upload, X, Loader2, Plus, Wallet
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/store/AuthContext';
 import api from '@/lib/axios';
 import RatingSection from '@/components/RatingSection';
 import Image from 'next/image';
+// @ts-ignore
+import { load } from '@cashfreepayments/cashfree-js';
+
+let cashfree: any = null;
+const initCashfree = async () => {
+    if (!cashfree) {
+        cashfree = await load({ mode: process.env.NEXT_PUBLIC_CASH_ENVIRONMENT === 'PRODUCTION' ? 'production' : 'sandbox' });
+    }
+    return cashfree;
+};
 
 interface OrderDetail {
     id: string; title: string; imageUrls: string[];
@@ -66,13 +76,45 @@ export default function OrderPage() {
     const [uploading, setUploading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+    // New: Address & Wallet States
+    const [wallet, setWallet] = useState<{ walletBalance: number; pendingFunds: number; availableBalance: number } | null>(null);
+    const [addresses, setAddresses] = useState<any[]>([]);
+    const [selectedAddressId, setSelectedAddressId] = useState<string>('');
+    const [paying, setPaying] = useState(false);
+    const [showAddressForm, setShowAddressForm] = useState(false);
+    const [newAddress, setNewAddress] = useState({ fullName: '', line1: '', city: '', state: '', pincode: '', phone: '' });
+
     useEffect(() => {
         if (!user) { router.push('/auth'); return; }
-        api.get(`/auctions/${auctionId}`)
-            .then(res => setOrder(res.data.auction))
-            .catch(() => setMessage({ type: 'error', text: 'Order not found.' }))
-            .finally(() => setLoading(false));
-    }, [auctionId, user]);
+        
+        const loadInitialData = async () => {
+             try {
+                const res = await api.get(`/auctions/${auctionId}`);
+                const auction = res.data.auction;
+                setOrder(auction);
+
+                // If auction is in PAYMENT_PENDING and user is buyer, fetch addresses & wallet
+                if (auction.status === 'PAYMENT_PENDING' && user.id === auction.buyer?.id) {
+                    const [addrRes, walletRes] = await Promise.all([
+                        api.get('/shipping/address'),
+                        api.get('/wallet')
+                    ]);
+                    setAddresses(addrRes.data.addresses || []);
+                    setWallet(walletRes.data);
+                    
+                    // Auto-select default address if any
+                    const def = addrRes.data.addresses?.find((a: any) => a.isDefault);
+                    if (def) setSelectedAddressId(def.id);
+                }
+             } catch (err) {
+                 setMessage({ type: 'error', text: 'Order not found or access denied.' });
+             } finally {
+                 setLoading(false);
+             }
+        };
+
+        loadInitialData();
+    }, [auctionId, user, router]);
 
     const confirmDelivery = async () => {
         setConfirming(true);
@@ -141,6 +183,65 @@ export default function OrderPage() {
         } finally { setMarkingDelivered(false); }
     };
 
+    const handleAddAddress = async () => {
+        if (!newAddress.fullName || !newAddress.line1 || !newAddress.city || !newAddress.pincode) {
+            return setMessage({ type: 'error', text: 'Please fill all required address fields.' });
+        }
+        try {
+            const res = await api.post('/shipping/address', newAddress);
+            setAddresses(prev => [...prev, res.data.address]);
+            setSelectedAddressId(res.data.address.id);
+            setShowAddressForm(false);
+            setMessage({ type: 'success', text: 'Address added successfully!' });
+        } catch (e: any) {
+            setMessage({ type: 'error', text: 'Failed to add address.' });
+        }
+    };
+
+    const handlePayment = async () => {
+        if (!selectedAddressId) return setMessage({ type: 'error', text: 'Please select a shipping address.' });
+        setPaying(true);
+        try {
+            const totalDue = Number(order!.currentHighestBid) + Number(order!.shippingCost);
+            const available = wallet?.availableBalance || 0;
+
+            if (available < totalDue) {
+                const diff = totalDue - available;
+                // Deposit the difference
+                const res = await api.post('/payments/create-order', { amount: Math.ceil(diff) });
+                const cf = await initCashfree();
+                
+                cf.checkout({
+                    paymentSessionId: res.data.payment_session_id,
+                    redirectTarget: "_modal",
+                }).then(async (result: any) => {
+                    if (result.paymentDetails) {
+                        try {
+                            await api.post('/payments/verify', { order_id: res.data.order_id });
+                            // Now try to pay for auction
+                            const payRes = await api.post('/wallet/pay-auction', { auctionId, addressId: selectedAddressId });
+                            setOrder(prev => prev ? { ...prev, status: payRes.data.status } : prev);
+                            setMessage({ type: 'success', text: 'Deposit & Payment successful! Awaiting shipment.' });
+                        } catch (err) {
+                            setMessage({ type: 'error', text: 'Payment verification failed. Please refresh.' });
+                        }
+                    } else {
+                        setMessage({ type: 'error', text: 'Deposit failed or cancelled.' });
+                    }
+                    setPaying(false);
+                });
+            } else {
+                const payRes = await api.post('/wallet/pay-auction', { auctionId, addressId: selectedAddressId });
+                setOrder(prev => prev ? { ...prev, status: payRes.data.status } : prev);
+                setMessage({ type: 'success', text: 'Payment successful! Awaiting shipment.' });
+                setPaying(false);
+            }
+        } catch (e: any) {
+            setMessage({ type: 'error', text: e.response?.data?.error || 'Payment failed.' });
+            setPaying(false);
+        }
+    };
+
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center">
             <div className="w-10 h-10 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin" />
@@ -162,6 +263,7 @@ export default function OrderPage() {
     const isSeller = user?.id === order.seller.id;
     const canConfirm = isBuyer && order.status === 'DELIVERED';
     const canGenerateLabel = isSeller && order.status === 'PAID';
+    const canPay = isBuyer && order.status === 'PAYMENT_PENDING';
 
     return (
         <div className="container mx-auto px-4 md:px-8 py-12 max-w-4xl">
@@ -366,6 +468,101 @@ export default function OrderPage() {
             {/* Actions */}
             {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
                 <div className="space-y-4">
+                    {/* Payment Section */}
+                    {canPay && order && (
+                        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="mb-8">
+                            <div className="bg-yellow-400/5 border-2 border-yellow-400/20 rounded-[2rem] p-6 sm:p-8 overflow-hidden relative">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/10 blur-3xl -z-10" />
+                                
+                                <h3 className="text-xl sm:text-2xl font-black text-white mb-6 flex items-center gap-3">
+                                    <Wallet className="w-6 h-6 sm:w-7 sm:h-7 text-yellow-400" /> Complete Your Purchase
+                                </h3>
+
+                                <div className="grid md:grid-cols-2 gap-8">
+                                    {/* Left: Address Selection */}
+                                    <div className="space-y-4">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Shipping Address</p>
+                                        
+                                        {addresses.length > 0 && !showAddressForm ? (
+                                            <div className="space-y-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                                                {addresses.map(addr => (
+                                                    <button key={addr.id} onClick={() => setSelectedAddressId(addr.id)}
+                                                        className={`w-full text-left p-4 rounded-2xl border transition-all ${selectedAddressId === addr.id ? 'bg-yellow-400/10 border-yellow-400 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'}`}>
+                                                        <div className="flex justify-between items-start">
+                                                            <p className="font-bold text-sm">{addr.fullName}</p>
+                                                            {selectedAddressId === addr.id && <CheckCircle2 className="w-4 h-4 text-yellow-400" />}
+                                                        </div>
+                                                        <p className="text-[11px] mt-1 line-clamp-1">{addr.line1}, {addr.city}</p>
+                                                    </button>
+                                                ))}
+                                                <button onClick={() => setShowAddressForm(true)} className="w-full py-3 text-xs font-bold text-gray-500 hover:text-white transition-colors flex items-center justify-center gap-2">
+                                                    <Plus className="w-3 h-3" /> Add New Address
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3 bg-black/20 p-4 rounded-2xl border border-white/5">
+                                                <input type="text" placeholder="Full Name" value={newAddress.fullName} onChange={e => setNewAddress({...newAddress, fullName: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-yellow-400/50" />
+                                                <input type="text" placeholder="Address line 1" value={newAddress.line1} onChange={e => setNewAddress({...newAddress, line1: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-yellow-400/50" />
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <input type="text" placeholder="City" value={newAddress.city} onChange={e => setNewAddress({...newAddress, city: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-yellow-400/50" />
+                                                    <input type="text" placeholder="Pincode" value={newAddress.pincode} onChange={e => setNewAddress({...newAddress, pincode: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-yellow-400/50" />
+                                                </div>
+                                                <div className="flex gap-2 pt-2">
+                                                    <button onClick={handleAddAddress} className="flex-1 py-2.5 bg-yellow-400/10 border border-yellow-400/20 text-yellow-400 font-bold rounded-xl text-xs hover:bg-yellow-400/20 transition-colors">Save Address</button>
+                                                    {addresses.length > 0 && <button onClick={() => setShowAddressForm(false)} className="px-4 py-2.5 text-gray-500 font-bold text-xs hover:text-white transition-colors">Cancel</button>}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Right: Payment Details */}
+                                    <div className="bg-black/40 rounded-3xl p-6 border border-white/5 space-y-4">
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-xs">
+                                                <span className="text-gray-500">Winning Bid</span>
+                                                <span className="font-bold text-white">₹{Number(order.currentHighestBid).toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex justify-between text-xs">
+                                                <span className="text-gray-500">Shipping</span>
+                                                <span className="font-bold text-white">₹{Number(order.shippingCost).toLocaleString()}</span>
+                                            </div>
+                                            <div className="pt-2 border-t border-white/10 flex justify-between">
+                                                <span className="font-black text-white text-sm">Total Due</span>
+                                                <span className="font-black text-yellow-400 text-lg">₹{(Number(order.currentHighestBid) + Number(order.shippingCost)).toLocaleString()}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-4 border-t border-white/10">
+                                            <div className="flex justify-between items-center mb-4">
+                                                <div>
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-500">Your Wallet</p>
+                                                    <p className={`font-black text-sm ${Number(wallet?.availableBalance || 0) < (Number(order.currentHighestBid) + Number(order.shippingCost)) ? 'text-red-400' : 'text-green-400'}`}>
+                                                        ₹{Number(wallet?.availableBalance || 0).toLocaleString()}
+                                                    </p>
+                                                </div>
+                                                {Number(wallet?.availableBalance || 0) < (Number(order.currentHighestBid) + Number(order.shippingCost)) && (
+                                                    <div className="text-[8px] font-black uppercase tracking-widest bg-red-500/10 text-red-400 px-2 py-1 rounded-md border border-red-500/20">
+                                                        Low Balance
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <button onClick={handlePayment} disabled={paying || (!selectedAddressId)}
+                                                className="w-full py-4 bg-yellow-400 text-black font-black uppercase tracking-tighter text-base rounded-2xl hover:bg-yellow-300 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_10px_20px_rgba(250,204,21,0.2)]">
+                                                {paying ? <Loader2 className="w-5 h-5 animate-spin" /> : <Shield className="w-5 h-5" />}
+                                                {Number(wallet?.availableBalance || 0) < (Number(order.currentHighestBid) + Number(order.shippingCost)) 
+                                                    ? 'Top up & Pay' 
+                                                    : 'Complete Purchase'}
+                                            </button>
+                                            <p className="text-[8px] text-gray-600 text-center mt-3 font-bold uppercase tracking-widest leading-relaxed">
+                                                Secure Escrow Payment<br/>Funds held until you confirm delivery
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
                     {/* Confirm Delivery Button */}
                     {canConfirm && (
                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>

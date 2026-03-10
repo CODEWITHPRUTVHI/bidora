@@ -27,8 +27,6 @@ export default function CreateAuctionPage() {
     const [error, setError] = useState('');
     const [imageUrls, setImageUrls] = useState<string[]>([]);
 
-    const [aiPrompt, setAiPrompt] = useState('');
-    const [generatingAI, setGeneratingAI] = useState(false);
 
     const [form, setForm] = useState({
         title: '',
@@ -59,30 +57,6 @@ export default function CreateAuctionPage() {
 
     const removeImage = (idx: number) => setImageUrls(prev => prev.filter((_, i) => i !== idx));
 
-    const handleAIGenerate = async () => {
-        if (!aiPrompt) return setError('Please enter a short description for the AI.');
-        setGeneratingAI(true);
-        setError('');
-        try {
-            const res = await api.post('/auctions/ai-auto-lister', {
-                prompt: aiPrompt,
-                imageUrls: imageUrls
-            });
-            const draft = res.data.draft;
-            setForm(prev => ({
-                ...prev,
-                title: draft.title || prev.title,
-                description: draft.description || prev.description,
-                startingPrice: draft.startingPrice ? String(draft.startingPrice) : prev.startingPrice,
-                categoryId: draft.categoryId ? String(draft.categoryId) : prev.categoryId
-            }));
-            setAiPrompt('');
-        } catch (e: any) {
-            setError(e.response?.data?.error || 'Failed to generate with AI.');
-        } finally {
-            setGeneratingAI(false);
-        }
-    };
 
     const handleSubmit = async () => {
         setError('');
@@ -173,31 +147,28 @@ export default function CreateAuctionPage() {
                 <div className="bg-white/5 border border-white/10 rounded-3xl p-8 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400/60 to-yellow-600/60" />
 
-                    <motion.div key={step} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                    {user?.verifiedStatus === 'BASIC' ? (
+                        <div className="text-center py-12 px-6">
+                            <div className="w-20 h-20 bg-yellow-400/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-yellow-400/20 shadow-inner">
+                                <AlertCircle className="w-10 h-10 text-yellow-500" />
+                            </div>
+                            <h2 className="text-2xl font-black text-white mb-3">Verification Required</h2>
+                            <p className="text-gray-400 mb-8 max-w-sm mx-auto leading-relaxed">To list items on Bidora, you must first verify your account. This helps build a safe and trusted community for all bidders.</p>
+                            <Link href="/dashboard?tab=verify" className="inline-flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-black px-8 py-3.5 rounded-xl font-black transition-all shadow-[0_10px_30px_-10px_rgba(250,204,21,0.5)]">
+                                <CheckCircle2 className="w-5 h-5" /> Get Verified Now
+                            </Link>
+                        </div>
+                    ) : (
+                        <motion.div key={step} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+
 
                         {/* ── Step 1: Details ─────────────────────────── */}
                         {step === 1 && (
                             <div className="space-y-6">
                                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 gap-4">
                                     <h2 className="text-2xl font-bold flex items-center gap-2"><Tag className="w-6 h-6 text-yellow-400" /> Item Details</h2>
-
-                                    {/* AI Magic Box */}
-                                    <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/30 p-2 pl-4 rounded-xl flex items-center gap-3 w-full md:w-auto shadow-inner">
-                                        <Sparkles className="w-5 h-5 text-indigo-400" />
-                                        <input
-                                            value={aiPrompt} onChange={e => setAiPrompt(e.target.value)}
-                                            placeholder="Auto-fill with AI (e.g. Vintage Rolex Submariner)"
-                                            className="bg-transparent text-sm text-white placeholder:text-indigo-400/50 outline-none w-[200px]"
-                                            onKeyDown={e => e.key === 'Enter' && handleAIGenerate()}
-                                        />
-                                        <button
-                                            onClick={handleAIGenerate} disabled={generatingAI || !aiPrompt}
-                                            className="bg-indigo-500 hover:bg-indigo-400 text-white p-2 rounded-lg transition-colors disabled:opacity-50"
-                                        >
-                                            {generatingAI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                                        </button>
-                                    </div>
                                 </div>
+
 
                                 <div>
                                     <label className={LABEL}>Title *</label>
@@ -456,46 +427,46 @@ export default function CreateAuctionPage() {
                                 </div>
                             </div>
                         )}
-                    </motion.div>
+                                <div className="flex items-center justify-between mt-8 pt-6 border-t border-white/10">
+                                    <button onClick={() => setStep(s => Math.max(s - 1, 1))} disabled={step === 1}
+                                        className="px-6 py-3 bg-white/5 border border-white/10 text-gray-400 rounded-xl font-semibold hover:text-white hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                                        Back
+                                    </button>
 
-                    {/* Navigation Buttons */}
-                    <div className="flex items-center justify-between mt-8 pt-6 border-t border-white/10">
-                        <button onClick={() => setStep(s => Math.max(s - 1, 1))} disabled={step === 1}
-                            className="px-6 py-3 bg-white/5 border border-white/10 text-gray-400 rounded-xl font-semibold hover:text-white hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
-                            Back
-                        </button>
-
-                        {step < 4 ? (
-                            <button onClick={() => {
-                                if (step === 1 && (!form.title || !form.description || !form.categoryId)) return setError('Please complete all required fields.');
-                                if (step === 3) {
-                                    if (form.isImmediate) {
-                                        if (form.durationValue === 'manual' && !form.endTime) return setError('Please set an end time.');
-                                        // Auto-calculate end time for preview
-                                        if (form.durationValue !== 'manual') {
-                                            const end = new Date();
-                                            end.setMinutes(end.getMinutes() + Number(form.durationValue));
-                                            setForm(p => ({ ...p, endTime: end.toISOString() }));
-                                        }
-                                    } else {
-                                        if (!form.startTime || !form.endTime) return setError('Start and end times are required.');
-                                    }
-                                }
-                                setError(''); setStep(s => s + 1);
-                            }}
-                                className="px-8 py-3 bg-yellow-400 text-black font-bold rounded-xl hover:bg-yellow-300 transition-colors hover:scale-105">
-                                Continue →
-                            </button>
-                        ) : (
-                            <button onClick={handleSubmit} disabled={loading || !form.isConfirmed}
-                                className="px-8 py-3 bg-yellow-400 text-black font-bold rounded-xl hover:bg-yellow-300 transition-colors hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-[0_0_30px_rgba(250,204,21,0.3)]">
-                                {loading ? <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <Zap className="w-5 h-5" />}
-                                {loading ? 'Publishing…' : 'Publish Auction'}
-                            </button>
+                                    {step < 4 ? (
+                                        <button onClick={() => {
+                                            if (step === 1 && (!form.title || !form.description || !form.categoryId)) return setError('Please complete all required fields.');
+                                            if (step === 3) {
+                                                if (form.isImmediate) {
+                                                    if (form.durationValue === 'manual' && !form.endTime) return setError('Please set an end time.');
+                                                    if (form.durationValue !== 'manual') {
+                                                        const end = new Date();
+                                                        end.setMinutes(end.getMinutes() + Number(form.durationValue));
+                                                        setForm(p => ({ ...p, endTime: end.toISOString() }));
+                                                    }
+                                                } else {
+                                                    if (!form.startTime || !form.endTime) return setError('Start and end times are required.');
+                                                }
+                                            }
+                                            setError(''); setStep(s => s + 1);
+                                        }}
+                                            className="px-8 py-3 bg-yellow-400 text-black font-bold rounded-xl hover:bg-yellow-300 transition-colors hover:scale-105">
+                                            Continue →
+                                        </button>
+                                    ) : (
+                                        <button onClick={handleSubmit} disabled={loading || !form.isConfirmed}
+                                            className="px-8 py-3 bg-yellow-400 text-black font-bold rounded-xl hover:bg-yellow-300 transition-colors hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-[0_0_30px_rgba(250,204,21,0.3)]">
+                                            {loading ? <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <Zap className="w-5 h-5" />}
+                                            {loading ? 'Publishing…' : 'Publish Auction'}
+                                        </button>
+                                    )}
+                                </div>
+                            </motion.div>
                         )}
-                    </div>
+
                 </div>
             </div>
-        </div >
+        </div>
     );
 }
+

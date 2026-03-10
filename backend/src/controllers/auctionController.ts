@@ -4,7 +4,6 @@ import { AuthRequest } from '../middlewares/authMiddleware';
 import { qs, qn } from '../utils/queryHelpers';
 import { AuctionService } from '../services/auctionService';
 import { io } from '../services/websocketService';
-import { GoogleGenAI } from '@google/genai';
 import { scheduleAuctionEvents } from '../services/queueService';
 import { CacheService } from '../services/cacheService';
 
@@ -24,6 +23,16 @@ export const createAuction = async (req: AuthRequest, res: Response) => {
         if (!title || !description || !categoryId || !startingPrice || !startTime || !endTime) {
             return res.status(400).json({ error: 'Missing required auction fields' });
         }
+
+        // 🛡️ LAUNCH READINESS: Enforce Seller Verification
+        const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+        if (!user || user.verifiedStatus === 'BASIC') {
+            return res.status(403).json({ 
+                error: 'Account verification required to list auctions.',
+                code: 'VERIFICATION_REQUIRED'
+            });
+        }
+
 
         const start = new Date(startTime);
         const end = new Date(endTime);
@@ -369,215 +378,6 @@ export const setAutoBid = async (req: AuthRequest, res: Response) => {
     }
 };
 
-
-
-// ─────────────────────────────────────────────
-// POST /api/v1/auctions/ai-auto-lister
-// ─────────────────────────────────────────────
-export const aiAutoLister = async (req: AuthRequest, res: Response) => {
-    try {
-        const { prompt, imageUrls } = req.body;
-        if (!prompt) return res.status(400).json({ error: 'Prompt is required' });
-
-        if (!process.env.GEMINI_API_KEY) {
-            return res.status(500).json({ error: 'AI features are not configured on this server.' });
-        }
-
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
-        const systemInstruction = `
-        You are an elite e-commerce copywriter and auction expert for Bidora.
-        The user wants to list an item (text prompt provided, and possibly images).
-        Generate a JSON response for their auction listing based on both inputs:
-        {
-          "title": "SEO-optimized title (max 80 chars)",
-          "description": "Persuasive description covering condition, features, formatted with newlines.",
-          "startingPrice": estimated starting bid in INR (number),
-          "buyItNowPrice": instant purchase price in INR (number),
-          "categoryId": integer ID (1: Electronics, 2: Fashion, 3: Art & Collectibles, 4: Fine Watches, 5: Cars, 6: Others)
-        }
-        Return ONLY valid JSON.
-        `;
-
-        // Prepare content parts (text prompt + images if any)
-        const contents: any[] = [{ text: prompt }];
-
-        if (imageUrls && Array.isArray(imageUrls)) {
-            for (const url of imageUrls.slice(0, 3)) { // Limit to 3 images for AI analysis
-                try {
-                    const resp = await fetch(url);
-                    if (!resp.ok) continue;
-                    const buffer = await resp.arrayBuffer();
-                    contents.push({
-                        inlineData: {
-                            mimeType: resp.headers.get('content-type') || 'image/jpeg',
-                            data: Buffer.from(buffer).toString('base64')
-                        }
-                    });
-                } catch (err) {
-                    console.warn(`[AI] Failed to fetch image for analysis: ${url}`, err);
-                }
-            }
-        }
-
-        const result = await ai.models.generateContent({
-            model: 'gemini-1.5-flash',
-            contents: contents,
-            config: {
-                systemInstruction: systemInstruction,
-                responseMimeType: "application/json",
-            }
-        });
-
-        const textResponse = result.text || '{}';
-        const parsedDraft = JSON.parse(textResponse);
-
-        return res.status(200).json({ draft: parsedDraft });
-    } catch (error: any) {
-        console.error('[Auction] AI Auto-Lister error:', error);
-        return res.status(500).json({ error: 'Failed to generate listing with AI. Please try again.' });
-    }
-};
-
-// ─────────────────────────────────────────────
-// POST /api/v1/auctions/:id/ask-ai
-// ─────────────────────────────────────────────
-export const askProductAI = async (req: AuthRequest, res: Response) => {
-    try {
-        const { question, history } = req.body;
-        const { id } = req.params;
-
-        if (!question) return res.status(400).json({ error: 'Question is required' });
-
-        const auction = await prisma.auction.findUnique({
-            where: { id },
-            select: { title: true, description: true, startingPrice: true, buyItNowPrice: true, category: { select: { name: true } } }
-        }) as any;
-
-        if (!auction) return res.status(404).json({ error: 'Auction not found' });
-
-        if (!process.env.GEMINI_API_KEY) {
-            return res.status(500).json({ error: 'AI features are not configured on this server.' });
-        }
-
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-        // @ts-ignore - Prisma type out of sync
-        const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-        const systemPrompt = `
-        You are "Bidora AI Assistant", a helpful shopping assistant.
-        The user is looking at this auction:
-        TITLE: ${auction.title}
-        CATEGORY: ${auction.category?.name || 'General'}
-        PRICING: Starting at ₹${Number(auction.startingPrice).toLocaleString()}
-        DESCRIPTION: 
-        ${auction.description}
-
-        YOUR TASK: Answer the user's question professionally, concisely, and honestly based ONLY on the provided listing.
-        - If the answer IS in the description, highlight it.
-        - If the answer IS NOT in the description, say: "That information isn't in the description. You should ask the seller directly using the messages feature."
-        - Be friendly but professional. 
-        - Max 3 short sentences.
-        `;
-
-        // Format history for Gemini chat
-        const geminiHistory = (history || []).map((msg: any) => ({
-            role: msg.type === 'user' ? 'user' : 'model',
-            parts: [{ text: msg.text }]
-        }));
-
-        const chat = model.startChat({
-            history: geminiHistory,
-            generationConfig: {
-                maxOutputTokens: 200,
-            }
-        });
-
-        const result = await chat.sendMessage([systemPrompt, question]);
-        const response = result.response;
-        const answer = response.text();
-
-        return res.status(200).json({ answer });
-    } catch (error: any) {
-        console.error('[Auction] Ask AI error:', error);
-        return res.status(500).json({ error: 'Failed to get answer from AI. Please try again later.' });
-    }
-};
-
-// ─────────────────────────────────────────────
-// POST /api/v1/auctions/:id/lume-suggestion
-// ─────────────────────────────────────────────
-export const getLumeSuggestion = async (req: AuthRequest, res: Response) => {
-    try {
-        const { id } = req.params;
-        const auction = await prisma.auction.findUnique({
-            where: { id },
-            include: { category: true, _count: { select: { bids: true } } }
-        });
-
-        if (!auction) return res.status(404).json({ error: 'Auction not found' });
-
-        const uniqueBiddersCount = await prisma.bid.groupBy({
-            by: ['bidderId'],
-            where: { auctionId: id },
-            _count: true
-        }).then(res => res.length);
-
-        const currentBid = Number(auction.currentHighestBid);
-        const startPrice = Number(auction.startingPrice);
-        const bidInc = Number(auction.bidIncrement);
-        const timeLeft = new Date(auction.endTime).getTime() - Date.now();
-        const views = auction.viewCount;
-
-        if (!process.env.GEMINI_API_KEY) {
-            return res.status(500).json({ error: 'AI features are not configured.' });
-        }
-
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-        // @ts-ignore
-        const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-        const systemPrompt = `
-        You are "Lume", Bidora's premium AI strategy assistant.
-        You analyze real-time auction data to recommend a strategic "Max Auto-Bid" limit.
-        
-        DATA:
-        - Current Price: ₹${currentBid}
-        - Starting Price: ₹${startPrice}
-        - Unique Bidders: ${uniqueBiddersCount}
-        - Total Bids: ${auction._count.bids}
-        - View Count: ${views}
-        - Bid Increment: ₹${bidInc}
-        - Time Left: ${Math.floor(timeLeft / 60000)} minutes
-        
-        GOAL: Suggest a Max Bid value that is likely to win given the competition intensity, without grossly overpaying. 
-        - If competition is high (many bidders/views), suggest higher (~20-50% over current).
-        - If competition is low, suggest a safer margin (~10-15%).
-        - If very little time left, factor in "last-minute sniping" risk.
-        
-        RESPONSE FORMAT (JSON):
-        {
-          "suggestedMaxBid": number,
-          "confidence": "High" | "Medium" | "Low",
-          "reasoning": "1 sentence explanation of the strategy."
-        }
-        Return ONLY valid JSON.
-        `;
-
-        const result = await model.generateContent({
-            contents: [{ role: "user", parts: [{ text: systemPrompt }] }],
-            generationConfig: { responseMimeType: "application/json" }
-        });
-
-        const textResponse = result.response.text();
-        const suggestion = JSON.parse(textResponse);
-
-        return res.status(200).json(suggestion);
-    } catch (error) {
-        console.error('[Lume] Suggestion error:', error);
-        return res.status(500).json({ error: 'Failed to get Lume suggestion.' });
-    }
-};
 
 // ─────────────────────────────────────────────
 // GET /api/v1/auctions/my/analytics

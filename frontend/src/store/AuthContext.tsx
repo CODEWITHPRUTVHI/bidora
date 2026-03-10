@@ -13,8 +13,10 @@ export interface User {
     walletBalance: number;
     pendingFunds: number;
     avatarUrl: string | null;
+    phone: string | null;
     collectorBadge?: string;
 }
+
 
 interface AuthContextType {
     user: User | null;

@@ -251,7 +251,7 @@ export default function LiveBidsGrid() {
                                                     DROPPING SOON
                                                 </div>
                                                 <div className="bg-black/60 backdrop-blur-md text-white text-[9px] font-bold px-2.5 py-1 rounded-full border border-white/20 w-fit">
-                                                    Launching March 28, 2026
+                                                    Next Drop: Friday 8:00 PM
                                                 </div>
                                             </div>
 

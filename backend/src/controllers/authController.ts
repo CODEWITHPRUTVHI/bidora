@@ -307,9 +307,39 @@ export const verifyEmail = async (req: Request, res: Response) => {
 };
 
 // ─────────────────────────────────────────────
+// PATCH /api/v1/auth/me
+// ─────────────────────────────────────────────
+export const updateMe = async (req: AuthRequest, res: Response) => {
+    try {
+        const { fullName, phone, avatarUrl } = req.body;
+        
+        const updatedUser = await prisma.user.update({
+            where: { id: req.user!.id },
+            data: {
+                fullName: fullName !== undefined ? fullName : undefined,
+                phone: phone !== undefined ? phone : undefined,
+                avatarUrl: avatarUrl !== undefined ? avatarUrl : undefined
+            },
+            select: {
+                id: true, email: true, role: true, fullName: true, avatarUrl: true,
+                phone: true, verifiedStatus: true, walletBalance: true,
+                trustScore: true, createdAt: true
+            }
+        });
+
+        return res.status(200).json({ user: updatedUser });
+    } catch (error: any) {
+        console.error('[Auth] Update-me error:', error);
+        if (error.code === 'P2002') return res.status(400).json({ error: 'Phone number already in use.' });
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+// ─────────────────────────────────────────────
 // PATCH /api/v1/auth/me/verify-seller
 // ─────────────────────────────────────────────
 // MOVED TO ADMIN-ONLY APPROVAL FLOW. THIS ENDPOINT IS NOW DISABLED TO PREVENT SELF-VERIFICATION.
 export const verifyMeAsSeller = async (req: AuthRequest, res: Response) => {
     return res.status(403).json({ error: 'Manual self-verification is disabled. Please contact an admin for seller verification.' });
 };
+

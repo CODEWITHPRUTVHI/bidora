@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, logout, refreshAccessToken, getMe, verifyMeAsSeller, verifyEmail } from '../controllers/authController';
+import { register, login, logout, refreshAccessToken, getMe, updateMe, verifyMeAsSeller, verifyEmail } from '../controllers/authController';
 import { authenticateJWT } from '../middlewares/authMiddleware';
 
 const router = Router();
@@ -10,6 +10,8 @@ router.post('/login', login);
 router.post('/logout', logout);
 router.post('/refresh', refreshAccessToken);
 router.get('/me', authenticateJWT, getMe);
+router.patch('/me', authenticateJWT, updateMe);
 router.patch('/me/verify-seller', authenticateJWT, verifyMeAsSeller);
+
 
 export default router;

@@ -41,14 +41,15 @@ router.post('/create-order', authenticateJWT, async (req: AuthRequest, res: Resp
             order_id: orderId,
             customer_details: {
                 customer_id: user.id,
-                customer_phone: '9999999999', // Cashfree requires a phone number; mock or collect later
+                customer_phone: user.phone || '9999999999', // Fallback for Cashfree validation
                 customer_name: user.fullName || 'Bidora User',
                 customer_email: user.email
             },
             order_meta: {
-                return_url: `${process.env.FRONTEND_URL || 'https://bidora-pink.vercel.app'}/dashboard?tab=wallet`
+                return_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard?tab=wallet&status={payment_status}&order_id={order_id}`
             }
         };
+
 
         const response = await axios.post(`${CASHFREE_API_URL}/orders`, requestBody, {
             headers: getCashfreeHeaders()

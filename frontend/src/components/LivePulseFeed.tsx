@@ -7,9 +7,9 @@ import { Zap, Eye, TrendingUp, MapPin } from 'lucide-react';
 const LOCATIONS = ['Mumbai', 'Dubai', 'London', 'Singapore', 'New York', 'Paris', 'Tokyo', 'Berlin'];
 const ACTIONS = [
     { text: 'is watching the countdown', icon: Eye },
-    { text: 'just viewed the AR preview', icon: Zap },
-    { text: 'calculated max bid with Lume', icon: TrendingUp },
-    { text: 'is eyeing the starting price', icon: Eye }
+    { text: 'just started viewing this item', icon: Zap },
+    { text: 'is eyeing the starting price', icon: Eye },
+    { text: 'added this to their watchlist', icon: TrendingUp }
 ];
 
 export default function LivePulseFeed() {

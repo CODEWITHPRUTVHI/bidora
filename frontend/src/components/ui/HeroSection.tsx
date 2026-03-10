@@ -40,12 +40,12 @@ export default function HeroSection() {
                     {/* SEO Optimized Hidden H1 */}
                     <h1 className="sr-only">Buy and Sell Rare Sneakers India — Live Auction Platform</h1>
 
-                    <div className="inline-flex items-center space-x-2 bg-white/[0.03] border border-white/10 px-4 py-2 rounded-full mb-8 backdrop-blur-md">
+                    <div className="hidden sm:inline-flex items-center space-x-2 bg-white/[0.03] border border-white/10 px-4 py-2 rounded-full mb-8 backdrop-blur-md">
                         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                         <span className="text-sm font-medium tracking-wide text-gray-300">Bidora Escrow guarantees every transaction</span>
                     </div>
 
-                    <div className="text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-black leading-[1.1] tracking-tighter text-white mb-6 drop-shadow-2xl">
+                    <div className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black leading-[1.1] tracking-tighter text-white mb-6 drop-shadow-2xl">
                         WHERE RARE<br className="hidden xs:block" />
                         <span className="text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-amber-600 drop-shadow-[0_0_15px_rgba(250,204,21,0.3)]">
                             LANDS.

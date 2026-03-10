@@ -3,7 +3,7 @@ import { authenticateJWT, optionalAuth, requireRole, requireEmailVerified } from
 import {
     createAuction, getAuctions, searchAuctions, getCategories,
     getAuctionById, updateAuction, cancelAuction,
-    getMyListings, getMyBids, setAutoBid, aiAutoLister, askProductAI, getLumeSuggestion, getMyAnalytics, getMyOrders
+    getMyListings, getMyBids, setAutoBid, getMyAnalytics, getMyOrders
 } from '../controllers/auctionController';
 
 const router = Router();
@@ -26,12 +26,9 @@ router.get('/:id', optionalAuth, getAuctionById);
 // ── Authenticated write routes ─────────────────────────────────────
 router.use(authenticateJWT);
 
-router.post('/ai-auto-lister', requireRole(['SELLER', 'ADMIN', 'BUYER']), aiAutoLister);
 router.post('/', requireRole(['BUYER', 'SELLER', 'ADMIN']), createAuction);
 router.patch('/:id', requireRole(['BUYER', 'SELLER', 'ADMIN']), updateAuction);
 router.post('/:id/cancel', requireRole(['BUYER', 'SELLER', 'ADMIN']), cancelAuction);
 router.post('/:id/auto-bid', setAutoBid);
-router.post('/:id/ask-ai', askProductAI);
-router.post('/:id/lume-suggestion', getLumeSuggestion);
 
 export default router;

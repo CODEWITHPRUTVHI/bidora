@@ -149,6 +149,13 @@ export default function DashboardPage() {
     const [withdrawMsg, setWithdrawMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [loading, setLoading] = useState(true);
     const [pageError, setPageError] = useState('');
+    const [updatingProfile, setUpdatingProfile] = useState(false);
+    const [profileMsg, setProfileMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+    const [profileForm, setProfileForm] = useState({
+        fullName: user?.fullName || '',
+        phone: user?.phone || '',
+        avatarUrl: user?.avatarUrl || ''
+    });
 
     // Pagination/Filters
     const [txPage, setTxPage] = useState(1);
@@ -186,8 +193,6 @@ export default function DashboardPage() {
         setLoading(true);
         const fetchBids = api.get('/auctions/my/bids').catch(() => ({ data: { bids: [] } }));
         const fetchListings = api.get('/auctions/my/listings').catch(() => ({ data: { auctions: [] } }));
-        const fetchTxs = api.get(`/wallet/transactions?limit=10&page=${txPage}${txFilter ? `&type=${txFilter}` : ''}`).catch(() => ({ data: { transactions: [], pagination: { pages: 1 } } }));
-        const fetchWallet = api.get('/wallet').catch(() => ({ data: { walletBalance: 0, pendingFunds: 0, availableBalance: 0 } }));
         const fetchNotifs = api.get('/notifications?limit=20').catch(() => ({ data: { notifications: [], unreadCount: 0 } }));
         const fetchOrders = api.get('/auctions/my/orders').catch(() => ({ data: { wonAuctions: [], soldAuctions: [] } }));
         const fetchAnalytics = user.role === 'SELLER' || user.verifiedStatus !== 'BASIC'
@@ -197,17 +202,12 @@ export default function DashboardPage() {
         Promise.all([
             fetchBids,
             fetchListings,
-            fetchTxs,
-            fetchWallet,
             fetchNotifs,
             fetchOrders,
             fetchAnalytics
-        ]).then(([bidsRes, listingsRes, txRes, walletRes, notifRes, ordersRes, analyticsRes]) => {
+        ]).then(([bidsRes, listingsRes, notifRes, ordersRes, analyticsRes]) => {
             setMyBids(bidsRes.data.bids || []);
             setMyListings(listingsRes.data.auctions || []);
-            setTransactions(txRes.data.transactions || []);
-            setTxTotalPages(txRes.data.pagination?.pages || 1);
-            setWallet(walletRes.data);
             setNotifications(notifRes.data.notifications || []);
             setWonOrders(ordersRes.data.wonAuctions || []);
             setSoldOrders(ordersRes.data.soldAuctions || []);
@@ -219,7 +219,18 @@ export default function DashboardPage() {
             console.error("Dashboard critical fetch error:", err);
             setPageError('Connection lost. Please check your internet or try again later.');
         }).finally(() => setLoading(false));
-    }, [user, authLoading, txPage, txFilter]);
+    }, [user?.id, authLoading]);
+
+    // Separate effect for ledger/wallet to handle pagination/filters without reloading everything
+    useEffect(() => {
+        if (authLoading || !user) return;
+        
+        api.get('/wallet').then(res => setWallet(res.data)).catch(() => {});
+        api.get(`/wallet/transactions?limit=10&page=${txPage}${txFilter ? `&type=${txFilter}` : ''}`).then(res => {
+            setTransactions(res.data.transactions || []);
+            setTxTotalPages(res.data.pagination?.pages || 1);
+        }).catch(() => {});
+    }, [user?.id, authLoading, txPage, txFilter]);
 
     useEffect(() => {
         let socket: any = null;
@@ -391,6 +402,19 @@ export default function DashboardPage() {
 
     const handleLogout = async () => { await logout(); router.push('/'); };
 
+    const handleUpdateProfile = async () => {
+        setUpdatingProfile(true);
+        setProfileMsg(null);
+        try {
+            await api.patch('/auth/me', profileForm);
+            setProfileMsg({ type: 'success', text: 'Profile updated successfully!' });
+            refreshUser();
+        } catch (e: any) {
+            setProfileMsg({ type: 'error', text: e.response?.data?.error || 'Failed to update profile.' });
+        } finally {
+            setUpdatingProfile(false);
+        }
+    };
     if (!user || loading) return (
         <div className="container mx-auto px-4 md:px-8 py-24 max-w-7xl animate-fade-in">
             <div className="h-48 w-full bg-zinc-900/40 rounded-[2rem] border border-white/10 p-8 flex justify-between animate-pulse">
@@ -405,13 +429,14 @@ export default function DashboardPage() {
                 {[...Array(6)].map((_, i) => <div key={i} className="h-10 w-28 bg-zinc-900/60 rounded-xl flex-shrink-0" />)}
             </div>
             <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-6">
-                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-3xl" />)}
+                {[...Array(4)].map((_, i) => <div key={i} className="h-32 w-full bg-zinc-900/40 rounded-3xl" />)}
             </div>
             <div className="mt-8">
-                <Skeleton className="h-96 w-full rounded-3xl" />
+                <div className="h-96 w-full bg-zinc-900/40 rounded-3xl" />
             </div>
         </div>
     );
+
 
     if (pageError) return (
         <div className="min-h-screen flex items-center justify-center p-6">
@@ -436,6 +461,7 @@ export default function DashboardPage() {
         { id: 'listings', label: 'Sales', icon: Package },
         { id: 'analytics', label: 'Stats', icon: BarChart3 },
         { id: 'verify', label: user.verifiedStatus !== 'BASIC' ? 'Verified ✓' : 'Get Verified', icon: BadgeCheck },
+        { id: 'profile', label: 'Settings', icon: UserCheck },
         { id: 'notifs', label: `Alerts${unreadCount > 0 ? ` (${unreadCount})` : ''}`, icon: Bell },
         { id: 'feed', label: 'Hype Feed', icon: Sparkles }
     ].filter(t => {
@@ -444,18 +470,16 @@ export default function DashboardPage() {
     });
 
 
+
     return (
-        <div className="container mx-auto px-3 sm:px-4 md:px-8 py-16 sm:py-24 max-w-7xl relative min-h-screen">
+        <div className="container mx-auto px-4 sm:px-8 py-20 sm:py-32 max-w-[1600px] min-h-screen relative">
             <div className="absolute top-0 left-1/4 w-[40vw] h-[40vw] bg-yellow-500/5 blur-[150px] rounded-full pointer-events-none -z-10" />
 
-
-
-
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 bg-zinc-900/40 backdrop-blur-2xl border border-white/10 rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-8 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] overflow-hidden">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 bg-zinc-900/40 backdrop-blur-2xl border border-white/10 rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-8 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] overflow-hidden relative">
                 <div className="w-full">
-                    <p className="text-yellow-400 text-[10px] sm:text-sm font-black uppercase tracking-widest mb-1 sm:mb-2">Dashboard</p>
-                    <h1 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tighter mb-1 break-words">
+                    <p className="text-yellow-400 text-[10px] sm:text-xs font-black uppercase tracking-widest mb-1 sm:mb-2">Dashboard</p>
+                    <h1 className="text-2xl sm:text-3xl md:text-5xl font-black tracking-tighter mb-1 break-words">
                         Hey, <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500 drop-shadow-[0_0_10px_rgba(250,204,21,0.3)]">{user.fullName?.split(' ')[0] || 'Bidder'}</span> 👋
                     </h1>
                     <div className="flex items-center flex-wrap gap-3 mt-3">
@@ -533,33 +557,33 @@ export default function DashboardPage() {
                     {/* ── Overview ── BENTO GRID ─────────────────────── */}
                     {activeTab === 'overview' && (
                         <div className="space-y-6">
-                            <div className="grid grid-cols-6 grid-rows-2 gap-4 h-auto md:h-[500px]">
+                            <div className="grid grid-cols-6 gap-4 h-auto">
                                 {/* MAIN TILE: Analytics Summary (2x2) */}
-                                <div className="col-span-6 md:col-span-4 row-span-2 bg-gradient-to-br from-zinc-900/40 to-black/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-8 relative overflow-hidden group shadow-2xl">
+                                <div className="col-span-6 md:col-span-4 md:row-span-2 bg-gradient-to-br from-zinc-900/40 to-black/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 sm:p-8 relative overflow-hidden group shadow-2xl">
                                     <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/5 blur-[100px] rounded-full pointer-events-none group-hover:bg-yellow-400/10 transition-colors" />
 
                                     <div className="relative z-10 h-full flex flex-col">
-                                        <div className="flex justify-between items-start mb-8">
+                                        <div className="flex justify-between items-start mb-6 sm:mb-8">
                                             <div>
                                                 <p className="text-yellow-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Performance Analytics</p>
-                                                <h3 className="text-3xl font-black text-white tracking-tighter">Your Auction Growth</h3>
+                                                <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tighter">Your Auction Growth</h3>
                                             </div>
-                                            <div className="bg-white/5 p-3 rounded-2xl border border-white/10">
-                                                <TrendingUp className="w-6 h-6 text-yellow-400" />
+                                            <div className="bg-white/5 p-2 sm:p-3 rounded-2xl border border-white/10">
+                                                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400" />
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-6 mt-auto">
-                                            <div className="bg-white/5 rounded-3xl p-6 border border-white/5 hover:border-white/10 transition-all">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mt-auto">
+                                            <div className="bg-white/5 rounded-3xl p-5 sm:p-6 border border-white/5 hover:border-white/10 transition-all">
                                                 <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-2">Revenue Potential</p>
-                                                <p className="text-4xl font-black text-white tracking-tighter">₹{(analytics?.revenuePotential || 0).toLocaleString()}</p>
+                                                <p className="text-3xl sm:text-4xl font-black text-white tracking-tighter">₹{(analytics?.revenuePotential || 0).toLocaleString()}</p>
                                                 <div className="h-1 w-full bg-white/5 rounded-full mt-4 overflow-hidden">
                                                     <motion.div initial={{ width: 0 }} animate={{ width: '65%' }} className="h-full bg-yellow-400" />
                                                 </div>
                                             </div>
-                                            <div className="bg-white/5 rounded-3xl p-6 border border-white/5 hover:border-white/10 transition-all">
+                                            <div className="bg-white/5 rounded-3xl p-5 sm:p-6 border border-white/5 hover:border-white/10 transition-all">
                                                 <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-2">Total Sales</p>
-                                                <p className="text-4xl font-black text-white tracking-tighter">₹{(analytics?.totalSales || 0).toLocaleString()}</p>
+                                                <p className="text-3xl sm:text-4xl font-black text-white tracking-tighter">₹{(analytics?.totalSales || 0).toLocaleString()}</p>
                                                 <div className="h-1 w-full bg-white/5 rounded-full mt-4 overflow-hidden">
                                                     <motion.div initial={{ width: 0 }} animate={{ width: '40%' }} className="h-full bg-blue-400" />
                                                 </div>
@@ -569,37 +593,37 @@ export default function DashboardPage() {
                                 </div>
 
                                 {/* SECONDARY TILE: Wallet (2x1) */}
-                                <div className="col-span-6 md:col-span-2 row-span-1 bg-zinc-900/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 flex flex-col justify-between group cursor-pointer hover:border-blue-400/30 transition-all shadow-xl">
+                                <div className="col-span-6 md:col-span-2 md:row-span-1 bg-zinc-900/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 flex flex-col justify-between group cursor-pointer hover:border-blue-400/30 transition-all shadow-xl min-h-[160px]">
                                     <div className="flex justify-between items-start">
                                         <div className="p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20">
-                                            <Wallet className="w-6 h-6 text-blue-400" />
+                                            <Wallet className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
                                         </div>
                                         <ArrowUpRight className="w-5 h-5 text-gray-600 group-hover:text-blue-400 transition-colors" />
                                     </div>
                                     <div>
                                         <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Available Funds</p>
-                                        <p className="text-3xl font-black text-white tracking-tighter">₹{(wallet?.availableBalance || 0).toLocaleString()}</p>
+                                        <p className="text-2xl sm:text-3xl font-black text-white tracking-tighter">₹{(wallet?.availableBalance || 0).toLocaleString()}</p>
                                     </div>
                                 </div>
 
                                 {/* THIRD TILE: Active Bids Count (1x1) */}
-                                <div className="col-span-3 md:col-span-1 row-span-1 bg-zinc-900/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 flex flex-col justify-between group shadow-xl">
+                                <div className="col-span-3 md:col-span-1 md:row-span-1 bg-zinc-900/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 flex flex-col justify-between group shadow-xl">
                                     <div className="p-3 bg-green-500/10 rounded-2xl border border-green-500/20 w-fit">
                                         <Activity className="w-5 h-5 text-green-400" />
                                     </div>
-                                    <div>
-                                        <h4 className="text-4xl font-black text-white tracking-tighter">{myBids.length}</h4>
+                                    <div className="mt-4 sm:mt-0">
+                                        <h4 className="text-3xl sm:text-4xl font-black text-white tracking-tighter">{myBids.length}</h4>
                                         <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Active Bids</p>
                                     </div>
                                 </div>
 
                                 {/* FOURTH TILE: Listings Count (1x1) */}
-                                <div className="col-span-3 md:col-span-1 row-span-1 bg-zinc-900/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 flex flex-col justify-between group shadow-xl">
+                                <div className="col-span-3 md:col-span-1 md:row-span-1 bg-zinc-900/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 flex flex-col justify-between group shadow-xl">
                                     <div className="p-3 bg-orange-500/10 rounded-2xl border border-orange-500/20 w-fit">
                                         <Package className="w-5 h-5 text-orange-400" />
                                     </div>
-                                    <div>
-                                        <h4 className="text-4xl font-black text-white tracking-tighter">{myListings.length}</h4>
+                                    <div className="mt-4 sm:mt-0">
+                                        <h4 className="text-3xl sm:text-4xl font-black text-white tracking-tighter">{myListings.length}</h4>
                                         <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Listings</p>
                                     </div>
                                 </div>

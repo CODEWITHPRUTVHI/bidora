@@ -152,17 +152,24 @@ export const autoGenerateLabel = async (req: AuthRequest, res: Response) => {
 
         const buyerAddress = shippingDetail.buyerAddress;
 
-        // Shippo Address From (Mocked Seller Address for demo)
-        const addressFrom = await shippoClient.addresses.create({
-            name: auction.seller.fullName || 'Seller',
-            street1: '123 Seller Lane',
-            city: 'Mumbai',
-            state: 'MH',
-            zip: '400001',
-            country: 'IN',
-            phone: '+919876543210',
-            email: auction.seller.email || 'seller@example.com'
+        const sellerAddress = await prisma.shippingAddress.findFirst({
+            where: { userId: auction.sellerId, isDefault: true }
         });
+
+        // Shippo Address From
+        const addressFromData = {
+            name: sellerAddress?.fullName || auction.seller.fullName || 'Bidora Seller',
+            street1: sellerAddress?.line1 || '123 Seller Lane',
+            street2: sellerAddress?.line2 || '',
+            city: sellerAddress?.city || 'Mumbai',
+            state: sellerAddress?.state || 'MH',
+            zip: sellerAddress?.pincode || '400001',
+            country: sellerAddress?.country || 'IN',
+            phone: sellerAddress?.phone || auction.seller.phone || '+919999999999',
+            email: auction.seller.email || 'seller@bidora.com'
+        };
+
+        const addressFrom = await shippoClient.addresses.create(addressFromData);
 
         // Shippo Address To (Buyer's real address)
         const addressTo = await shippoClient.addresses.create({
@@ -173,9 +180,10 @@ export const autoGenerateLabel = async (req: AuthRequest, res: Response) => {
             state: buyerAddress.state,
             zip: buyerAddress.pincode,
             country: buyerAddress.country,
-            phone: buyerAddress.phone || '+910000000000',
-            email: 'buyer@bidora.local' // Placeholder if no buyer email readily available
+            phone: buyerAddress.phone || '+919999999999', // Critical for real delivery
+            email: 'buyer@bidora.local'
         });
+
 
         // The Parcel
         const parcel = await shippoClient.parcels.create({

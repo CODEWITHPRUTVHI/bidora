@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ArrowLeft, Share2, Heart, ShieldCheck as Shield, Clock as Timer, TrendingUp,
-    CheckCircle2, AlertTriangle, Package, Zap, Activity, Loader2, MessageSquare, Star
+    CheckCircle2, AlertTriangle, Package, Zap, Activity, Loader2, MessageSquare, Star, Flame
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -597,9 +597,16 @@ export default function LiveAuctionPage() {
                                 whileHover={{ scale: 1.15, backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
                                 whileTap={{ scale: 0.9 }}
                                 onClick={handleShare}
-                                className="p-3 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 hover:border-white/30 transition-all shadow-lg group"
+                                className="p-2 sm:p-3 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 hover:border-white/30 transition-all shadow-lg group"
                             >
-                                <Share2 className="w-5 h-5 text-gray-300 group-hover:text-white" />
+                                <Share2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300 group-hover:text-white" />
+                            </motion.button>
+                            <motion.button
+                                whileHover={{ scale: 1.15, backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
+                                whileTap={{ scale: 0.9 }}
+                                className="p-2 sm:p-3 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 hover:border-white/30 transition-all shadow-lg text-red-500"
+                            >
+                                <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
                             </motion.button>
                             <motion.button
                                 whileHover={{ scale: 1.15 }}
@@ -892,14 +899,23 @@ export default function LiveAuctionPage() {
 
             <AnimatePresence>
                 {isLive && !isSeller && (
-                    <motion.div initial={{ y: 100 }} animate={{ y: 0 }} exit={{ y: 100 }} className="lg:hidden fixed bottom-1 left-0 right-0 z-[100] p-4">
-                        <div className="bg-zinc-950/80 backdrop-blur-2xl border border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] rounded-[2rem] p-4 flex items-center gap-4">
-                            <div className="flex-1 pl-2">
-                                <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-0.5">Current Bid</p>
-                                <p className="text-xl font-black text-white">₹{Number(auction.currentHighestBid).toLocaleString()}</p>
+                    <motion.div initial={{ y: 100 }} animate={{ y: 0 }} exit={{ y: 100 }} className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] p-4 bg-gradient-to-t from-black via-black/95 to-transparent pb-8">
+                        <div className="flex items-center justify-between mb-4 px-2">
+                             <div className="text-left">
+                                <p className="text-gray-400 text-[9px] font-black uppercase tracking-widest">Leading Bid</p>
+                                <p className="text-lg font-black text-white">₹{Number(auction.currentHighestBid).toLocaleString()}</p>
                             </div>
-                            <button onClick={() => { const el = document.getElementById('bid-input-container'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }} className="flex-[2] bg-yellow-400 text-black py-4 rounded-2xl font-black text-sm active:scale-95 transition-all shadow-[0_0_30px_rgba(250,204,21,0.4)]">Place Bid Now</button>
+                            <div className="text-right">
+                                <p className="text-gray-400 text-[9px] font-black uppercase tracking-widest text-right">Available Balance</p>
+                                <p className="text-gray-400 text-xs font-bold text-right">₹{availableBalance.toLocaleString()}</p>
+                            </div>
                         </div>
+                        <SwipeToBid 
+                            label={availableBalance < bidAmount ? 'Insufficient Balance' : `Swipe to Bid ₹${Math.round(bidAmount).toLocaleString('en-IN')}`} 
+                            onConfirm={placeBid} 
+                            disabled={auction.status !== 'LIVE' || (!!user && availableBalance < bidAmount)} 
+                            confirming={bidding} 
+                        />
                     </motion.div>
                 )}
             </AnimatePresence>

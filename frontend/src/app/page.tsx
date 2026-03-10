@@ -72,15 +72,15 @@ export default function Home() {
         {/* ── Trust Bar ─────────────────────────────────────────────── */}
         <section className="border-y border-white/5 bg-black/40 py-6 backdrop-blur-xl relative z-20 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
           <div className="container mx-auto px-6">
-            <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-4 text-gray-400 text-sm font-semibold tracking-wide">
+            <div className="grid grid-cols-2 md:flex md:flex-wrap items-center justify-center gap-x-12 gap-y-6 text-gray-400 text-[10px] md:text-sm font-black tracking-widest leading-none">
               {[
                 { icon: Shield, text: 'YOUR MONEY IS SAFE' },
                 { icon: CheckCircle, text: 'ONLY THE REAL ONES' },
                 { icon: Zap, text: 'ZERO LAG BIDDING' },
                 { icon: Lock, text: 'WIN OR GET REFUNDED' },
               ].map(({ icon: Icon, text }) => (
-                <div key={text} className="flex items-center gap-2.5 opacity-80 hover:opacity-100 transition-opacity">
-                  <Icon className="w-5 h-5 text-yellow-500" />
+                <div key={text} className="flex flex-col md:flex-row items-center gap-2.5 opacity-80 hover:opacity-100 transition-opacity text-center">
+                  <Icon className="w-4 h-4 md:w-5 md:h-5 text-yellow-500" />
                   <span>{text}</span>
                 </div>
               ))}
@@ -89,20 +89,20 @@ export default function Home() {
         </section>
 
         {/* ── Stats ──────────────────────────────────────────────────── */}
-        <section className="py-24 relative">
+        <section className="py-16 md:py-24 relative overflow-hidden">
           <div className="absolute inset-0 bg-yellow-500/5 blur-[150px] rounded-full pointer-events-none w-[70%] left-1/2 -translate-x-1/2" />
           <div className="container mx-auto px-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
               {STATS.map((stat, i) => {
                 const Icon = stat.icon;
                 return (
                   <FadeIn key={stat.label} delay={i * 0.1}>
-                    <div className="bg-white/[0.03] border border-white/[0.05] rounded-3xl p-8 flex flex-col items-center text-center hover:bg-white/[0.05] hover:border-white/[0.1] transition-all duration-300 group">
-                      <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-yellow-500/10 group-hover:scale-110 transition-all duration-300">
-                        <Icon className="w-6 h-6 text-gray-400 group-hover:text-yellow-400 transition-colors" />
+                    <div className="bg-white/[0.03] border border-white/[0.05] rounded-2xl md:rounded-3xl p-6 md:p-8 flex flex-col items-center text-center hover:bg-white/[0.05] hover:border-white/[0.1] transition-all duration-300 group">
+                      <div className="w-10 h-10 md:w-12 md:h-12 bg-white/5 rounded-xl md:rounded-2xl flex items-center justify-center mb-4 md:mb-6 group-hover:bg-yellow-500/10 group-hover:scale-110 transition-all duration-300">
+                        <Icon className="w-5 h-5 md:w-6 md:h-6 text-gray-400 group-hover:text-yellow-400 transition-colors" />
                       </div>
-                      <p className="text-3xl lg:text-4xl font-black tracking-tight text-white mb-2">{stat.value}</p>
-                      <p className="text-gray-500 text-sm font-medium">{stat.label}</p>
+                      <p className="text-2xl md:text-4xl font-black tracking-tight text-white mb-1 md:mb-2">{stat.value}</p>
+                      <p className="text-gray-500 text-[10px] md:text-sm font-medium uppercase tracking-widest">{stat.label}</p>
                     </div>
                   </FadeIn>
                 );
