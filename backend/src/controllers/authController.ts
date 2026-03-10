@@ -128,9 +128,12 @@ export const login = async (req: Request, res: Response) => {
             return res.status(403).json({ error: 'Account suspended. Contact support.' });
         }
 
-        // Update last login timestamp
-        await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-
+        // Update last login timestamp gracefully (prevents crashes if production DB schema is pending push)
+        try {
+            await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+        } catch (updateError) {
+            console.warn('[Auth] Could not update lastLoginAt (schema may be pending sync):', updateError);
+        }
         const { accessToken, refreshTokenRaw, refreshTokenHash, refreshExpiresAt } = generateTokens(user.id, user.role);
 
         await prisma.refreshToken.create({
