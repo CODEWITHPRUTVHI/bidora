@@ -24,8 +24,6 @@ import messagingRoutes from './routes/messagingRoutes';
 import { initWebSocket } from './services/websocketService';
 import { initCronJobs } from './utils/cron';
 import { apiLimiter } from './middlewares/rateLimiter';
-import { initQueueWorker } from './services/queueService';
-import { initRedis } from './utils/redis';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -123,9 +121,8 @@ httpServer.listen(PORT, () => {
     initCronJobs();
     console.log('⏰ Cron Jobs       → 4 jobs active');
 
-    initQueueWorker();
-
-    initRedis();
+    // initQueueWorker(); // Temporarily disabled for DB-only bidding
+    // initRedis();       // Temporarily disabled to prevent connection crashes
 
     console.log('\n📋 Active routes:');
     console.log(`   POST   /api/v1/auth/register`);

@@ -193,7 +193,7 @@ export const getAuctionById = async (req: AuthRequest, res: Response) => {
             include: {
                 seller: { select: { id: true, fullName: true, trustScore: true, verifiedStatus: true, avatarUrl: true } },
                 category: true,
-                bids: { orderBy: { amount: 'desc' }, take: 20, include: { bidder: { select: { id: true, fullName: true } } } },
+                bids: { orderBy: { amount: 'desc' }, take: 20, include: { bidder: { select: { id: true, fullName: true, email: true, phone: true } } } },
                 shippingDetail: { include: { buyerAddress: true } },
                 _count: { select: { bids: true } }
             }
@@ -231,6 +231,14 @@ export const getAuctionById = async (req: AuthRequest, res: Response) => {
             (auction as any).bidCount = cachedState.bidCount;
         }
         // ──────────────────────────────────────────────────
+
+        // ── NEW: INJECT BUYER OBJECT FOR FRONTEND ORDERS PAGE ──────
+        if (['PAYMENT_PENDING', 'PAID', 'SHIPPED', 'DELIVERED', 'COMPLETED'].includes(auction.status)) {
+            if (auction.bids && auction.bids.length > 0) {
+                (auction as any).buyer = auction.bids[0].bidder;
+            }
+        }
+        // ──────────────────────────────────────────────────────────
 
         return res.status(200).json({ auction, userTotalBids, isWatched, uniqueBiddersCount });
     } catch (error) {

@@ -1,8 +1,6 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import jwt from 'jsonwebtoken';
-import { createClient } from 'redis';
-import { createAdapter } from '@socket.io/redis-adapter';
 import prisma from '../utils/prisma';
 import { AuctionService } from './auctionService';
 import { NotificationService, setNotificationIO } from './notificationService';
@@ -24,23 +22,7 @@ export const initWebSocket = async (server: HTTPServer) => {
         pingInterval: 10000
     });
 
-    // ── Redis Adapter for Multi-Server Scaling ──────
-    if (process.env.REDIS_URL) {
-        try {
-            const pubClient = createClient({ url: process.env.REDIS_URL });
-            const subClient = pubClient.duplicate();
 
-            pubClient.on('error', (err) => console.error('WS Redis Pub Client Error', err));
-            subClient.on('error', (err) => console.error('WS Redis Sub Client Error', err));
-
-            await Promise.all([pubClient.connect(), subClient.connect()]);
-
-            io.adapter(createAdapter(pubClient, subClient));
-            console.log('📡 Redis Adapter → initialized (Scalable WS mode)');
-        } catch (err) {
-            console.error('❌ Redis Adapter Connection Failed. Falling back to memory adapter.', err);
-        }
-    }
 
     // ─────────────────────────────────────────────
     // Share io instance with NotificationService
