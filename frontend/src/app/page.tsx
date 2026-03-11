@@ -3,14 +3,16 @@
 import { useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
 import HeroSection from '@/components/ui/HeroSection';
-import LiveBidsGrid from '@/components/auction/LiveBidsGrid';
-import FridayDropBanner from '@/components/FridayDropBanner';
-import RecentWins from '@/components/RecentWins';
-import SellOnBidora from '@/components/SellOnBidora';
-import { Shield, Zap, CheckCircle, ArrowRight, TrendingUp, Users, Award, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/store/AuthContext';
 import Schema from '@/components/seo/Schema';
+import dynamic from 'next/dynamic';
+import { Shield, Zap, CheckCircle, ArrowRight, TrendingUp, Users, Award, Lock } from 'lucide-react';
+
+const LiveBidsGrid = dynamic(() => import('@/components/auction/LiveBidsGrid'), { loading: () => <div className="h-96 w-full animate-pulse bg-zinc-900 rounded-[2rem]" />, ssr: false });
+const FridayDropBanner = dynamic(() => import('@/components/FridayDropBanner'));
+const RecentWins = dynamic(() => import('@/components/RecentWins'));
+const SellOnBidora = dynamic(() => import('@/components/SellOnBidora'));
 
 // ── Scroll-reveal wrapper ───────────────────────────────────────────
 function FadeIn({ children, delay = 0, className = '', scale = false }: { children: React.ReactNode; delay?: number; className?: string; scale?: boolean }) {

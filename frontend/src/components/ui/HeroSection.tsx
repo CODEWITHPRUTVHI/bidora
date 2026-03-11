@@ -31,8 +31,8 @@ export default function HeroSection() {
             <div className="container mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center z-10">
 
                 {/* Left Typography */}
-                {/* Left Typography - Using CSS animation instead of framer-motion to save Mobile LCP time */}
-                <div className="max-w-2xl animate-fade-in-up">
+                {/* Left Typography - ZERO ANIMATION FOR MAXIMUM LCP SCORE */}
+                <div className="max-w-2xl">
 
                     <div className="hidden sm:inline-flex items-center space-x-2 bg-white/[0.03] border border-white/10 px-4 py-2 rounded-full mb-8 backdrop-blur-md">
                         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
@@ -64,13 +64,8 @@ export default function HeroSection() {
 
                 </div>
 
-                {/* Right Hero Image Card */}
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                    className="relative hidden lg:block mx-auto w-full max-w-md perspective-1000"
-                >
+                {/* Right Hero Image Card - NO ANIMATION FOR INSTANT LCP PAINT */}
+                <div className="relative hidden lg:block mx-auto w-full max-w-md perspective-1000">
                     <div className="relative w-full aspect-[4/5] rounded-[2rem] overflow-hidden bg-black/40 backdrop-blur-2xl p-3 border border-white/10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.8)] group transition-transform duration-700 hover:scale-[1.02]">
                         <div className="relative w-full h-full rounded-2xl overflow-hidden">
                             <Image
@@ -119,7 +114,7 @@ export default function HeroSection() {
                             </div>
                         </div>
                     </div>
-                </motion.div>
+                </div>
 
             </div>
         </section>
