@@ -7,7 +7,7 @@ import {
     TrendingUp, Star, Bell, Shield, LogOut, Plus, BarChart3, PieChart, Filter,
     ChevronLeft, ChevronRight, Trophy, Target, Zap, ShoppingBag, Tag,
     ArrowDownLeft, ArrowUpRight, CheckCircle2, XCircle, Clock, ArrowDownCircle, AlertTriangle,
-    FileText, Upload, UserCheck, BadgeCheck, X, Sparkles, Loader2
+    FileText, Upload, UserCheck, BadgeCheck, X, Sparkles, Loader2, UserCircle2
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/store/AuthContext';
@@ -480,7 +480,7 @@ export default function DashboardPage() {
                 <div className="w-full">
                     <p className="text-yellow-400 text-[10px] sm:text-xs font-black uppercase tracking-widest mb-1 sm:mb-2">Dashboard</p>
                     <h1 className="text-2xl sm:text-3xl md:text-5xl font-black tracking-tighter mb-1 break-words">
-                        Hey, <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500 drop-shadow-[0_0_10px_rgba(250,204,21,0.3)]">{user.fullName?.split(' ')[0] || 'Bidder'}</span> 👋
+                        Hey, <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500 drop-shadow-[0_0_10px_rgba(250,204,21,0.3)]">{user.fullName?.split(' ')[0] || 'Bidder'}</span>
                     </h1>
                     <div className="flex items-center flex-wrap gap-3 mt-3">
                         <span className="flex items-center text-yellow-400 text-sm bg-black/40 px-3 py-1.5 rounded-full border border-white/5 shadow-inner">
@@ -687,7 +687,7 @@ export default function DashboardPage() {
                                             <p className="text-gray-500 text-xs font-medium mb-3">Bid placed {new Date(bid.createdAt).toLocaleString()}</p>
                                             <div className="flex items-center gap-2">
                                                 <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border shadow-sm ${statusColor[bid.auction.status] || 'text-gray-400'}`}>{bid.auction.status}</span>
-                                                {bid.isWinning && <span className="text-[10px] bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-2.5 py-1 rounded-md font-bold uppercase tracking-widest shadow-[0_0_10px_rgba(250,204,21,0.2)]">🏆 Winning</span>}
+                                                {bid.isWinning && <span className="text-[10px] bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-2.5 py-1 rounded-md font-bold uppercase tracking-widest shadow-[0_0_10px_rgba(250,204,21,0.2)] flex items-center gap-1"><Trophy className="w-3 h-3" /> Winning</span>}
                                             </div>
                                         </div>
                                     </div>
@@ -1101,7 +1101,7 @@ export default function DashboardPage() {
                                 ) : hypeFeed.map((item: any) => (
                                     <div key={item.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 p-5 rounded-3xl flex items-center gap-4 hover:border-white/20 transition-all">
                                         <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-yellow-400/20 bg-zinc-800">
-                                            {item.userAvatar ? <Image src={item.userAvatar} alt="" width={48} height={48} /> : <div className="w-full h-full flex items-center justify-center text-xl">👤</div>}
+                                            {item.userAvatar ? <Image src={item.userAvatar} alt="" width={48} height={48} /> : <div className="w-full h-full flex items-center justify-center"><UserCircle2 className="w-7 h-7 text-gray-600" /></div>}
                                         </div>
                                         <div className="flex-1">
                                             <p className="text-sm font-bold text-white flex items-center flex-wrap gap-x-1">
@@ -1153,14 +1153,13 @@ export default function DashboardPage() {
                             ) : notifications.map(n => (
                                 <div key={n.id} className={`border rounded-3xl p-5 transition-all duration-300 ${n.isRead ? 'bg-zinc-900/40 backdrop-blur-xl border-white/10 hover:border-white/20' : 'bg-gradient-to-r from-yellow-400/10 to-transparent border-yellow-400/30'}`}>
                                     <div className="flex items-start gap-4">
-                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 ${n.isRead ? 'bg-white/5' : 'bg-yellow-400/20 shadow-[0_0_15px_rgba(250,204,21,0.2)]'}`}>
-                                            {
-                                                n.type === 'AUCTION_WON' ? '🏆' :
-                                                    n.type === 'OUTBID' ? '🔔' :
-                                                        n.type === 'PAYMENT_REQUIRED' ? '💳' :
-                                                            n.type === 'ITEM_SHIPPED' ? '📦' :
-                                                                n.type === 'DISPUTE_OPENED' ? '⚠️' : '💬'
-                                            }
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${n.isRead ? 'bg-white/5' : 'bg-yellow-400/20 shadow-[0_0_15px_rgba(250,204,21,0.2)]'}`}>
+                                            {n.type === 'AUCTION_WON' ? <Trophy className="w-6 h-6 text-yellow-400" /> :
+                                                n.type === 'OUTBID' ? <Bell className="w-6 h-6 text-orange-400" /> :
+                                                    n.type === 'PAYMENT_REQUIRED' ? <Wallet className="w-6 h-6 text-blue-400" /> :
+                                                        n.type === 'ITEM_SHIPPED' ? <Package className="w-6 h-6 text-purple-400" /> :
+                                                            n.type === 'DISPUTE_OPENED' ? <AlertTriangle className="w-6 h-6 text-red-400" /> :
+                                                                <Bell className="w-6 h-6 text-gray-400" />}
                                         </div>
                                         <div className="flex-1 min-w-0 pt-1">
                                             <div className="flex items-start justify-between gap-4">
@@ -1188,7 +1187,7 @@ export default function DashboardPage() {
                             {user.verifiedStatus !== 'BASIC' && (
                                 <div className="bg-gradient-to-br from-green-500/10 to-blue-500/10 border border-green-500/20 rounded-3xl p-8 text-center">
                                     <CheckCircle2 className="w-16 h-16 text-green-400 mx-auto mb-4" />
-                                    <h3 className="text-2xl font-black text-white mb-2">You are a {user.verifiedStatus === 'PREMIUM' ? '⭐ Premium' : '✅ Verified'} Seller!</h3>
+                                    <h3 className="text-2xl font-black text-white mb-2">You are a {user.verifiedStatus === 'PREMIUM' ? 'Premium' : 'Verified'} Seller!</h3>
                                     <p className="text-gray-400">You can create and list auctions. Your buyer trust score is actively tracked.</p>
                                 </div>
                             )}
@@ -1199,7 +1198,11 @@ export default function DashboardPage() {
                                     ? 'bg-blue-500/5 border-blue-500/20'
                                     : 'bg-orange-500/5 border-orange-500/20'
                                     }`}>
-                                    <div className="text-5xl mb-4">{verificationRequest.status === 'UNDER_REVIEW' ? '🔍' : '⏳'}</div>
+                                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/10 bg-white/5">
+                                        {verificationRequest.status === 'UNDER_REVIEW'
+                                            ? <Shield className="w-8 h-8 text-blue-400" />
+                                            : <Clock className="w-8 h-8 text-orange-400" />}
+                                    </div>
                                     <h3 className="text-2xl font-black text-white mb-2">
                                         {verificationRequest.status === 'UNDER_REVIEW' ? 'Under Admin Review' : 'Application Pending'}
                                     </h3>
@@ -1288,7 +1291,7 @@ export default function DashboardPage() {
                                     </div>
 
                                     <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 sm:p-6">
-                                        <p className="text-blue-400 text-xs font-black uppercase tracking-widest mb-3">📎 Document Upload Instructions</p>
+                                        <p className="text-blue-400 text-xs font-black uppercase tracking-widest mb-3 flex items-center gap-2"><Upload className="w-3.5 h-3.5" /> Document Upload Instructions</p>
                                         <p className="text-gray-400 text-sm leading-relaxed mb-6">
                                             Upload your ID proofs and asset ownership documents below. <strong className="text-blue-400">Selected files are automatically uploaded</strong> to our secure server.
                                         </p>
@@ -1364,12 +1367,14 @@ export default function DashboardPage() {
                             {/* Info cards */}
                             <div className="grid sm:grid-cols-3 gap-4">
                                 {[
-                                    { icon: '🔒', title: 'Secure KYC', desc: 'Your documents are reviewed only by our verified admin team and are never shared.' },
-                                    { icon: '⚡', title: '24-48 Hours', desc: 'Fast review process. Most applications are reviewed by the next business day.' },
-                                    { icon: '🏆', title: 'Unlock Selling', desc: 'Once verified, you can list unlimited auctions and receive payouts directly to your bank.' }
+                                    { icon: Shield, color: 'text-blue-400', title: 'Secure KYC', desc: 'Your documents are reviewed only by our verified admin team and are never shared.' },
+                                    { icon: Zap, color: 'text-yellow-400', title: '24-48 Hours', desc: 'Fast review process. Most applications are reviewed by the next business day.' },
+                                    { icon: Trophy, color: 'text-amber-400', title: 'Unlock Selling', desc: 'Once verified, you can list unlimited auctions and receive payouts directly to your bank.' }
                                 ].map((item, i) => (
                                     <div key={i} className="bg-zinc-900/40 border border-white/10 rounded-2xl p-5">
-                                        <p className="text-3xl mb-3">{item.icon}</p>
+                                        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-3">
+                                            <item.icon className={`w-5 h-5 ${item.color}`} />
+                                        </div>
                                         <p className="font-black text-white mb-1">{item.title}</p>
                                         <p className="text-gray-500 text-xs leading-relaxed">{item.desc}</p>
                                     </div>

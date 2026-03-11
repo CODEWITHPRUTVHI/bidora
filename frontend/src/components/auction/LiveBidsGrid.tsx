@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SlidersHorizontal, Timer, ArrowRight, Loader2 } from 'lucide-react';
+import { SlidersHorizontal, Timer, ArrowRight, Loader2, Flame } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import api from '@/lib/axios';
@@ -146,8 +146,8 @@ export default function LiveBidsGrid() {
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6 relative z-10">
                 <div>
                     <p className="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-3">Real-time bidding</p>
-                    <h2 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter mb-2">
-                        🔥 LIVE <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-600 drop-shadow-[0_0_10px_rgba(250,204,21,0.3)]">SNEAKER DROPS</span>
+                    <h2 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter mb-2 flex items-center gap-3">
+                        <Flame className="w-8 h-8 md:w-10 md:h-10 text-yellow-400 flex-shrink-0" /> LIVE <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-600 drop-shadow-[0_0_10px_rgba(250,204,21,0.3)]">SNEAKER DROPS</span>
                     </h2>
                     <p className="text-gray-400 font-light max-w-lg text-lg">Mumbai&apos;s hottest kicks — bid before time runs out.</p>
                 </div>

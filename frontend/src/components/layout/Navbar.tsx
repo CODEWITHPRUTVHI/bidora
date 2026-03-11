@@ -1,6 +1,11 @@
 'use client';
 
-import { Search, Wallet, Bell, Menu, Flame, Shield, X, ShoppingBag, MessageCircle } from 'lucide-react';
+import {
+    Search, Wallet, Bell, Menu, Flame, Shield, X,
+    ShoppingBag, MessageCircle, Home, LayoutDashboard,
+    Package, ShieldCheck, Trophy, AlertCircle, CreditCard,
+    Truck, MessageSquare
+} from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -28,7 +33,6 @@ export default function Navbar() {
     useEffect(() => {
         if (!user) return;
 
-        // Initial fetch
         api.get('/notifications?limit=5')
             .then(r => {
                 setNotifs(r.data.notifications || []);
@@ -36,7 +40,6 @@ export default function Navbar() {
             })
             .catch(() => { });
 
-        // Real-time
         const token = localStorage.getItem('token');
         if (!token) return;
         const { io: socketIO } = require('socket.io-client');
@@ -53,7 +56,6 @@ export default function Navbar() {
             setUnreadMessages(prev => prev + 1);
         });
 
-        // Fetch initial unread message count
         api.get('/messages/unread-count').then(r => setUnreadMessages(r.data.count ?? 0)).catch(() => {});
 
         return () => socket.disconnect();
@@ -72,12 +74,34 @@ export default function Navbar() {
         } catch (_) { }
     };
 
+    // Notification icon by type using Lucide icons
+    const NotifIcon = ({ type }: { type: string }) => {
+        if (type === 'AUCTION_WON') return <Trophy className="w-5 h-5 text-yellow-400" />;
+        if (type === 'OUTBID') return <Bell className="w-5 h-5 text-orange-400" />;
+        if (type === 'PAYMENT_REQUIRED') return <CreditCard className="w-5 h-5 text-blue-400" />;
+        if (type === 'ITEM_SHIPPED') return <Truck className="w-5 h-5 text-purple-400" />;
+        if (type === 'DISPUTE_OPENED') return <AlertCircle className="w-5 h-5 text-red-400" />;
+        return <MessageSquare className="w-5 h-5 text-gray-400" />;
+    };
+
+    const navLinks = [
+        { href: '/', label: 'Home', icon: Home, color: 'bg-yellow-400/10 text-yellow-400' },
+        ...(user ? [
+            { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'bg-blue-500/10 text-blue-400' },
+            { href: '/dashboard?tab=orders', label: 'My Orders', icon: Package, color: 'bg-purple-500/10 text-purple-400' },
+            { href: '/inbox', label: 'Messages', icon: MessageCircle, color: 'bg-green-500/10 text-green-400', badge: unreadMessages },
+        ] : []),
+        ...(user?.role === 'ADMIN' ? [
+            { href: '/admin', label: 'Admin Panel', icon: Shield, color: 'bg-yellow-400/10 text-black', adminStyle: true },
+        ] : []),
+    ];
+
     return (
         <motion.header
             initial={{ y: -100 }} animate={{ y: 0 }}
             className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'bg-zinc-950/80 backdrop-blur-2xl border-b border-white/10 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.8)] py-1' : 'bg-transparent py-4'}`}
         >
-            <div className="container mx-auto px-6 h-16 flex items-center justify-between">
+            <div className="container mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
 
                 {/* Logo */}
                 <Link href="/" className="flex items-center space-x-2 flex-shrink-0 z-50">
@@ -95,7 +119,7 @@ export default function Navbar() {
                 </form>
 
                 {/* Right Actions */}
-                <div className="flex items-center gap-2 sm:gap-4">
+                <div className="flex items-center gap-1 sm:gap-3">
                     {/* Live Bids Counter - Desktop Only */}
                     <div className="hidden lg:flex items-center space-x-2 mr-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full whitespace-nowrap">
                         <span className="relative flex h-2 w-2">
@@ -154,8 +178,8 @@ export default function Navbar() {
                                                     </div>
                                                 ) : notifs.map(n => (
                                                     <div key={n.id} onClick={() => { markRead(n.id); if (n.referenceId) router.push(`/auctions/${n.referenceId}`); }} className={`p-4 border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors flex gap-4 ${n.isRead ? 'opacity-60' : 'bg-yellow-400/5'}`}>
-                                                        <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center text-xl flex-shrink-0">
-                                                            {n.type === 'AUCTION_WON' ? '🏆' : n.type === 'OUTBID' ? '🔔' : '💬'}
+                                                        <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                                                            <NotifIcon type={n.type} />
                                                         </div>
                                                         <div className="min-w-0">
                                                             <p className="text-sm font-bold text-white truncate">{n.title}</p>
@@ -185,19 +209,19 @@ export default function Navbar() {
                         </Link>
                     )}
 
-                    {/* Analytics Link (Sellers only) */}
-                    {user?.role === 'SELLER' && (
-                        <Link href="/analytics" className="hidden lg:flex items-center gap-2 text-gray-300 hover:text-white transition-colors px-3 py-1.5 rounded-full hover:bg-white/5 border border-transparent hover:border-white/10">
-                            <ShoppingBag className="w-4 h-4 text-yellow-400" />
-                            <span className="font-semibold text-sm">Analytics</span>
-                        </Link>
-                    )}
-
                     {/* Orders Quick Link (Buyers) */}
                     {user && user.role !== 'SELLER' && (
                         <Link href="/dashboard?tab=orders" className="hidden lg:flex items-center gap-2 text-gray-300 hover:text-white transition-colors px-3 py-1.5 rounded-full hover:bg-white/5 border border-transparent hover:border-white/10">
                             <ShoppingBag className="w-4 h-4 text-yellow-400" />
                             <span className="font-semibold text-sm">Orders</span>
+                        </Link>
+                    )}
+
+                    {/* Analytics Link (Sellers only) */}
+                    {user?.role === 'SELLER' && (
+                        <Link href="/analytics" className="hidden lg:flex items-center gap-2 text-gray-300 hover:text-white transition-colors px-3 py-1.5 rounded-full hover:bg-white/5 border border-transparent hover:border-white/10">
+                            <ShoppingBag className="w-4 h-4 text-yellow-400" />
+                            <span className="font-semibold text-sm">Analytics</span>
                         </Link>
                     )}
 
@@ -217,7 +241,7 @@ export default function Navbar() {
                     )}
 
                     {!user ? (
-                        <Link href="/auth" className="bg-gradient-to-b from-yellow-400 to-yellow-500 text-zinc-950 px-6 py-2.5 rounded-full font-black text-sm hover:-translate-y-0.5 active:scale-95 transition-all shadow-[0_10px_30px_-10px_rgba(250,204,21,0.5)] border border-yellow-300">
+                        <Link href="/auth" className="bg-gradient-to-b from-yellow-400 to-yellow-500 text-zinc-950 px-5 py-2.5 rounded-full font-black text-sm hover:-translate-y-0.5 active:scale-95 transition-all shadow-[0_10px_30px_-10px_rgba(250,204,21,0.5)] border border-yellow-300">
                             Sign In
                         </Link>
                     ) : (
@@ -228,10 +252,11 @@ export default function Navbar() {
 
                     {/* Mobile Menu Toggle */}
                     <button
-                        className="md:hidden p-2 text-white bg-white/5 rounded-xl border border-white/10 active:scale-90 transition-transform"
+                        className="md:hidden p-2.5 text-white bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 active:scale-90 transition-all ml-1"
                         onClick={() => setMenuOpen(!menuOpen)}
+                        aria-label="Toggle menu"
                     >
-                        {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                        {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                     </button>
                 </div>
             </div>
@@ -242,80 +267,93 @@ export default function Navbar() {
                     <>
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] md:hidden"
+                            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] md:hidden"
                             onClick={() => setMenuOpen(false)}
                         />
                         <motion.div
                             initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="fixed right-0 top-0 bottom-0 w-[85%] max-w-sm bg-zinc-950 z-[70] md:hidden shadow-[-20px_0_50px_rgba(0,0,0,0.5)] flex flex-col"
+                            transition={{ type: 'spring', damping: 28, stiffness: 220 }}
+                            className="fixed right-0 top-0 bottom-0 w-[80%] max-w-xs bg-zinc-950 border-l border-white/10 z-[70] md:hidden shadow-[-30px_0_60px_rgba(0,0,0,0.6)] flex flex-col"
                         >
-                            <div className="p-6 border-b border-white/10 flex items-center justify-between">
-                                <span className="text-xl font-black tracking-tighter text-white">MENU</span>
-                                <button onClick={() => setMenuOpen(false)} className="p-2 bg-white/5 rounded-xl border border-white/10">
-                                    <X className="w-6 h-6 text-white" />
+                            {/* Drawer Header */}
+                            <div className="p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 bg-yellow-400 rounded-lg flex items-center justify-center">
+                                        <Flame className="w-4 h-4 text-black" />
+                                    </div>
+                                    <span className="font-black tracking-tighter text-white">BIDORA</span>
+                                </div>
+                                <button onClick={() => setMenuOpen(false)} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-colors">
+                                    <X className="w-5 h-5 text-white" />
                                 </button>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                            {/* Scrollable Content */}
+                            <div className="flex-1 overflow-y-auto overscroll-contain">
                                 {/* Mobile Search */}
-                                <form onSubmit={e => { e.preventDefault(); const q = (e.currentTarget.querySelector('input') as HTMLInputElement).value; if (q) { router.push(`/search?q=${encodeURIComponent(q)}`); setMenuOpen(false); } }} className="relative group">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                                    <input id="mobile-search" type="text" placeholder="Search anything…"
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-11 pr-5 text-sm text-white focus:outline-none focus:border-yellow-400/50 transition-all" />
-                                </form>
+                                <div className="p-4 border-b border-white/5">
+                                    <form onSubmit={e => { e.preventDefault(); const q = (e.currentTarget.querySelector('input') as HTMLInputElement).value; if (q) { router.push(`/search?q=${encodeURIComponent(q)}`); setMenuOpen(false); } }} className="relative">
+                                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                        <input id="mobile-search" type="text" placeholder="Search sneakers…"
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-yellow-400/50 transition-all placeholder:text-gray-600" />
+                                    </form>
+                                </div>
 
-                                <nav className="space-y-4">
-                                    <Link href="/" onClick={() => setMenuOpen(false)} className="flex items-center gap-4 text-lg font-bold text-gray-300 hover:text-white p-4 bg-white/5 rounded-2xl border border-white/5">
-                                        <div className="w-10 h-10 rounded-xl bg-yellow-400/10 flex items-center justify-center">🏠</div>
-                                        Home
-                                    </Link>
-                                    {user && (
-                                        <>
-                                            <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-4 text-lg font-bold text-gray-300 hover:text-white p-4 bg-white/5 rounded-2xl border border-white/5">
-                                                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">📊</div>
-                                                Dashboard
-                                            </Link>
-                                            <Link href="/dashboard?tab=orders" onClick={() => setMenuOpen(false)} className="flex items-center gap-4 text-lg font-bold text-gray-300 hover:text-white p-4 bg-white/5 rounded-2xl border border-white/5">
-                                                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">🛍️</div>
-                                                My Orders
-                                            </Link>
-                                            <Link href="/inbox" onClick={() => { setMenuOpen(false); setUnreadMessages(0); }} className="flex items-center gap-4 text-lg font-bold text-gray-300 hover:text-white p-4 bg-white/5 rounded-2xl border border-white/5">
-                                                <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center relative">
-                                                    💬
-                                                    {unreadMessages > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 text-black text-[10px] font-black rounded-full flex items-center justify-center">{unreadMessages}</span>}
+                                {/* Nav Links */}
+                                <nav className="p-4 space-y-2">
+                                    {navLinks.map(link => {
+                                        const Icon = link.icon;
+                                        return (
+                                            <Link
+                                                key={link.href}
+                                                href={link.href}
+                                                onClick={() => { setMenuOpen(false); if ('badge' in link) setUnreadMessages(0); }}
+                                                className={`flex items-center gap-4 p-4 rounded-2xl border transition-all active:scale-[0.98] ${
+                                                    (link as any).adminStyle
+                                                        ? 'bg-yellow-400 border-yellow-300 text-black font-black'
+                                                        : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.07] hover:border-white/10 text-gray-200 font-bold'
+                                                }`}
+                                            >
+                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${(link as any).adminStyle ? 'bg-black/10' : link.color.split(' ').map((c: string) => c.includes('text-') ? '' : c).join(' ')}`}>
+                                                    <Icon className={`w-5 h-5 ${(link as any).adminStyle ? 'text-black' : link.color.split(' ').find((c: string) => c.startsWith('text-'))}`} />
                                                 </div>
-                                                Messages
+                                                <span className="flex-1 text-base">{link.label}</span>
+                                                {'badge' in link && (link as any).badge > 0 && (
+                                                    <span className="w-5 h-5 bg-yellow-400 text-black text-[10px] font-black rounded-full flex items-center justify-center">
+                                                        {(link as any).badge > 9 ? '9+' : (link as any).badge}
+                                                    </span>
+                                                )}
                                             </Link>
-                                        </>
-                                    )}
-                                    {user?.role === 'ADMIN' && (
-                                        <Link href="/admin" onClick={() => setMenuOpen(false)} className="flex items-center gap-4 text-lg font-bold text-black p-4 bg-yellow-400 rounded-2xl">
-                                            <div className="w-10 h-10 rounded-xl bg-black/10 flex items-center justify-center">🛡️</div>
-                                            Admin Panel
-                                        </Link>
-                                    )}
+                                        );
+                                    })}
                                 </nav>
                             </div>
 
-                            <div className="p-6 border-t border-white/10 bg-white/[0.02]">
+                            {/* Drawer Footer - User Section */}
+                            <div className="p-4 border-t border-white/10 bg-white/[0.02] flex-shrink-0">
                                 {!user ? (
-                                    <Link href="/auth" onClick={() => setMenuOpen(false)} className="block bg-yellow-400 text-zinc-950 py-4 rounded-2xl font-black text-center shadow-[0_10px_30px_-10px_rgba(250,204,21,0.5)]">
-                                        Sign In
+                                    <Link href="/auth" onClick={() => setMenuOpen(false)} className="block bg-yellow-400 text-zinc-950 py-4 rounded-2xl font-black text-center shadow-[0_10px_30px_-10px_rgba(250,204,21,0.5)] active:scale-[0.98] transition-transform">
+                                        Sign In to Bid
                                     </Link>
                                 ) : (
-                                    <div className="space-y-4">
+                                    <div className="space-y-3">
                                         <div className="flex items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/5">
-                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white font-black">
-                                                {user.fullName?.charAt(0) || 'U'}
+                                            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white font-black text-lg flex-shrink-0">
+                                                {user.fullName?.charAt(0)?.toUpperCase() || 'U'}
                                             </div>
                                             <div className="min-w-0 flex-1">
-                                                <p className="text-white font-bold truncate">{user.fullName}</p>
-                                                <p className="text-yellow-400 text-xs font-bold">₹{(user.walletBalance ?? 0).toLocaleString()}</p>
+                                                <p className="text-white font-bold truncate text-sm">{user.fullName}</p>
+                                                <div className="flex items-center gap-1 mt-0.5">
+                                                    <Wallet className="w-3 h-3 text-yellow-400" />
+                                                    <p className="text-yellow-400 text-xs font-bold">₹{(user.walletBalance ?? 0).toLocaleString()}</p>
+                                                </div>
                                             </div>
+                                            {user.verifiedStatus !== 'BASIC' && (
+                                                <ShieldCheck className="w-5 h-5 text-blue-400 flex-shrink-0" />
+                                            )}
                                         </div>
-                                        <button onClick={() => { handleLogout(); setMenuOpen(false); }} className="w-full text-red-500 py-4 font-black border border-red-500/20 rounded-2xl hover:bg-red-500/5">
-                                            Log out
+                                        <button onClick={() => { handleLogout(); setMenuOpen(false); }} className="w-full text-red-400 py-3.5 font-bold text-sm border border-red-500/20 rounded-2xl hover:bg-red-500/5 active:scale-[0.98] transition-all">
+                                            Log Out
                                         </button>
                                     </div>
                                 )}

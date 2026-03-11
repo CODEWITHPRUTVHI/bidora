@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, SlidersHorizontal, X, Flame, Timer, TrendingUp, ChevronDown } from 'lucide-react';
+import { Search, SlidersHorizontal, X, Timer, ChevronDown, Radio, CalendarClock, CheckCircle2, UserCircle2 } from 'lucide-react';
 import Breadcrumbs from '@/components/seo/Breadcrumbs';
 
 import Link from 'next/link';
@@ -86,7 +86,7 @@ function AuctionSearchCard({ auction }: { auction: Auction }) {
 
                     <div className="flex items-center justify-between pt-4 border-t border-white/5">
                         <p className="text-gray-400 text-xs font-medium truncate max-w-[60%] flex items-center gap-1.5">
-                            <span className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] pb-px">👤</span>
+                            <UserCircle2 className="w-4 h-4 text-gray-500 flex-shrink-0" />
                             {auction.seller.fullName || 'Anonymous'}
                         </p>
                         {auction.seller.verifiedStatus !== 'BASIC' && (
@@ -108,9 +108,9 @@ const SORT_OPTIONS = [
 ];
 
 const STATUS_OPTIONS = [
-    { value: 'LIVE', label: '🔴 Live Now' },
-    { value: 'SCHEDULED', label: '📅 Upcoming' },
-    { value: 'ENDED', label: '✅ Ended' }
+    { value: 'LIVE', label: 'Live Now' },
+    { value: 'SCHEDULED', label: 'Upcoming' },
+    { value: 'ENDED', label: 'Ended' }
 ];
 
 function SearchContent() {
@@ -277,7 +277,9 @@ function SearchContent() {
                 </div>
             ) : auctions.length === 0 ? (
                 <div className="text-center py-24">
-                    <p className="text-6xl mb-6">🔍</p>
+                    <div className="w-20 h-20 bg-white/5 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-white/10">
+                        <Search className="w-10 h-10 text-gray-600" />
+                    </div>
                     <h3 className="text-2xl font-bold text-white mb-2">No auctions found</h3>
                     <p className="text-gray-400 mb-6">Try adjusting your filters or search query</p>
                     <button onClick={() => { setQuery(''); setStatus('LIVE'); setCategoryId(''); doSearch(1); }}
