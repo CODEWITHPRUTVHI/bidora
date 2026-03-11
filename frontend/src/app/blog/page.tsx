@@ -4,8 +4,16 @@ import Breadcrumbs from '@/components/seo/Breadcrumbs';
 import Schema from '@/components/seo/Schema';
 
 
-// Placeholder blog data for SEO ranking
 const POSTS = [
+    {
+        id: 0,
+        title: "The Ultimate Guide to Buying & Selling Authentic Sneakers in India (2026)",
+        slug: "ultimate-guide-buying-selling-authentic-sneakers-india-2026",
+        category: "Comprehensive Guide",
+        date: "March 11, 2026",
+        excerpt: "Everything you need to know about navigating the Indian sneaker resell market. Stop getting scammed on Instagram and master the art of safe trading.",
+        image: "https://images.unsplash.com/photo-1595341888016-a392ef81b7de?w=800&q=80"
+    },
     {
         id: 1,
         title: "Top 10 Rarest Sneakers You Can Buy in India Right Now",
