@@ -1,7 +1,7 @@
 'use client';
 
 import {
-    Search, Wallet, Menu, Shield, X,
+    Search, Wallet, Menu, Shield, X, Flame,
     ShoppingBag, MessageCircle, Home, LayoutDashboard,
     Package, ShieldCheck, AlertCircle, CreditCard, MessageSquare
 } from 'lucide-react';
@@ -12,7 +12,7 @@ import { useAuth } from '@/store/AuthContext';
 import api from '@/lib/axios';
 import { useRouter } from 'next/navigation';
 import {
-    BellAnimated, FlameAnimated, TrophyAnimated,
+    BellAnimated, TrophyAnimated,
     PackageAnimated, HoverIcon
 } from '@/components/ui/AnimatedIcon';
 
@@ -93,21 +93,12 @@ export default function Navbar() {
 
                 {/* Logo */}
                 <Link href="/" className="flex items-center space-x-2 flex-shrink-0 z-50">
-                    <motion.div
-                        whileHover={{ rotate: 15, scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-                        className="w-8 h-8 sm:w-9 sm:h-9 bg-yellow-400 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(250,204,21,0.4)]"
-                    >
-                        <FlameAnimated className="w-4 h-4 sm:w-5 sm:h-5 text-black" />
-                    </motion.div>
-                    <motion.span
-                        whileHover={{ letterSpacing: '0.05em' }}
-                        transition={{ duration: 0.2 }}
-                        className="text-lg sm:text-xl font-black tracking-tighter text-white"
-                    >
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 bg-yellow-400 rounded-xl flex items-center justify-center rotate-3 shadow-[0_0_20px_rgba(250,204,21,0.4)] transition-transform hover:rotate-6">
+                        <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-black" />
+                    </div>
+                    <span className="text-lg sm:text-xl font-black tracking-tighter text-white">
                         BIDORA
-                    </motion.span>
+                    </span>
                 </Link>
 
                 {/* Search - Desktop */}
@@ -293,8 +284,8 @@ export default function Navbar() {
                             {/* Drawer Header */}
                             <div className="p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 bg-yellow-400 rounded-lg flex items-center justify-center">
-                                        <FlameAnimated className="w-4 h-4 text-black" />
+                                    <div className="w-7 h-7 bg-yellow-400 rounded-lg flex items-center justify-center rotate-3">
+                                        <Flame className="w-4 h-4 text-black" />
                                     </div>
                                     <span className="font-black tracking-tighter text-white">BIDORA</span>
                                 </div>
