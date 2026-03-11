@@ -24,9 +24,10 @@ export default function InstallAppPrompt() {
         const dismissed = localStorage.getItem('bidora_pwa_dismissed');
 
         if (isMobile && !isStandalone && !dismissed) {
+            // Show prompt immediately on mobile to ensure visibility
+            setShowPrompt(true);
             if (_isIos) {
-                // iOS doesn't reliably fire beforeinstallprompt. Just show it directly.
-                setShowPrompt(true);
+                setIsIos(true);
             }
         }
         
@@ -35,15 +36,7 @@ export default function InstallAppPrompt() {
             e.preventDefault();
             // Stash the event so it can be triggered later.
             setDeferredPrompt(e);
-            
-            // Only show custom prompt if it's a mobile device (optional, but matching user request)
-            if (isMobile) {
-                // Check if user dismissed it recently (optional check, but good ux)
-                const dismissed = localStorage.getItem('bidora_pwa_dismissed');
-                if (!dismissed) {
-                    setShowPrompt(true);
-                }
-            }
+            console.log('⭐ beforeinstallprompt fired');
         };
 
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -61,25 +54,22 @@ export default function InstallAppPrompt() {
 
     const handleInstallClick = async () => {
         if (isIos) {
-            alert('To install on iPhone/iPad:\n1. Tap the Share button at the bottom\n2. Scroll down and tap "Add to Home Screen"');
+            alert('To install on iPhone/iPad:\n1. Tap the "Share" icon (square with arrow up) at the bottom.\n2. Scroll down and tap "Add to Home Screen".');
             return;
         }
 
-        if (!deferredPrompt) return;
-        
-        // Show the install prompt
-        deferredPrompt.prompt();
-        
-        // Wait for the user to respond to the prompt
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-            console.log('User accepted the install prompt');
+        if (deferredPrompt) {
+            // Show the native install prompt
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                setShowPrompt(false);
+            }
+            setDeferredPrompt(null);
         } else {
-            console.log('User dismissed the install prompt');
+            // Fallback for Chrome/Android if the event didn't fire yet or is blocked
+            alert('To install Bidora on Android:\n1. Tap the three dots (⋮) in the top-right corner of Chrome.\n2. Tap "Install app" or "Add to Home Screen".');
         }
-        
-        setDeferredPrompt(null);
-        setShowPrompt(false);
     };
 
     const handleDismiss = () => {
