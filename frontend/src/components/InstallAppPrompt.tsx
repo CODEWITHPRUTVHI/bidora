@@ -95,36 +95,39 @@ export default function InstallAppPrompt() {
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     className="fixed bottom-4 left-4 right-4 z-[9999] md:hidden"
                 >
-                    <div className="bg-[#111] border border-white/10 rounded-2xl shadow-2xl p-4 flex items-center gap-4 relative overflow-hidden backdrop-blur-xl">
+                    <div className="bg-[#111]/95 border border-white/10 rounded-2xl shadow-2xl p-4 flex flex-col gap-3 relative overflow-hidden backdrop-blur-xl">
                         {/* Decorative glow */}
                         <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/10 blur-[50px] rounded-full pointer-events-none" />
                         
-                        {/* Icon */}
-                        <div className="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <span className="text-[#111] font-black tracking-tighter text-sm">B</span>
-                        </div>
+                        {/* Dismiss Button */}
+                        <button 
+                            onClick={handleDismiss} 
+                            className="absolute top-3 right-3 text-gray-400 hover:text-white z-10 p-1 bg-black/20 rounded-full"
+                        >
+                            <X size={16} />
+                        </button>
 
-                        {/* Content */}
-                        <div className="flex-1">
-                            <h4 className="text-white font-bold text-sm">Add Bidora to Home Screen</h4>
-                            <p className="text-gray-400 text-xs mt-0.5">Get faster bids and push notifications</p>
+                        <div className="flex items-center gap-3 pr-6">
+                            {/* Icon */}
+                            <div className="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-yellow-400/20">
+                                <span className="text-[#111] font-black tracking-tighter text-2xl">B</span>
+                            </div>
+
+                            {/* Content */}
+                            <div className="flex-1">
+                                <h4 className="text-white font-bold text-[15px] leading-tight mb-0.5">Bidora Mobile App</h4>
+                                <p className="text-gray-400 text-xs leading-snug">Install for faster bidding and instant push notifications.</p>
+                            </div>
                         </div>
 
                         {/* Actions */}
-                        <div className="flex flex-col gap-2">
-                            <button
-                                onClick={handleInstallClick}
-                                className="bg-yellow-400 hover:bg-yellow-500 text-black px-4 py-1.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap"
-                            >
-                                Install 
-                            </button>
-                            <button
-                                onClick={handleDismiss}
-                                className="text-gray-500 hover:text-white px-4 py-1.5 text-xs transition-colors whitespace-nowrap"
-                            >
-                                Not Now
-                            </button>
-                        </div>
+                        <button
+                            onClick={handleInstallClick}
+                            className="w-full bg-yellow-400 hover:bg-yellow-500 text-black py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 mt-1 shadow-lg shadow-yellow-400/10 active:scale-[0.98]"
+                        >
+                            <Download size={18} />
+                            Install App
+                        </button>
                     </div>
                 </motion.div>
             )}
