@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 const LiveNotificationToast = dynamic(() => import('@/components/LiveNotificationToast'), { ssr: false });
 const Footer = dynamic(() => import('@/components/layout/Footer'), { ssr: true });
 const Navbar = dynamic(() => import('@/components/layout/Navbar'), { ssr: true });
+const InstallAppPrompt = dynamic(() => import('@/components/InstallAppPrompt'), { ssr: false });
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
     return (
@@ -17,6 +18,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             </main>
             <Footer />
             <LiveNotificationToast />
+            <InstallAppPrompt />
         </AuthProvider>
     );
 }
