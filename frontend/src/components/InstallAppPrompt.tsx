@@ -9,10 +9,12 @@ export default function InstallAppPrompt() {
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [showPrompt, setShowPrompt] = useState(false);
     const [isIos, setIsIos] = useState(false);
+    const [isSamsung, setIsSamsung] = useState(false);
 
     useEffect(() => {
         const _isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
         setIsIos(_isIos);
+        setIsSamsung(/SamsungBrowser/i.test(navigator.userAgent));
         
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         
@@ -121,13 +123,20 @@ export default function InstallAppPrompt() {
                         </div>
 
                         {/* Actions */}
-                        <button
-                            onClick={handleInstallClick}
-                            className="w-full bg-yellow-400 hover:bg-yellow-500 text-black py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 mt-1 shadow-lg shadow-yellow-400/10 active:scale-[0.98]"
-                        >
-                            <Download size={18} />
-                            Install App
-                        </button>
+                        <div className="flex flex-col gap-2">
+                            {isSamsung && (
+                                <p className="text-[10px] text-yellow-500/80 bg-yellow-500/10 p-2 rounded-lg border border-yellow-500/20 leading-tight">
+                                    <span className="font-bold text-yellow-400">Samsung Internet Note:</span> If Google Play Protect shows a warning, press <span className="text-white">"More details"</span> then <span className="text-white">"Install anyway"</span>. (Or use Google Chrome).
+                                </p>
+                            )}
+                            <button
+                                onClick={handleInstallClick}
+                                className="w-full bg-yellow-400 hover:bg-yellow-500 text-black py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 mt-1 shadow-lg shadow-yellow-400/10 active:scale-[0.98]"
+                            >
+                                <Download size={18} />
+                                Install App
+                            </button>
+                        </div>
                     </div>
                 </motion.div>
             )}
