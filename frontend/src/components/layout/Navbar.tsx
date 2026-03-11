@@ -121,7 +121,7 @@ export default function Navbar() {
                     </div>
 
                     {/* Mobile Search */}
-                    <button onClick={() => { setMenuOpen(true); setTimeout(() => document.getElementById('mobile-search')?.focus(), 150); }} className="md:hidden p-2 text-gray-400 hover:text-white">
+                    <button onClick={() => { setMenuOpen(true); setTimeout(() => document.getElementById('mobile-search')?.focus(), 150); }} className="md:hidden p-2 text-gray-400 hover:text-white" aria-label="Open mobile search">
                         <Search className="w-5 h-5" />
                     </button>
 
@@ -132,6 +132,7 @@ export default function Navbar() {
                                 <button
                                     onClick={() => setShowNotifs(!showNotifs)}
                                     className={`relative text-gray-400 hover:text-white transition-colors p-2 hover:bg-white/5 rounded-full ${showNotifs ? 'bg-white/10 text-white' : ''}`}
+                                    aria-label="View notifications"
                                 >
                                     <BellAnimated className="w-5 h-5" hasUnread={unread > 0} />
                                     {unread > 0 && (

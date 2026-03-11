@@ -28,9 +28,15 @@ export default function Footer() {
                             India&apos;s home for verified sneaker auctions. Hunt, bid, and win — with zero risk and zero lag.
                         </p>
                         <div className="flex items-center space-x-4">
-                            {[Facebook, Twitter, Instagram, Youtube].map((Icon, i) => (
-                                <Link key={i} href="#" className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-yellow-400 hover:border-yellow-400/50 hover:bg-yellow-400/5 transition-all">
+                            {[
+                                { icon: Facebook, label: 'Facebook' },
+                                { icon: Twitter, label: 'Twitter' },
+                                { icon: Instagram, label: 'Instagram' },
+                                { icon: Youtube, label: 'YouTube' }
+                            ].map(({ icon: Icon, label }, i) => (
+                                <Link key={i} href="#" aria-label={`Follow us on ${label}`} className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-yellow-400 hover:border-yellow-400/50 hover:bg-yellow-400/5 transition-all">
                                     <Icon size={18} />
+                                    <span className="sr-only">{label}</span>
                                 </Link>
                             ))}
                         </div>
@@ -101,12 +107,15 @@ export default function Footer() {
                     </div>
                     <div className="space-y-6 pt-8 sm:pt-0 border-t sm:border-t-0 border-white/5 flex flex-col items-center sm:items-start text-center sm:text-left transition-all">
                         <h3 className="text-white font-black uppercase text-xs tracking-[0.2em]">Our Newsletter</h3>
+                        <label htmlFor="newsletter-email" className="sr-only">Email Address</label>
                         <p className="text-gray-400 text-sm max-w-xs">Join 20k+ collectors getting weekly deal updates.</p>
                         <div className="relative group w-full max-w-sm sm:max-w-none">
                             <input
+                                id="newsletter-email"
                                 type="email"
                                 placeholder="name@email.com"
                                 className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-5 text-sm text-white focus:outline-none focus:border-yellow-400/50 focus:ring-4 focus:ring-yellow-400/10 transition-all placeholder:text-gray-600"
+                                aria-label="Join our newsletter"
                             />
                             <button className="absolute right-2 top-2 bottom-2 bg-yellow-400 hover:bg-yellow-300 transition-all px-4 rounded-xl text-zinc-950 font-bold text-xs uppercase tracking-wider">
                                 Join
