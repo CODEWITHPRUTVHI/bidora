@@ -10,6 +10,7 @@ import SellOnBidora from '@/components/SellOnBidora';
 import { Shield, Zap, CheckCircle, ArrowRight, TrendingUp, Users, Award, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/store/AuthContext';
+import Schema from '@/components/seo/Schema';
 
 // ── Scroll-reveal wrapper ───────────────────────────────────────────
 function FadeIn({ children, delay = 0, className = '', scale = false }: { children: React.ReactNode; delay?: number; className?: string; scale?: boolean }) {
@@ -53,8 +54,35 @@ const TRUST_FEATURES = [
 export default function Home() {
   const { user } = useAuth();
 
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Bidora",
+    "url": "https://bidora.me",
+    "logo": "https://bidora.me/apple-touch-icon.png",
+    "description": "India's most trusted live sneaker auction platform. Buy and sell verified rare sneakers with 100% escrow protection.",
+    "sameAs": [
+      "https://instagram.com/bidora.india",
+      "https://twitter.com/bidora"
+    ]
+  };
+
+  const webSiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Bidora",
+    "url": "https://bidora.me",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://bidora.me/search?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  };
+
   return (
     <div className="overflow-hidden relative min-h-screen bg-zinc-950 text-white selection:bg-yellow-500/30">
+      <Schema data={organizationSchema} />
+      <Schema data={webSiteSchema} />
 
       {/* ── Ambient Background Orbs ── */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
