@@ -31,26 +31,20 @@ export default function HeroSection() {
             <div className="container mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center z-10">
 
                 {/* Left Typography */}
-                <motion.div
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                    className="max-w-2xl"
-                >
-                    {/* SEO Optimized Hidden H1 */}
-                    <h1 className="sr-only">Buy and Sell Rare Sneakers India — Live Auction Platform</h1>
+                {/* Left Typography - Using CSS animation instead of framer-motion to save Mobile LCP time */}
+                <div className="max-w-2xl animate-fade-in-up">
 
                     <div className="hidden sm:inline-flex items-center space-x-2 bg-white/[0.03] border border-white/10 px-4 py-2 rounded-full mb-8 backdrop-blur-md">
                         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                         <span className="text-sm font-medium tracking-wide text-gray-300">Bidora Escrow guarantees every transaction</span>
                     </div>
 
-                    <div className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black leading-[1.1] tracking-tighter text-white mb-6 drop-shadow-2xl">
+                    <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black leading-[1.1] tracking-tighter text-white mb-6 drop-shadow-2xl">
                         WHERE RARE<br className="hidden xs:block" />
                         <span className="text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-amber-600 drop-shadow-[0_0_15px_rgba(250,204,21,0.3)]">
                             LANDS.
                         </span>
-                    </div>
+                    </h1>
 
                     <p className="text-lg text-gray-400 font-light leading-relaxed mb-10 max-w-xl">
                         Hunt. Bid. Win. Only verified kicks. Only Bidora.
@@ -68,7 +62,7 @@ export default function HeroSection() {
                         </Link>
                     </div>
 
-                </motion.div>
+                </div>
 
                 {/* Right Hero Image Card */}
                 <motion.div
