@@ -92,13 +92,11 @@ export default function Navbar() {
             <div className="container mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
 
                 {/* Logo */}
-                <Link href="/" className="flex items-center space-x-2 flex-shrink-0 z-50">
-                    <div className="w-8 h-8 sm:w-9 sm:h-9 bg-yellow-400 rounded-xl flex items-center justify-center rotate-3 shadow-[0_0_20px_rgba(250,204,21,0.4)] transition-transform hover:rotate-6">
+                <Link href="/" className="flex items-center gap-2 flex-shrink-0 z-50">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 bg-yellow-400 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(250,204,21,0.3)] flex-shrink-0 transition-transform hover:scale-105">
                         <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-black" />
                     </div>
-                    <span className="text-lg sm:text-xl font-black tracking-tighter text-white">
-                        BIDORA
-                    </span>
+                    <span className="text-lg sm:text-xl font-black tracking-tighter text-white leading-none uppercase">BIDORA</span>
                 </Link>
 
                 {/* Search - Desktop */}
@@ -284,10 +282,10 @@ export default function Navbar() {
                             {/* Drawer Header */}
                             <div className="p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 bg-yellow-400 rounded-lg flex items-center justify-center rotate-3">
+                                    <div className="w-8 h-8 bg-yellow-400 rounded-xl flex items-center justify-center flex-shrink-0">
                                         <Flame className="w-4 h-4 text-black" />
                                     </div>
-                                    <span className="font-black tracking-tighter text-white">BIDORA</span>
+                                    <span className="text-lg font-black tracking-tighter text-white leading-none uppercase">BIDORA</span>
                                 </div>
                                 <motion.button
                                     whileTap={{ scale: 0.85 }}
