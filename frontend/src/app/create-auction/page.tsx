@@ -18,7 +18,7 @@ const INPUT = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 tex
 const LABEL = "block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2";
 
 export default function CreateAuctionPage() {
-    const { user } = useAuth();
+    const { user, refreshUser } = useAuth();
     const router = useRouter();
 
     const [step, setStep] = useState(1); // 1=details, 2=media, 3=pricing, 4=review
@@ -73,13 +73,14 @@ export default function CreateAuctionPage() {
 
     useEffect(() => {
         if (!user) router.push('/auth');
-        if (user && user.verifiedStatus === 'BASIC') {
-            // BASIC users can still create: backend will gate by role
-        }
+        
+        // Refresh user status on mount to capture recent admin approvals
+        refreshUser();
+
         api.get('/auctions/categories')
             .then(r => setCategories(r.data.categories))
             .catch(() => { });
-    }, [user]);
+    }, [user, refreshUser]);
 
     const update = (k: string, v: string) => setForm(prev => ({ ...prev, [k]: v }));
 
