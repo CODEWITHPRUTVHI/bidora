@@ -93,7 +93,8 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     text-rendering: optimizeSpeed;
-    @apply antialiased selection:bg-primary/30 selection:text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* GPU Acceleration hints for fixed/animated elements */
@@ -105,26 +106,29 @@
 /* Custom Utilities for Premium Vibe */
 @layer utilities {
   .smart-blur {
-    @apply bg-background/80;
+    background-color: rgba(9, 9, 11, 0.85);
   }
   
   @media (min-width: 768px) {
     .smart-blur {
-        @apply backdrop-blur-md bg-background/50;
+        backdrop-filter: blur(12px);
+        background-color: rgba(9, 9, 11, 0.5);
     }
   }
 
   .glass {
-    @apply smart-blur border border-white/10;
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .card-hover {
-    @apply transition-all duration-300;
+    transition: all 0.3s ease;
   }
   
   @media (min-width: 1024px) {
     .card-hover:hover {
-        @apply -translate-y-1 shadow-2xl shadow-primary/20 border-primary/50;
+        transform: translateY(-4px);
+        box-shadow: 0 20px 50px -10px rgba(250, 204, 21, 0.2);
+        border-color: rgba(250, 204, 21, 0.5);
     }
   }
 
@@ -136,7 +140,7 @@
     animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
   
-  /* Performance optimization: disable expensive blurs on low-power mode or if slow */
+  /* Performance optimization: disable expensive animations on low-power mode */
   @media (prefers-reduced-motion: reduce) {
     * {
       animation-duration: 0.01ms !important;
