@@ -40,8 +40,47 @@ export default function CreateAuctionPage() {
         durationValue: '60', // Default 60 mins
         isImmediate: true,
         isConfirmed: false,
-        shippingCost: '0'
+        shippingCost: '0',
+        buyItNowPrice: '',
+        retailPrice: ''
     });
+
+    // Auto-assign category based on title keywords
+    useEffect(() => {
+        if (form.title && categories.length > 0) {
+            const lowerTitle = form.title.toLowerCase();
+            
+            const findAndSet = (catName: string) => {
+                const cat = categories.find(c => c.name === catName);
+                if (cat) setForm(prev => ({ ...prev, categoryId: cat.id.toString() }));
+                return !!cat;
+            };
+
+            if (['shoe', 'sneaker', 'nike', 'jordan', 'adidas', 'yeezy', 'kicks', 'footwear'].some(k => lowerTitle.includes(k))) {
+                if (findAndSet('Sneakers')) return;
+            }
+            
+            if (['phone', 'iphone', 'laptop', 'macbook', 'samsung', 'pro', 'tech', 'gadget', 'pixel', 'ipad', 'm1', 'm2', 'm3'].some(k => lowerTitle.includes(k))) {
+                 if (findAndSet('Electronics')) return;
+            }
+
+            if (['rolex', 'omega', 'patek', 'casio', 'seiko', 'tissot', 'watch', 'chronograph'].some(k => lowerTitle.includes(k))) {
+                 if (findAndSet('Watches')) return;
+            }
+
+            if (['car', 'bike', 'motorcycle', 'scooter', 'ev', 'tesla', 'bmw', 'audi', 'mercedes', 'honda', 'toyota'].some(k => lowerTitle.includes(k))) {
+                 if (findAndSet('Vehicles')) return;
+            }
+
+            if (['dress', 'shirt', 'jacket', 'gucci', 'lv', 'fashion', 'prada', 'zara', 'h&m'].some(k => lowerTitle.includes(k))) {
+                 if (findAndSet('Fashion')) return;
+            }
+
+            if (['card', 'pokémon', 'pokemon', 'comic', 'collectible', 'limited', 'signed'].some(k => lowerTitle.includes(k))) {
+                 if (findAndSet('Collectibles')) return;
+            }
+        }
+    }, [form.title, categories]);
 
     useEffect(() => {
         if (!user) router.push('/auth');
@@ -79,6 +118,8 @@ export default function CreateAuctionPage() {
                 categoryId: Number(form.categoryId),
                 startingPrice: Number(form.startingPrice),
                 reservePrice: form.reservePrice ? Number(form.reservePrice) : undefined,
+                buyItNowPrice: form.buyItNowPrice ? Number(form.buyItNowPrice) : undefined,
+                retailPrice: form.retailPrice ? Number(form.retailPrice) : undefined,
                 bidIncrement: Number(form.bidIncrement),
                 startTime: calculatedStartTime,
                 endTime: calculatedEndTime,
@@ -279,6 +320,16 @@ export default function CreateAuctionPage() {
                                             placeholder="500" className={INPUT} />
                                     </div>
                                     <div>
+                                        <label className={LABEL}>Buy It Now Price (₹) <span className="text-gray-600 normal-case font-normal">(optional)</span></label>
+                                        <input type="number" min="1" value={form.buyItNowPrice} onChange={e => update('buyItNowPrice', e.target.value)}
+                                            placeholder="Instant buy price" className={INPUT} />
+                                    </div>
+                                    <div>
+                                        <label className={LABEL}>Suggested Price / MSRP (₹) <span className="text-gray-600 normal-case font-normal">(optional)</span></label>
+                                        <input type="number" min="1" value={form.retailPrice} onChange={e => update('retailPrice', e.target.value)}
+                                            placeholder="Retail Price" className={INPUT} />
+                                    </div>
+                                    <div>
                                         <label className={LABEL}>Reserve Price (₹) <span className="text-gray-600 normal-case font-normal">(optional)</span></label>
                                         <input type="number" min="1" value={form.reservePrice} onChange={e => update('reservePrice', e.target.value)}
                                             placeholder="Hidden minimum price" className={INPUT} />
@@ -392,6 +443,7 @@ export default function CreateAuctionPage() {
                                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-white/10">
                                             {[
                                                 { label: 'Starting At', value: `₹${Number(form.startingPrice || 0).toLocaleString()}` },
+                                                { label: 'Sug. Retail', value: form.retailPrice ? `₹${Number(form.retailPrice).toLocaleString()}` : '—' },
                                                 { label: 'Bid Increment', value: `₹${Number(form.bidIncrement || 0).toLocaleString()}` },
                                                 { label: 'Shipping', value: Number(form.shippingCost) === 0 ? 'Free' : `₹${Number(form.shippingCost).toLocaleString()}` },
                                                 { label: 'Ends', value: form.endTime ? new Date(form.endTime).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' }

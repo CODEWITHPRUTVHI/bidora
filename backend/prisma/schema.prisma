@@ -145,6 +145,7 @@ model Auction {
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   buyItNowPrice     Decimal?        @db.Decimal(12, 2)
+  retailPrice       Decimal?        @db.Decimal(12, 2) // Suggested/Retail price for comparison
   category          Category        @relation(fields: [categoryId], references: [id])
   seller            User            @relation("SellerAuctions", fields: [sellerId], references: [id])
   autoBids          AutoBid[]

@@ -1,7 +1,7 @@
 import { Metadata, ResolvingMetadata } from 'next';
 
 type Props = {
-    params: { id: string };
+    params: Promise<{ id: string }>;
     children: React.ReactNode;
 };
 
@@ -22,7 +22,7 @@ export async function generateMetadata(
     { params }: Props,
     parent: ResolvingMetadata
 ): Promise<Metadata> {
-    const id = params.id;
+    const { id } = await params;
     const auction = await getAuction(id);
 
     if (!auction) {

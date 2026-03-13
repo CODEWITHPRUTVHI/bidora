@@ -18,7 +18,7 @@ import { CacheService } from '../services/cacheService';
 export const createAuction = async (req: AuthRequest, res: Response) => {
     try {
         const { title, description, categoryId, startingPrice, reservePrice,
-            bidIncrement, startTime, endTime, shippingCost, imageUrls } = req.body;
+            bidIncrement, startTime, endTime, shippingCost, imageUrls, buyItNowPrice, retailPrice } = req.body;
 
         if (!title || !description || !categoryId || !startingPrice || !startTime || !endTime) {
             return res.status(400).json({ error: 'Missing required auction fields' });
@@ -52,6 +52,8 @@ export const createAuction = async (req: AuthRequest, res: Response) => {
                 startingPrice: Number(startingPrice),
                 reservePrice: reservePrice ? Number(reservePrice) : null,
                 bidIncrement: bidIncrement ? Number(bidIncrement) : 1,
+                buyItNowPrice: buyItNowPrice ? Number(buyItNowPrice) : null,
+                retailPrice: retailPrice ? Number(retailPrice) : null,
                 startTime: start,
                 endTime: end,
                 shippingCost: shippingCost ? Number(shippingCost) : 0,
@@ -259,7 +261,7 @@ export const updateAuction = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ error: 'Cannot edit an auction that is live or ended' });
         }
 
-        const { title, description, reservePrice, startTime, endTime, shippingCost, imageUrls } = req.body;
+        const { title, description, reservePrice, startTime, endTime, shippingCost, imageUrls, buyItNowPrice, retailPrice } = req.body;
 
         const updated = await prisma.auction.update({
             where: { id: req.params.id },
@@ -267,6 +269,8 @@ export const updateAuction = async (req: AuthRequest, res: Response) => {
                 title: title || (auction as any).title,
                 description: description || (auction as any).description,
                 reservePrice: reservePrice !== undefined ? Number(reservePrice) : (auction as any).reservePrice,
+                buyItNowPrice: buyItNowPrice !== undefined ? Number(buyItNowPrice) : (auction as any).buyItNowPrice,
+                retailPrice: retailPrice !== undefined ? Number(retailPrice) : (auction as any).retailPrice,
                 startTime: startTime ? new Date(startTime) : (auction as any).startTime,
                 endTime: endTime ? new Date(endTime) : (auction as any).endTime,
                 shippingCost: shippingCost !== undefined ? Number(shippingCost) : (auction as any).shippingCost,

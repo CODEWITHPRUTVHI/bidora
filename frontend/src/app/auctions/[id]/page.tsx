@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ArrowLeft, Share2, Heart, ShieldCheck as Shield, Clock as Timer, TrendingUp,
-    CheckCircle2, AlertTriangle, Package, Zap, Activity, Loader2, MessageSquare, Star, Flame
+    CheckCircle2, AlertTriangle, Package, Zap, Activity, Loader2, MessageSquare, Star, Flame, ShoppingBag
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -136,6 +136,14 @@ export default function LiveAuctionPage() {
     const [isFollowing, setIsFollowing] = useState(false);
     const [isFollowLoading, setIsFollowLoading] = useState(false);
 
+    const currentBidAmt = Number(auction?.currentHighestBid || 0);
+    const increment = Math.max(getMinIncrement(currentBidAmt), Number(auction?.bidIncrement || 0));
+    const minNext = currentBidAmt > 0
+        ? Math.ceil(currentBidAmt + increment)
+        : Number(auction?.startingPrice || 0);
+    const isSeller = user && auction && user.id === auction.seller.id;
+    const topBidder = bids[0]?.bidderId;
+
     const socketRef = useRef<Socket | null>(null);
     const { time, urgent } = useCountdown(auction?.endTime ?? null);
 
@@ -148,7 +156,7 @@ export default function LiveAuctionPage() {
             setIsWatched(res.data.isWatched || false);
             setUniqueBidders(res.data.uniqueBiddersCount || 0);
             const current = Number(a.currentHighestBid);
-            const inc = getMinIncrement(current);
+            const inc = Math.max(getMinIncrement(current), Number(a.bidIncrement || 0));
             setBidAmount(current > 0 ? Math.ceil(current + inc) : Number(a.startingPrice));
             setBids(a.bids.slice(0, 10).map((b: any) => ({
                 bidderId: b.bidderId,
@@ -312,18 +320,13 @@ export default function LiveAuctionPage() {
             return setMessage({ type: 'info', text: 'Sellers cannot bid on their own auctions!' });
         }
 
-        if (user.id === auction?.bids[0]?.bidderId) {
+        if (user.id === topBidder) {
             return setMessage({ type: 'info', text: 'You are already the leading bidder!' });
         }
 
         if (Number(user.trustScore || 5) < 2.0) {
             return setMessage({ type: 'error', text: 'Your trust score is too low (below 2.0) to place bids.' });
         }
-
-        const currentBidAmt = Number(auction?.currentHighestBid || 0);
-        const minNext = currentBidAmt > 0
-            ? Math.ceil(currentBidAmt + getMinIncrement(currentBidAmt))
-            : Number(auction?.startingPrice || 0);
 
         if (availableBalance < bidAmount) {
             return setMessage({ type: 'error', text: `Insufficient balance! You need ₹${bidAmount.toLocaleString()}, but you have ₹${availableBalance.toLocaleString()} available.` });
@@ -332,6 +335,15 @@ export default function LiveAuctionPage() {
         if (bidAmount < minNext) {
             return setMessage({ type: 'error', text: `Someone just bid higher! Please bid at least ₹${Math.round(minNext).toLocaleString()}` });
         }
+
+        // Exact multiple rule
+        if (currentBidAmt > 0) {
+            const diff = bidAmount - currentBidAmt;
+            if (Math.round(diff) % Math.round(increment) !== 0) {
+                return setMessage({ type: 'error', text: `Bids must be in exact multiples of ₹${increment} above the current price.` });
+            }
+        }
+
         setBidding(true);
         setMessage(null);
         socketRef.current.emit('place_bid', { auctionId: id, amount: bidAmount });
@@ -346,6 +358,21 @@ export default function LiveAuctionPage() {
             });
         }, 10000);
     }, [bidAmount, auction, user, id, router, availableBalance, wsConnected]);
+
+    const purchaseNow = useCallback(() => {
+        if (!user) return router.push('/auth');
+        if (!auction?.buyItNowPrice) return;
+
+        const price = Number(auction.buyItNowPrice);
+        if (availableBalance < price) {
+            return setMessage({ type: 'error', text: `Insufficient balance for Buy It Now (₹${price.toLocaleString()})` });
+        }
+
+        if (confirm(`Confirm instant purchase for ₹${price.toLocaleString()}?`)) {
+            setBidding(true);
+            socketRef.current?.emit('place_bid', { auctionId: id, amount: price });
+        }
+    }, [auction, user, id, router, availableBalance]);
 
     const setAutoBid = useCallback(async () => {
         if (!user) return router.push('/auth');
@@ -438,13 +465,7 @@ export default function LiveAuctionPage() {
     if (!auction) return <LiveAuctionSkeleton />;
 
     const isLive = auction.status === 'LIVE' && time !== 'ENDED';
-    const isSeller = user?.id === auction.seller.id;
     const displayStatus = (auction.status === 'LIVE' && time === 'ENDED') ? 'FINALIZING...' : auction.status;
-    const currentBidAmt = Number(auction.currentHighestBid);
-    const minNext = currentBidAmt > 0
-        ? Math.ceil(currentBidAmt + getMinIncrement(currentBidAmt))
-        : Number(auction.startingPrice);
-    const topBidder = auction.bids[0]?.bidderId;
     const isWinner = !isLive && user?.id === topBidder && ['PAYMENT_PENDING', 'PAID', 'SHIPPED', 'DELIVERED', 'COMPLETED'].includes(auction.status);
     const needsPayment = isWinner && auction.status === 'PAYMENT_PENDING';
     const orderActive = isWinner && ['PAID', 'SHIPPED', 'DELIVERED', 'COMPLETED'].includes(auction.status);
@@ -731,29 +752,32 @@ export default function LiveAuctionPage() {
                             <div className={`absolute -top-32 -right-32 w-64 h-64 rounded-full blur-[100px] pointer-events-none opacity-20 group-hover:opacity-40 transition-opacity ${urgent ? 'bg-red-500' : 'bg-yellow-400'}`} />
 
                             <div className="flex flex-col gap-4 sm:gap-6 relative z-10">
-                                <div className="flex justify-between items-start gap-3">
-                                    <div className="min-w-0">
-                                        <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Current Highest Bid</p>
+                                <div className="flex justify-between items-center gap-4">
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-1">Current Bid</p>
                                         <AnimatePresence mode="wait">
                                             <motion.h2
                                                 key={auction.currentHighestBid}
-                                                initial={{ scale: 1.1, color: '#facc15' }}
-                                                animate={{ scale: 1, color: '#ffffff' }}
-                                                exit={{ scale: 0.9, opacity: 0 }}
-                                                transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-                                                className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tighter"
+                                                initial={{ scale: 1.1, y: 10, opacity: 0 }}
+                                                animate={{ scale: 1, y: 0, opacity: 1 }}
+                                                className="text-3xl sm:text-5xl font-black text-white tracking-tighter"
                                             >
                                                 ₹{Number(auction.currentHighestBid).toLocaleString()}
                                             </motion.h2>
                                         </AnimatePresence>
-                                        <p className="text-gray-500 text-[10px] mt-2 font-semibold">Start: ₹{Number(auction.startingPrice).toLocaleString()}</p>
+                                        <p className="text-[10px] sm:text-xs font-bold text-gray-500 mt-1">
+                                            Start: ₹{Number(auction.startingPrice).toLocaleString()}
+                                            {(auction as any).retailPrice && (
+                                                <span className="ml-3 text-yellow-400/40">Est: ₹{Number((auction as any).retailPrice).toLocaleString()}</span>
+                                            )}
+                                        </p>
                                     </div>
 
-                                    <div className={`flex-shrink-0 text-right px-3 py-3 sm:px-5 sm:py-4 rounded-xl sm:rounded-2xl border shadow-lg backdrop-blur-md transition-all duration-300 ${urgent ? 'bg-red-950/50 border-red-500/60 ring-1 ring-red-500/20 scale-105' : 'bg-zinc-900/80 border-white/10'}`}>
-                                        <p className={`text-[9px] font-black uppercase tracking-widest mb-1 flex items-center justify-end ${urgent ? 'text-red-400' : 'text-gray-400'}`}>
-                                            <Timer className="w-3 h-3 mr-1" /> Ends In
+                                    <div className={`px-4 py-3 sm:px-6 sm:py-4 rounded-2xl border backdrop-blur-md transition-all ${urgent ? 'bg-red-500 border-red-400 text-white shadow-[0_0_30px_rgba(239,68,68,0.3)]' : 'bg-white/5 border-white/10 text-white'}`}>
+                                        <p className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] opacity-80 mb-1 flex items-center justify-end">
+                                            <Timer className="w-3 h-3 mr-1" /> {urgent ? 'Closing' : 'Ends In'}
                                         </p>
-                                        <p className={`text-lg sm:text-2xl font-black tabular-nums tracking-tight ${urgent ? 'text-red-500' : 'text-white'}`}>{time}</p>
+                                        <p className="text-xl sm:text-2xl font-black tabular-nums tracking-tighter">{time}</p>
                                     </div>
                                 </div>
 
@@ -797,35 +821,40 @@ export default function LiveAuctionPage() {
 
                             {isLive && !isSeller ? (
                                 <>
-                                    <div id="bid-input-container" className="bg-zinc-900/60 border border-white/10 rounded-xl p-4 mb-4 mt-3 flex items-center gap-2 focus-within:ring-2 focus-within:ring-yellow-400/30 focus-within:border-yellow-400/50 transition-all">
-                                        <span className="text-gray-500 text-xl font-black">₹</span>
-                                        <input type="number" value={bidAmount} min={minNext} step={Number(auction.bidIncrement)} onChange={e => setBidAmount(Math.round(Number(e.target.value)))} className="flex-1 bg-transparent text-2xl sm:text-3xl font-black text-white focus:outline-none min-w-0" />
-                                        <span className="text-gray-500 text-[9px] font-bold uppercase tracking-wider bg-black/40 px-2 py-1 rounded-lg border border-white/5 whitespace-nowrap flex-shrink-0">{currentBidAmt === 0 ? `Min ₹${Math.round(minNext).toLocaleString('en-IN')}` : `≥₹${Math.round(minNext).toLocaleString('en-IN')}`}</span>
+                                    <div className="bg-zinc-900 border border-white/10 rounded-2xl p-4 mb-3 mt-4 flex items-center gap-3 focus-within:border-yellow-400/50 transition-all">
+                                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center font-black text-white/50">₹</div>
+                                        <input type="number" value={bidAmount} onChange={e => setBidAmount(Math.round(Number(e.target.value)))} className="flex-1 bg-transparent text-3xl font-black text-white outline-none min-w-0" />
+                                        <div className="text-[10px] font-black text-gray-500 bg-white/5 px-2 py-1.5 rounded-lg border border-white/5">≥ ₹{Math.round(minNext).toLocaleString()}</div>
                                     </div>
 
-                                    <div className="grid grid-cols-3 gap-2 mb-5">
-                                        {[minNext, minNext + 500, minNext + 2000].map(amount => (
-                                            <button key={amount} onClick={() => setBidAmount(Math.round(amount))} className="bg-zinc-800/50 border border-white/10 text-xs sm:text-sm py-2.5 px-2 rounded-xl hover:bg-yellow-400/10 hover:border-yellow-400/40 hover:text-yellow-400 transition-all text-gray-300 font-bold active:scale-95">₹{Math.round(amount).toLocaleString('en-IN')}</button>
+                                    <div className="grid grid-cols-3 gap-2 mb-3">
+                                        {[minNext, minNext + increment, minNext + increment * 5].map(amount => (
+                                            <button key={amount} onClick={() => setBidAmount(Math.round(amount))} className="bg-zinc-800/40 border border-white/5 text-[11px] py-3 rounded-xl hover:bg-white/10 transition-all text-white/80 font-black">₹{Math.round(amount).toLocaleString()}</button>
                                         ))}
                                     </div>
 
+                                    {auction.buyItNowPrice && Number(auction.buyItNowPrice) > currentBidAmt && (
+                                        <button 
+                                            onClick={purchaseNow}
+                                            disabled={bidding}
+                                            className="w-full mb-4 bg-white text-black py-4 rounded-xl font-black uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-2 hover:bg-yellow-400 transition-colors shadow-lg"
+                                        >
+                                            <ShoppingBag className="w-4 h-4" /> Buy Now: ₹{Number(auction.buyItNowPrice).toLocaleString()}
+                                        </button>
+                                    )}
+
                                     {availableBalance < bidAmount && (
                                         <div className="mb-4 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center justify-between">
-                                            <div>
-                                                <p className="text-red-400 text-xs font-bold uppercase tracking-widest">Low Balance</p>
-                                                <p className="text-gray-400 text-xs">₹{availableBalance.toLocaleString()} available</p>
-                                            </div>
-                                            <Link href="/dashboard" className="px-4 py-1.5 bg-red-500 text-white text-xs font-black rounded-lg hover:bg-red-400 transition-all">Deposit ₹</Link>
+                                            <p className="text-gray-400 text-[10px] font-bold">Balance: ₹{availableBalance.toLocaleString()}</p>
+                                            <Link href="/dashboard" className="text-red-500 text-[10px] font-black uppercase tracking-widest">Deposit Now</Link>
                                         </div>
                                     )}
 
                                     {isLive && user?.id !== auction.bids[0]?.bidderId ? (
                                         <SwipeToBid label={availableBalance < bidAmount ? 'Insufficient Balance' : `Swipe to Bid ₹${Math.round(bidAmount).toLocaleString('en-IN')}`} onConfirm={placeBid} disabled={auction.status !== 'LIVE' || (!!user && availableBalance < bidAmount)} confirming={bidding} />
                                     ) : isLive ? (
-                                        <div className="bg-green-500/10 border border-green-500/30 p-6 rounded-[2rem] text-center">
-                                            <Star className="w-10 h-10 text-green-400 mx-auto mb-3 fill-green-400 shadow-[0_0_20px_rgba(34,197,94,0.4)]" />
-                                            <p className="text-green-400 font-black uppercase tracking-widest text-xs">You are leading</p>
-                                            <p className="text-gray-500 text-[10px] mt-1">Wait for others to outbid you before bidding again.</p>
+                                        <div className="bg-green-500/10 border border-green-500/20 p-4 rounded-2xl text-center">
+                                            <p className="text-green-400 font-black uppercase tracking-[0.1em] text-[10px]">You are leading the hunt</p>
                                         </div>
                                     ) : null}
 

@@ -94,7 +94,7 @@ export class AuctionService {
             // 2. Read the precisely locked auction state
             const auction = await tx.auction.findUnique({
                 where: { id: auctionId },
-                select: { id: true, title: true, currentHighestBid: true, endTime: true, status: true, sellerId: true, bidIncrement: true, startingPrice: true }
+                select: { id: true, title: true, currentHighestBid: true, endTime: true, status: true, sellerId: true, bidIncrement: true, startingPrice: true, buyItNowPrice: true }
             });
 
             if (!auction) throw new Error('Auction not found');
@@ -109,7 +109,8 @@ export class AuctionService {
             }
 
             // 4. Validate minimum increment and "Multiple-of-Increment" rule
-            const increment = AuctionService.getMinIncrement(currentBid || Number(auction.startingPrice));
+            const dynamicInc = AuctionService.getMinIncrement(currentBid || Number(auction.startingPrice));
+            const increment = Math.max(dynamicInc, Number(auction.bidIncrement || 0));
             const minRequired = currentBid > 0
                 ? currentBid + increment
                 : Number(auction.startingPrice);
@@ -121,8 +122,8 @@ export class AuctionService {
             // Ensure the bid is a step of the increment (e.g. 1100, 1200, 1500)
             if (currentBid > 0) {
                 const diff = amount - currentBid;
-                if (diff % increment !== 0) {
-                    throw new Error(`Bids must be in multiples of the increment (₹${increment.toLocaleString()}) above the current price.`);
+                if (Math.round(diff) % Math.round(increment) !== 0) {
+                    throw new Error(`Bids must be in exact multiples of the increment (₹${increment.toLocaleString()}) above the current price.`);
                 }
             }
 
@@ -146,11 +147,18 @@ export class AuctionService {
 
             // 5. Dynamic Velocity-Based Anti-Sniping (Patent Candidate 1)
             let newEndTime = new Date(auction.endTime);
+            let forceCompletion = false;
+
+            if (auction.buyItNowPrice && amount >= Number(auction.buyItNowPrice)) {
+                forceCompletion = true;
+                amount = Number(auction.buyItNowPrice);
+                newEndTime = new Date(); // End immediately
+            }
 
             const timeRemaining = (newEndTime.getTime() - Date.now()) / 1000;
             let extended = false;
 
-            if (timeRemaining <= ANTI_SNIPE_WINDOW_SECONDS) {
+            if (!forceCompletion && timeRemaining <= ANTI_SNIPE_WINDOW_SECONDS) {
                 // Calculate Bid Velocity (V) and Bidder Density (D) in the last 15 seconds
                 const fifteenSecondsAgo = new Date(Date.now() - 15000);
                 const recentBids = await tx.bid.findMany({
@@ -213,11 +221,11 @@ export class AuctionService {
             // ──────────────────────────────────────────────────
 
             // 8. Trigger auto-bid cascade (non-recursive, handled below)
-            return { bid, updatedAuction, extended };
+            return { bid, updatedAuction, extended, forceCompletion };
         });
 
         // ── NEW: PRECISION RESCHEDULING ───────────────────
-        if (result.extended) {
+        if (result.extended || result.forceCompletion) {
             await rescheduleAuctionEnd(auctionId, result.updatedAuction.endTime);
         }
         // ──────────────────────────────────────────────────
