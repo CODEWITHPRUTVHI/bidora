@@ -8,7 +8,6 @@ const LiveNotificationToast = dynamic(() => import('@/components/LiveNotificatio
 const Footer = dynamic(() => import('@/components/layout/Footer'), { ssr: true });
 const Navbar = dynamic(() => import('@/components/layout/Navbar'), { ssr: true });
 const InstallAppPrompt = dynamic(() => import('@/components/InstallAppPrompt'), { ssr: false });
-const SplashScreen = dynamic(() => import('@/components/SplashScreen'), { ssr: false });
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
     useEffect(() => {
@@ -21,7 +20,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
     return (
         <AuthProvider>
-            <SplashScreen />
             <Navbar />
             <main className="flex-grow">
                 {children}
