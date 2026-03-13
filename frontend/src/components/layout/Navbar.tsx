@@ -87,7 +87,7 @@ export default function Navbar() {
     return (
         <motion.header
             initial={{ y: -100 }} animate={{ y: 0 }}
-            className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'bg-zinc-950/80 backdrop-blur-2xl border-b border-white/10 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.8)] py-1' : 'bg-transparent py-4'}`}
+            className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 will-change-transform ${scrolled ? 'bg-zinc-950/90 sm:backdrop-blur-md border-b border-white/10 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.8)] py-1' : 'bg-transparent py-4'}`}
         >
             <div className="container mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
 

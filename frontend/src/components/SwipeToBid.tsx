@@ -55,7 +55,7 @@ export default function SwipeToBid({ label, onConfirm, disabled, confirming }: P
         <div className="w-full max-w-md mx-auto py-2">
             <div 
                 ref={containerRef}
-                className={`relative h-20 bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-[1.5rem] overflow-hidden select-none touch-none flex items-center p-2 ${disabled ? 'opacity-50 grayscale cursor-not-allowed' : 'cursor-pointer'}`}
+                className={`relative h-20 bg-zinc-900 border border-white/10 rounded-[1.5rem] overflow-hidden select-none touch-none flex items-center p-2 ${disabled ? 'opacity-50 grayscale cursor-not-allowed' : 'cursor-pointer'}`}
             >
                 {/* Background Text */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

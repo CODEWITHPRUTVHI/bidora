@@ -34,7 +34,7 @@ export default function HeroSection() {
                 {/* Left Typography - ZERO ANIMATION FOR MAXIMUM LCP SCORE */}
                 <div className="max-w-2xl">
 
-                    <div className="hidden sm:inline-flex items-center space-x-2 bg-white/[0.03] border border-white/10 px-4 py-2 rounded-full mb-8 backdrop-blur-md">
+                    <div className="hidden sm:inline-flex items-center space-x-2 bg-white/[0.05] border border-white/10 px-4 py-2 rounded-full mb-8">
                         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                         <span className="text-sm font-medium tracking-wide text-gray-300">Bidora Escrow guarantees every transaction</span>
                     </div>
@@ -57,7 +57,7 @@ export default function HeroSection() {
                             <ArrowRight className="w-5 h-5" />
                         </Link>
                         <Link href="/dashboard?tab=listings"
-                            className="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-white border border-white/40 bg-white/5 backdrop-blur-md hover:bg-white/10 hover:border-white/60 transition-all text-center">
+                            className="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-white border border-white/40 bg-zinc-900/80 hover:bg-zinc-800 hover:border-white/60 transition-all text-center">
                             LIST YOUR KICKS
                         </Link>
                     </div>
@@ -66,7 +66,7 @@ export default function HeroSection() {
 
                 {/* Right Hero Image Card - NO ANIMATION FOR INSTANT LCP PAINT */}
                 <div className="relative hidden lg:block mx-auto w-full max-w-md perspective-1000">
-                    <div className="relative w-full aspect-[4/5] rounded-[2rem] overflow-hidden bg-black/40 backdrop-blur-2xl p-3 border border-white/10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.8)] group transition-transform duration-700 hover:scale-[1.02]">
+                    <div className="relative w-full aspect-[4/5] rounded-[2rem] overflow-hidden bg-black p-3 border border-white/10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.8)] group transition-transform duration-700 hover:scale-[1.02]">
                         <div className="relative w-full h-full rounded-2xl overflow-hidden">
                             <Image
                                 src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=1000&auto=format&fit=crop"

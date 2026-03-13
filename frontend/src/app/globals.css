@@ -85,32 +85,71 @@
 @layer base {
   * {
     border-color: var(--color-border);
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    text-rendering: optimizeSpeed;
     @apply antialiased selection:bg-primary/30 selection:text-foreground;
+  }
+
+  /* GPU Acceleration hints for fixed/animated elements */
+  .fixed, .absolute, .animate-pulse, .animate-spin {
+    will-change: transform, opacity;
   }
 }
 
 /* Custom Utilities for Premium Vibe */
 @layer utilities {
+  .smart-blur {
+    @apply bg-background/80;
+  }
+  
+  @media (min-width: 768px) {
+    .smart-blur {
+        @apply backdrop-blur-md bg-background/50;
+    }
+  }
+
   .glass {
-    @apply bg-background/50 backdrop-blur-md border border-white/10;
+    @apply smart-blur border border-white/10;
   }
 
   .card-hover {
-    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/20 hover:border-primary/50;
+    @apply transition-all duration-300;
+  }
+  
+  @media (min-width: 1024px) {
+    .card-hover:hover {
+        @apply -translate-y-1 shadow-2xl shadow-primary/20 border-primary/50;
+    }
   }
 
   .text-glow {
-    text-shadow: 0 0 10px rgba(250, 204, 21, 0.5);
-    /* Primary glow */
+    text-shadow: 0 0 10px rgba(250, 204, 21, 0.4);
   }
 
   .animate-pulse-slow {
     animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  /* Performance optimization: disable expensive blurs on low-power mode or if slow */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+  
+  /* Faster image rendering for mobile */
+  @media (max-width: 767px) {
+    img {
+        image-rendering: -webkit-optimize-contrast;
+    }
   }
 }

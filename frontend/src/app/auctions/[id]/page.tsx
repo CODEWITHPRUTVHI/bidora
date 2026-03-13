@@ -525,7 +525,7 @@ export default function LiveAuctionPage() {
                 }}
             />
 
-            <Link href="/" className="inline-flex items-center text-gray-500 hover:text-white font-bold transition-colors mb-8 group bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl backdrop-blur-md">
+            <Link href="/" className="inline-flex items-center text-gray-500 hover:text-white font-bold transition-colors mb-8 group bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl">
                 <ArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" />
                 Back to Auctions
             </Link>
@@ -880,7 +880,7 @@ export default function LiveAuctionPage() {
                             <p className="text-center text-xs text-gray-600 mt-4 leading-relaxed">By bidding, you commit to purchasing if you win. Funds held in Bidora Escrow.</p>
                         </div>
 
-                        <div className="bg-zinc-900/40 backdrop-blur-2xl border border-white/10 p-6 md:p-8 rounded-[2rem] shadow-inner relative overflow-hidden">
+                        <div className="bg-zinc-900 border border-white/10 p-6 md:p-8 rounded-[2rem] shadow-inner relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 blur-[50px] rounded-full pointer-events-none" />
                             <h3 className="font-black text-white mb-6 flex items-center border-b border-white/10 pb-4 tracking-tight">
                                 <Activity className="w-5 h-5 mr-3 text-yellow-400" /> Live Bid Feed
