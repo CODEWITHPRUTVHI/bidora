@@ -150,6 +150,7 @@ export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
     const [pageError, setPageError] = useState('');
     const [updatingProfile, setUpdatingProfile] = useState(false);
+    const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [profileMsg, setProfileMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [profileForm, setProfileForm] = useState({
         fullName: user?.fullName || '',
@@ -774,13 +775,13 @@ export default function DashboardPage() {
                                         <p className="text-gray-500 text-sm font-medium mb-8">Pending Escrow: ₹{(wallet?.pendingFunds || 0).toLocaleString()}</p>
 
                                         <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-3">Deposit Funds</p>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                                             <input
                                                 type="number" placeholder="Min ₹100"
                                                 value={depositAmount} onChange={e => setDepositAmount(e.target.value)}
-                                                className="flex-1 bg-zinc-950/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-bold outline-none focus:border-yellow-400/50 transition-all"
+                                                className="flex-1 bg-zinc-950/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-bold outline-none focus:border-yellow-400/50 transition-all min-w-0"
                                             />
-                                            <button onClick={handleDepositRequest} disabled={depositing} className="px-6 py-3 bg-yellow-400 text-black font-black rounded-xl hover:bg-yellow-300 transition-all disabled:opacity-50">
+                                            <button onClick={handleDepositRequest} disabled={depositing} className="px-6 py-3 bg-yellow-400 text-black font-black rounded-xl hover:bg-yellow-300 transition-all disabled:opacity-50 whitespace-nowrap">
                                                 Deposit
                                             </button>
                                         </div>
@@ -795,13 +796,13 @@ export default function DashboardPage() {
                                         <p className="text-gray-500 text-sm font-medium mb-8">Withdrawal usually takes 2-3 days</p>
 
                                         <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-3">Withdraw Amount</p>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                                             <input
                                                 type="number" placeholder="Min ₹100"
                                                 value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)}
-                                                className="flex-1 bg-zinc-950/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-bold outline-none focus:border-blue-400/50 transition-all"
+                                                className="flex-1 bg-zinc-950/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-bold outline-none focus:border-blue-400/50 transition-all min-w-0"
                                             />
-                                            <button onClick={handleWithdraw} disabled={withdrawing} className="px-6 py-3 bg-white text-black font-black rounded-xl hover:bg-gray-200 transition-all disabled:opacity-50">
+                                            <button onClick={handleWithdraw} disabled={withdrawing} className="px-6 py-3 bg-white text-black font-black rounded-xl hover:bg-gray-200 transition-all disabled:opacity-50 whitespace-nowrap">
                                                 Withdraw
                                             </button>
                                         </div>
@@ -966,12 +967,71 @@ export default function DashboardPage() {
                                     <button onClick={() => logout()} className="flex items-center justify-center gap-2 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold rounded-xl transition-all border border-red-500/20">
                                         <LogOut className="w-4 h-4" /> Sign Out
                                     </button>
-                                    <button onClick={() => router.push('/settings')} className="flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 text-white font-bold rounded-xl transition-all border border-white/10">
-                                         Settings
+                                    <button 
+                                        onClick={() => setIsEditingProfile(!isEditingProfile)} 
+                                        className={`flex items-center justify-center gap-2 py-3 font-bold rounded-xl transition-all border ${isEditingProfile ? 'bg-yellow-400 text-black border-yellow-400' : 'bg-white/5 hover:bg-white/10 text-white border-white/10'}`}
+                                    >
+                                         {isEditingProfile ? 'Cancel Edit' : 'Edit Profile'}
                                     </button>
                                 </div>
                             </div>
                         </div>
+
+                        {/* Profile Edit Form */}
+                        {isEditingProfile && (
+                            <motion.div 
+                                initial={{ opacity: 0, y: -20 }} 
+                                animate={{ opacity: 1, y: 0 }}
+                                className="bg-zinc-900 border border-yellow-400/20 rounded-3xl p-8"
+                            >
+                                <h3 className="font-black text-xl text-white mb-6 flex items-center gap-2">
+                                    <UserCircle2 className="w-5 h-5 text-yellow-400" /> Update Your Profile
+                                </h3>
+                                
+                                {profileMsg && (
+                                    <div className={`mb-6 p-4 rounded-xl text-sm font-bold ${profileMsg.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                                        {profileMsg.text}
+                                    </div>
+                                )}
+
+                                <div className="grid md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Display Name</label>
+                                        <input 
+                                            type="text" 
+                                            value={profileForm.fullName} 
+                                            onChange={e => setProfileForm(p => ({ ...p, fullName: e.target.value }))}
+                                            className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-yellow-400/50 outline-none transition-all font-bold"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Phone Number</label>
+                                        <input 
+                                            type="text" 
+                                            value={profileForm.phone} 
+                                            onChange={e => setProfileForm(p => ({ ...p, phone: e.target.value }))}
+                                            className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-yellow-400/50 outline-none transition-all font-bold"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="mt-8 flex justify-end gap-3">
+                                    <button 
+                                        onClick={() => setIsEditingProfile(false)}
+                                        className="px-6 py-3 text-gray-500 font-bold hover:text-white transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button 
+                                        onClick={handleUpdateProfile}
+                                        disabled={updatingProfile}
+                                        className="px-8 py-3 bg-yellow-400 text-black font-black rounded-xl hover:bg-yellow-300 transition-all disabled:opacity-50 flex items-center gap-2"
+                                    >
+                                        {updatingProfile && <Loader2 className="w-4 h-4 animate-spin" />}
+                                        Save Changes
+                                    </button>
+                                </div>
+                            </motion.div>
+                        )}
 
                         {/* Notifications Section */}
                         <div className="pt-8">

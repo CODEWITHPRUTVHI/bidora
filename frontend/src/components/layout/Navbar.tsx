@@ -76,7 +76,6 @@ export default function Navbar() {
         { href: '/', label: 'Home', icon: Home, color: 'bg-yellow-400/10 text-yellow-400' },
         ...(user ? [
             { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'bg-blue-500/10 text-blue-400' },
-            { href: '/dashboard?tab=orders', label: 'My Orders', icon: Package, color: 'bg-purple-500/10 text-purple-400' },
             { href: '/inbox', label: 'Messages', icon: MessageCircle, color: 'bg-green-500/10 text-green-400', badge: unreadMessages },
         ] : []),
         ...(user?.role === 'ADMIN' ? [
@@ -364,13 +363,22 @@ export default function Navbar() {
                                                 <ShieldCheck className="w-5 h-5 text-blue-400 flex-shrink-0" />
                                             )}
                                         </div>
-                                        <motion.button
-                                            whileTap={{ scale: 0.97 }}
-                                            onClick={() => { handleLogout(); setMenuOpen(false); }}
-                                            className="w-full text-red-400 py-3.5 font-bold text-sm border border-red-500/20 rounded-2xl hover:bg-red-500/5 active:scale-[0.98] transition-all"
-                                        >
-                                            Log Out
-                                        </motion.button>
+                                        <div className="flex flex-col gap-2">
+                                            <Link 
+                                                href="/dashboard" 
+                                                onClick={() => setMenuOpen(false)}
+                                                className="w-full bg-yellow-400 text-zinc-950 py-3.5 rounded-2xl font-black text-center text-sm shadow-[0_10px_30px_-10px_rgba(250,204,21,0.5)] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                                            >
+                                                <LayoutDashboard className="w-4 h-4" /> Manage Dashboard
+                                            </Link>
+                                            <motion.button
+                                                whileTap={{ scale: 0.97 }}
+                                                onClick={() => { handleLogout(); setMenuOpen(false); }}
+                                                className="w-full text-gray-500 py-3 font-bold text-xs hover:text-red-400 transition-colors"
+                                            >
+                                                Log Out
+                                            </motion.button>
+                                        </div>
                                     </div>
                                 )}
                             </div>
