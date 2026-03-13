@@ -235,7 +235,7 @@ export default function DashboardPage() {
     useEffect(() => {
         let socket: any = null;
 
-        if (activeTab === 'feed') {
+        if (activeTab === 'insights') {
             fetchFeed();
 
             // Set up real-time websocket
@@ -453,19 +453,13 @@ export default function DashboardPage() {
 
     const unreadCount = notifications.filter(n => !n.isRead).length;
     const tabs = [
-        { id: 'overview', label: 'Home', icon: Activity },
-        { id: 'bids', label: 'Bids', icon: TrendingUp },
+        { id: 'overview', label: 'Overview', icon: BarChart3 },
+        { id: 'activity', label: 'My Activity', icon: Activity },
         { id: 'wallet', label: 'Wallet', icon: Wallet },
-        { id: 'tx', label: 'Ledger', icon: Clock },
-        { id: 'orders', label: 'Wins', icon: Trophy },
-        { id: 'listings', label: 'Sales', icon: Package },
-        { id: 'analytics', label: 'Stats', icon: BarChart3 },
-        { id: 'verify', label: user.verifiedStatus !== 'BASIC' ? 'Verified ✓' : 'Get Verified', icon: BadgeCheck },
-        { id: 'profile', label: 'Settings', icon: UserCheck },
-        { id: 'notifs', label: `Alerts${unreadCount > 0 ? ` (${unreadCount})` : ''}`, icon: Bell },
-        { id: 'feed', label: 'Hype Feed', icon: Sparkles }
+        { id: 'insights', label: 'Insights', icon: Sparkles },
+        { id: 'account', label: `Profile${unreadCount > 0 ? ` (${unreadCount})` : ''}`, icon: UserCircle2 }
     ].filter(t => {
-        if (t.id === 'analytics' && user.verifiedStatus === 'BASIC' && user.role !== 'SELLER') return false;
+        if (t.id === 'insights' && user.verifiedStatus === 'BASIC' && user.role !== 'SELLER') return false;
         return true;
     });
 
@@ -476,7 +470,7 @@ export default function DashboardPage() {
             <div className="absolute top-0 left-1/4 w-[40vw] h-[40vw] bg-yellow-500/5 blur-[150px] rounded-full pointer-events-none -z-10" />
 
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 bg-zinc-900/40 backdrop-blur-2xl border border-white/10 rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-8 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] overflow-hidden relative">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 bg-zinc-900 border border-white/10 rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-8 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] overflow-hidden relative">
                 <div className="w-full">
                     <p className="text-yellow-400 text-[10px] sm:text-xs font-black uppercase tracking-widest mb-1 sm:mb-2">Dashboard</p>
                     <h1 className="text-2xl sm:text-3xl md:text-5xl font-black tracking-tighter mb-1 break-words">
@@ -559,7 +553,7 @@ export default function DashboardPage() {
                         <div className="space-y-6">
                             <div className="grid grid-cols-6 gap-4 h-auto">
                                 {/* MAIN TILE: Analytics Summary (2x2) */}
-                                <div className="col-span-6 md:col-span-4 md:row-span-2 bg-gradient-to-br from-zinc-900/40 to-black/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 sm:p-8 relative overflow-hidden group shadow-2xl">
+                                <div className="col-span-6 md:col-span-4 md:row-span-2 bg-zinc-900 border border-white/10 rounded-[2.5rem] p-6 sm:p-8 relative overflow-hidden group shadow-2xl">
                                     <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/5 blur-[100px] rounded-full pointer-events-none group-hover:bg-yellow-400/10 transition-colors" />
 
                                     <div className="relative z-10 h-full flex flex-col">
@@ -593,7 +587,7 @@ export default function DashboardPage() {
                                 </div>
 
                                 {/* SECONDARY TILE: Wallet (2x1) */}
-                                <div className="col-span-6 md:col-span-2 md:row-span-1 bg-zinc-900/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 flex flex-col justify-between group cursor-pointer hover:border-blue-400/30 transition-all shadow-xl min-h-[160px]">
+                                <div className="col-span-6 md:col-span-2 md:row-span-1 bg-zinc-900 border border-white/10 rounded-[2.5rem] p-6 flex flex-col justify-between group cursor-pointer hover:border-blue-400/30 transition-all shadow-xl min-h-[160px]">
                                     <div className="flex justify-between items-start">
                                         <div className="p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20">
                                             <Wallet className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
@@ -607,7 +601,7 @@ export default function DashboardPage() {
                                 </div>
 
                                 {/* THIRD TILE: Active Bids Count (1x1) */}
-                                <div className="col-span-3 md:col-span-1 md:row-span-1 bg-zinc-900/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 flex flex-col justify-between group shadow-xl">
+                                <div className="col-span-3 md:col-span-1 md:row-span-1 bg-zinc-900 border border-white/10 rounded-[2.5rem] p-6 flex flex-col justify-between group shadow-xl">
                                     <div className="p-3 bg-green-500/10 rounded-2xl border border-green-500/20 w-fit">
                                         <Activity className="w-5 h-5 text-green-400" />
                                     </div>
@@ -618,7 +612,7 @@ export default function DashboardPage() {
                                 </div>
 
                                 {/* FOURTH TILE: Listings Count (1x1) */}
-                                <div className="col-span-3 md:col-span-1 md:row-span-1 bg-zinc-900/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 flex flex-col justify-between group shadow-xl">
+                                <div className="col-span-3 md:col-span-1 md:row-span-1 bg-zinc-900 border border-white/10 rounded-[2.5rem] p-6 flex flex-col justify-between group shadow-xl">
                                     <div className="p-3 bg-orange-500/10 rounded-2xl border border-orange-500/20 w-fit">
                                         <Package className="w-5 h-5 text-orange-400" />
                                     </div>
@@ -629,7 +623,7 @@ export default function DashboardPage() {
                                 </div>
                             </div>
 
-                            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden">
+                            <div className="bg-zinc-900 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden">
                                 <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-400/20 to-transparent" />
                                 <h3 className="font-black text-xl mb-6 flex items-center gap-3"><Activity className="w-5 h-5 text-yellow-400" /> Recent Bidding Activity</h3>
                                 <div className="space-y-4">
@@ -661,161 +655,177 @@ export default function DashboardPage() {
                     )}
 
 
-                    {/* ── My Bids ──────────────────────────────── */}
-                    {activeTab === 'bids' && (
-                        <div className="space-y-4">
-                            <h2 className="text-2xl font-black mb-6 flex items-center"><TrendingUp className="w-6 h-6 mr-3 text-yellow-400" /> My Active Bids</h2>
-                            {myBids.length === 0 ? (
-                                <div className="text-center py-20 bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl shadow-inner">
-                                    <div className="w-16 h-16 bg-yellow-400/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                                        <TrendingUp className="w-8 h-8 text-yellow-400" />
-                                    </div>
-                                    <h3 className="text-2xl font-black text-white mb-2 tracking-tight">No Bids Placed Yet</h3>
-                                    <p className="text-gray-400 mb-6 max-w-sm mx-auto">You haven't participated in any auctions recently. Discover rare items and place your first bid!</p>
-                                    <Link href="/" className="inline-flex items-center gap-2 bg-yellow-400 text-black px-6 py-3 rounded-xl font-bold hover:bg-yellow-300 transition-colors shadow-[0_10px_20px_-10px_rgba(250,204,21,0.5)]">
-                                        Explore Live Auctions <ArrowRight className="w-4 h-4" />
-                                    </Link>
-                                </div>
-                            ) : myBids.map(bid => (
-                                <div key={bid.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:border-yellow-400/30 hover:shadow-[0_15px_30px_-15px_rgba(0,0,0,0.8)] transition-all duration-300 gap-4">
-                                    <div className="flex items-center gap-5">
-                                        <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-zinc-800 shadow-md">
-                                            <Image src={bid.auction.imageUrls[0] || ''} alt="" fill className="object-cover" sizes="80px" />
+                    {/* ── Activity (Bids + Inventory) ──────────────────────────────── */}
+                    {activeTab === 'activity' && (
+                        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                             {/* Active Bids Section */}
+                            <div>
+                                <h2 className="text-2xl font-black mb-6 flex items-center"><TrendingUp className="w-6 h-6 mr-3 text-yellow-400" /> My Active Bids</h2>
+                                <div className="space-y-4">
+                                    {myBids.length === 0 ? (
+                                        <div className="text-center py-12 bg-zinc-900 border border-white/5 rounded-3xl">
+                                            <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">No active hunts</p>
                                         </div>
-                                        <div>
-                                            <h3 className="font-bold text-white text-lg tracking-tight mb-1">{bid.auction.title}</h3>
-                                            <p className="text-gray-500 text-xs font-medium mb-3">Bid placed {new Date(bid.createdAt).toLocaleString()}</p>
-                                            <div className="flex items-center gap-2">
-                                                <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border shadow-sm ${statusColor[bid.auction.status] || 'text-gray-400'}`}>{bid.auction.status}</span>
-                                                {bid.isWinning && <span className="text-[10px] bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-2.5 py-1 rounded-md font-bold uppercase tracking-widest shadow-[0_0_10px_rgba(250,204,21,0.2)] flex items-center gap-1"><Trophy className="w-3 h-3" /> Winning</span>}
+                                    ) : myBids.map(bid => (
+                                        <div key={bid.id} className="bg-zinc-900 border border-white/10 rounded-3xl p-5 flex flex-col sm:flex-row sm:items-center justify-between hover:border-yellow-400/30 transition-all gap-4">
+                                            <div className="flex items-center gap-5">
+                                                <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-zinc-800 shadow-md">
+                                                    <Image src={bid.auction.imageUrls[0] || ''} alt="" fill className="object-cover" sizes="64px" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-white text-base tracking-tight mb-1">{bid.auction.title}</h3>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${statusColor[bid.auction.status] || 'text-gray-400'}`}>{bid.auction.status}</span>
+                                                        {bid.isWinning && <span className="text-[9px] text-yellow-400 font-black uppercase tracking-widest flex items-center gap-1"><Trophy className="w-3 h-3" /> Winning</span>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="text-right flex items-center sm:flex-col justify-between sm:justify-center">
+                                                <p className="text-xl font-black text-yellow-400">₹{Number(bid.amount).toLocaleString()}</p>
+                                                <Link href={`/auctions/${bid.auction.id}`} className="text-[10px] font-black text-white hover:text-yellow-400 transition-colors uppercase tracking-widest mt-1">View Piece</Link>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div className="text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t border-white/5 sm:border-0 pt-4 sm:pt-0 mt-2 sm:mt-0">
-                                        <div>
-                                            <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Your Max Bid</p>
-                                            <p className="text-3xl font-black text-yellow-400 drop-shadow-sm">₹{Number(bid.amount).toLocaleString()}</p>
-                                        </div>
-                                        <Link href={`/auctions/${bid.auction.id}`}
-                                            className="text-sm font-bold text-black bg-white hover:bg-gray-200 px-4 py-2 rounded-xl flex items-center gap-2 transition-colors sm:mt-4 shadow-md">
-                                            View Page <ArrowRight className="w-4 h-4" />
-                                        </Link>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* ── Payments (Wallet) ─────────────────────── */}
-                    {activeTab === 'wallet' && (
-                        <div className="space-y-6">
-                            <div className="grid md:grid-cols-2 gap-6">
-                                {/* Deposit Card */}
-                                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-4 sm:p-8 relative overflow-hidden shadow-[0_15px_40px_-15px_rgba(0,0,0,0.5)]">
-                                    <div className="absolute top-0 right-0 w-48 h-48 bg-yellow-400/10 blur-[80px] rounded-full pointer-events-none" />
-                                    <Wallet className="w-8 h-8 text-yellow-400 mb-5 drop-shadow-md" />
-                                    <p className="text-gray-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1">Available Balance</p>
-                                    <h2 className="text-2xl sm:text-3xl lg:text-5xl font-black text-white mb-2 tracking-tighter drop-shadow-md truncate">₹{(wallet?.availableBalance || 0).toLocaleString()}</h2>
-                                    <p className="text-gray-500 text-[10px] sm:text-sm font-medium mb-6 sm:mb-8">Pending Escrow: ₹{(wallet?.pendingFunds || 0).toLocaleString()}</p>
-
-                                    <p className="text-gray-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-3">Deposit Funds</p>
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="number" placeholder="Min ₹100"
-                                            value={depositAmount} onChange={e => setDepositAmount(e.target.value)}
-                                            className="flex-1 bg-zinc-950/50 border border-white/10 rounded-xl px-3 py-3 text-white text-sm font-bold outline-none focus:border-yellow-400/50 transition-all placeholder:text-gray-600 min-w-0"
-                                        />
-                                        <button onClick={handleDepositRequest} disabled={depositing}
-                                            className="shrink-0 px-4 py-3 bg-yellow-400 text-black font-black rounded-xl hover:bg-yellow-300 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-lg text-xs sm:text-sm whitespace-nowrap">
-                                            {depositing ? <span className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <Plus className="w-4 h-4" />}
-                                            Deposit
-                                        </button>
-                                    </div>
-                                    {depositMsg && (
-                                        <p className={`mt-4 text-[11px] sm:text-sm font-bold px-4 py-3 rounded-xl transition-colors ${depositMsg.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
-                                            {depositMsg.text}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Withdraw Card */}
-                                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-4 sm:p-8 relative overflow-hidden shadow-[0_15px_40px_-15px_rgba(0,0,0,0.5)]">
-                                    <div className="absolute top-0 right-0 w-48 h-48 bg-blue-400/10 blur-[80px] rounded-full pointer-events-none" />
-                                    <ArrowDownCircle className="w-8 h-8 text-blue-400 mb-5 drop-shadow-md" />
-                                    <p className="text-gray-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1">Withdraw Balance</p>
-                                    <h2 className="text-2xl sm:text-3xl lg:text-5xl font-black text-white mb-2 tracking-tighter drop-shadow-md truncate">₹{(wallet?.availableBalance || 0).toLocaleString()}</h2>
-                                    <p className="text-gray-500 text-[10px] sm:text-sm font-medium mb-6 sm:mb-8">Credited in 2-3 business days</p>
-
-                                    <p className="text-gray-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-3">Withdraw Amount</p>
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <input
-                                            type="number" placeholder="Min ₹100"
-                                            value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)}
-                                            className="flex-1 bg-zinc-950/50 border border-white/10 rounded-xl px-3 py-3 text-white text-sm font-bold outline-none focus:border-blue-400/50 transition-all placeholder:text-gray-600 min-w-0"
-                                        />
-                                        <button onClick={handleWithdraw} disabled={withdrawing}
-                                            className="shrink-0 px-4 py-3 bg-white text-black font-black rounded-xl hover:bg-gray-200 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-lg text-xs sm:text-sm whitespace-nowrap">
-                                            {withdrawing ? <span className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <ArrowDownCircle className="w-4 h-4" />}
-                                            Withdraw
-                                        </button>
-                                    </div>
-                                    {withdrawMsg && (
-                                        <p className={`mt-4 text-[11px] sm:text-sm font-bold px-4 py-3 rounded-xl transition-colors ${withdrawMsg.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
-                                            {withdrawMsg.text}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* ── Ledger (New Tab) ───────────────────────── */}
-                    {activeTab === 'tx' && (
-                        <div className="space-y-6">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-                                <h2 className="text-2xl font-black flex items-center"><Clock className="w-6 h-6 mr-3 text-yellow-400" /> Transaction Ledger</h2>
-                                <div className="flex items-center gap-2 bg-zinc-900/60 p-1 rounded-xl border border-white/10">
-                                    {['', 'DEPOSIT', 'WITHDRAWAL', 'ESCROW_HELD'].map(f => (
-                                        <button key={f} onClick={() => { setTxFilter(f); setTxPage(1); }}
-                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${txFilter === f ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}>
-                                            {f || 'All'}
-                                        </button>
                                     ))}
                                 </div>
                             </div>
 
-                            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8 shadow-[0_15px_40px_-15px_rgba(0,0,0,0.5)]">
-                                {transactions.length === 0 ? (
-                                    <div className="text-center py-20">
-                                        <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
-                                            <Filter className="w-8 h-8 text-gray-600" />
-                                        </div>
-                                        <p className="text-gray-500">No transactions found matching your filter.</p>
+                            {/* Orders & Listings Section */}
+                            <div className="pt-12 border-t border-white/5 space-y-12">
+                                 {/* Won Orders */}
+                                 <div>
+                                    <h2 className="text-2xl font-black mb-6 flex items-center"><Trophy className="w-6 h-6 mr-3 text-yellow-400" /> Won Orders</h2>
+                                    <div className="space-y-4">
+                                        {wonOrders.length === 0 ? (
+                                            <div className="text-center py-12 bg-zinc-900 border border-white/5 rounded-3xl">
+                                                <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">No won items yet</p>
+                                            </div>
+                                        ) : wonOrders.map(order => (
+                                            <div key={order.id} className="bg-zinc-900 border border-white/10 rounded-3xl p-6 flex flex-col hover:border-yellow-400/30 transition-all gap-4">
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                    <div className="flex items-center gap-5">
+                                                        <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-zinc-800 shadow-md flex-shrink-0">
+                                                            <Image src={order.imageUrls[0] || ''} alt="" fill className="object-cover" sizes="64px" />
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="font-bold text-white tracking-tight mb-1">{order.title}</h3>
+                                                            <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border ${statusColor[order.status] || 'text-gray-400'}`}>{order.status}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <p className="text-xl font-black text-white">₹{Number(order.currentHighestBid).toLocaleString()}</p>
+                                                        <Link href={`/orders/${order.id}`} className="text-xs font-bold text-black bg-yellow-400 px-5 py-2.5 rounded-xl">Track</Link>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                ) : (
+                                </div>
+
+                                {/* My Listings */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-8">
+                                        <h2 className="text-2xl font-black flex items-center"><Package className="w-6 h-6 mr-3 text-yellow-400" /> My Listings</h2>
+                                        <Link href="/create-auction" className="text-xs font-black bg-white text-black px-4 py-2 rounded-xl uppercase tracking-widest hover:bg-gray-200 transition-all">+ New Drop</Link>
+                                    </div>
+                                    <div className="space-y-4">
+                                        {myListings.length === 0 ? (
+                                            <div className="text-center py-20 bg-zinc-900 border border-white/5 border-dashed rounded-[2.5rem]">
+                                                <h3 className="text-xl font-black text-white mb-2">Got Rare Pairs?</h3>
+                                                <Link href="/create-auction" className="text-yellow-400 font-bold text-sm hover:underline">Start Listing</Link>
+                                            </div>
+                                        ) : myListings.map(auction => (
+                                            <div key={auction.id} className="bg-zinc-900 border border-white/10 rounded-3xl p-5 flex flex-col sm:flex-row sm:items-center justify-between hover:border-white/20 transition-all gap-4">
+                                                <div className="flex items-center gap-5">
+                                                    <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-zinc-800">
+                                                        <Image src={auction.imageUrls[0] || ''} alt="" fill className="object-cover" sizes="64px" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-bold text-white tracking-tight mb-1">{auction.title}</h3>
+                                                        <span className={`text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded border ${statusColor[auction.status]}`}>{auction.status}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="text-right">
+                                                        <p className="text-xs text-gray-500 font-bold uppercase mb-0.5">Top Bid</p>
+                                                        <p className="text-xl font-black text-white">₹{Number(auction.currentHighestBid).toLocaleString()}</p>
+                                                    </div>
+                                                    <Link href={`/auctions/${auction.id}`} className="p-2.5 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 text-white"><ArrowRight className="w-4 h-4" /></Link>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Wallet ─────────────────────── */}
+                    {activeTab === 'wallet' && (
+                        <div className="space-y-16">
+                            <div>
+                                <h2 className="text-2xl font-black mb-8 flex items-center"><Wallet className="w-6 h-6 mr-3 text-yellow-400" /> My Treasury</h2>
+                                <div className="grid md:grid-cols-2 gap-6">
+                                    {/* Deposit Card */}
+                                    <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-8 relative overflow-hidden shadow-2xl">
+                                        <div className="absolute top-0 right-0 w-48 h-48 bg-yellow-400/10 blur-[80px] rounded-full pointer-events-none" />
+                                        <Wallet className="w-8 h-8 text-yellow-400 mb-5" />
+                                        <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Available Balance</p>
+                                        <h2 className="text-3xl lg:text-5xl font-black text-white mb-2 tracking-tighter">₹{(wallet?.availableBalance || 0).toLocaleString()}</h2>
+                                        <p className="text-gray-500 text-sm font-medium mb-8">Pending Escrow: ₹{(wallet?.pendingFunds || 0).toLocaleString()}</p>
+
+                                        <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-3">Deposit Funds</p>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="number" placeholder="Min ₹100"
+                                                value={depositAmount} onChange={e => setDepositAmount(e.target.value)}
+                                                className="flex-1 bg-zinc-950/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-bold outline-none focus:border-yellow-400/50 transition-all"
+                                            />
+                                            <button onClick={handleDepositRequest} disabled={depositing} className="px-6 py-3 bg-yellow-400 text-black font-black rounded-xl hover:bg-yellow-300 transition-all disabled:opacity-50">
+                                                Deposit
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Withdraw Card */}
+                                    <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-8 relative overflow-hidden shadow-2xl">
+                                        <div className="absolute top-0 right-0 w-48 h-48 bg-blue-400/10 blur-[80px] rounded-full pointer-events-none" />
+                                        <ArrowDownCircle className="w-8 h-8 text-blue-400 mb-5" />
+                                        <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Total Payouts</p>
+                                        <h2 className="text-3xl lg:text-5xl font-black text-white mb-2 tracking-tighter">₹{(wallet?.availableBalance || 0).toLocaleString()}</h2>
+                                        <p className="text-gray-500 text-sm font-medium mb-8">Withdrawal usually takes 2-3 days</p>
+
+                                        <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-3">Withdraw Amount</p>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="number" placeholder="Min ₹100"
+                                                value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)}
+                                                className="flex-1 bg-zinc-950/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-bold outline-none focus:border-blue-400/50 transition-all"
+                                            />
+                                            <button onClick={handleWithdraw} disabled={withdrawing} className="px-6 py-3 bg-white text-black font-black rounded-xl hover:bg-gray-200 transition-all disabled:opacity-50">
+                                                Withdraw
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="pt-16 border-t border-white/5">
+                                <h2 className="text-2xl font-black mb-8 flex items-center"><Clock className="w-6 h-6 mr-3 text-yellow-400" /> Transaction History</h2>
+                                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-left">
                                             <thead>
                                                 <tr className="border-b border-white/5">
                                                     <th className="pb-4 text-xs font-black text-gray-500 uppercase tracking-widest">Type</th>
-                                                    <th className="pb-4 text-xs font-black text-gray-500 uppercase tracking-widest hidden md:table-cell">Date</th>
-                                                    <th className="pb-4 text-xs font-black text-gray-500 uppercase tracking-widest lg:table-cell">Description</th>
+                                                    <th className="pb-4 text-xs font-black text-gray-500 uppercase tracking-widest">Date</th>
                                                     <th className="pb-4 text-xs font-black text-gray-500 uppercase tracking-widest text-right">Amount</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-white/5">
-                                                {transactions.map(tx => (
-                                                    <tr key={tx.id} className="group hover:bg-white/[0.02] transition-colors">
-                                                        <td className="py-4">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${Number(tx.amount) > 0 ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
-                                                                    {Number(tx.amount) > 0 ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
-                                                                </div>
-                                                                <span className="font-bold text-sm text-white">{tx.type.replace('_', ' ')}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="py-4 text-sm text-gray-500 hidden md:table-cell">{new Date(tx.createdAt).toLocaleDateString()}</td>
-                                                        <td className="py-4 text-sm text-gray-400 lg:table-cell max-w-xs truncate">{tx.description}</td>
+                                                {transactions.slice(0, 5).map(tx => (
+                                                    <tr key={tx.id} className="group">
+                                                        <td className="py-4 font-bold text-white text-sm">{tx.type.replace('_', ' ')}</td>
+                                                        <td className="py-4 text-sm text-gray-500">{new Date(tx.createdAt).toLocaleDateString()}</td>
                                                         <td className={`py-4 text-right font-black ${Number(tx.amount) > 0 ? 'text-green-400' : 'text-white'}`}>
                                                             {Number(tx.amount) > 0 ? '+' : ''}₹{Math.abs(Number(tx.amount)).toLocaleString()}
                                                         </td>
@@ -824,364 +834,182 @@ export default function DashboardPage() {
                                             </tbody>
                                         </table>
                                     </div>
-                                )}
-
-                                {/* Pagination */}
-                                {txTotalPages > 1 && (
-                                    <div className="flex items-center justify-between mt-8 pt-8 border-t border-white/5">
-                                        <p className="text-xs text-gray-500">Page {txPage} of {txTotalPages}</p>
-                                        <div className="flex gap-2">
-                                            <button disabled={txPage === 1} onClick={() => setTxPage(p => p - 1)}
-                                                className="p-2 border border-white/10 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30">
-                                                <ChevronLeft className="w-5 h-5" />
-                                            </button>
-                                            <button disabled={txPage === txTotalPages} onClick={() => setTxPage(p => p + 1)}
-                                                className="p-2 border border-white/10 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30">
-                                                <ChevronRight className="w-5 h-5" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
+                                </div>
                             </div>
                         </div>
                     )}
 
-                    {/* ── Insights (New Tab) ──────────────────────── */}
-                    {activeTab === 'analytics' && (
-                        <div className="space-y-6">
-                            <h2 className="text-2xl font-black flex items-center"><BarChart3 className="w-6 h-6 mr-3 text-yellow-400" /> Seller Insights</h2>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                {[
-                                    { label: 'Total Earnings', value: `₹${analytics?.totalSales.toLocaleString()}`, icon: Trophy, color: 'text-yellow-400' },
-                                    { label: 'Revenue Potential', value: `₹${analytics?.revenuePotential.toLocaleString()}`, icon: Target, color: 'text-blue-400', desc: 'Active bids - fees' },
-                                    { label: 'Sales Velocity', value: analytics?.recentSales, icon: Zap, color: 'text-orange-400', desc: 'Last 7 days' },
-                                    { label: 'Total Listings', value: myListings.length, icon: Package, color: 'text-purple-400' }
-                                ].map((item, i) => (
-                                    <div key={i} className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-lg">
-                                        <item.icon className={`w-8 h-8 ${item.color} mb-4`} />
-                                        <p className="text-gray-500 text-xs font-black uppercase tracking-widest">{item.label}</p>
-                                        <p className="text-3xl font-black text-white mt-1">{item.value}</p>
-                                        {item.desc && <p className="text-[10px] text-gray-600 font-bold mt-1">{item.desc}</p>}
-                                    </div>
-                                ))}
+
+                    {/* ── Insights (Analytics + Feed) ──────────────────────── */}
+                    {activeTab === 'insights' && (
+                        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            <div>
+                                <h2 className="text-2xl font-black mb-8 flex items-center"><BarChart3 className="w-6 h-6 mr-3 text-yellow-400" /> Seller Insights</h2>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                    {[
+                                        { label: 'Total Earnings', value: `₹${(analytics?.totalSales || 0).toLocaleString()}`, icon: Trophy, color: 'text-yellow-400' },
+                                        { label: 'Revenue Potential', value: `₹${(analytics?.revenuePotential || 0).toLocaleString()}`, icon: Target, color: 'text-blue-400', desc: 'Active bids - fees' },
+                                        { label: 'Sales Velocity', value: analytics?.recentSales || 0, icon: Zap, color: 'text-orange-400', desc: 'Last 7 days' },
+                                        { label: 'Total Listings', value: myListings.length, icon: Package, color: 'text-purple-400' }
+                                    ].map((item, i) => (
+                                        <div key={i} className="bg-zinc-900 border border-white/10 rounded-3xl p-6 shadow-lg text-left">
+                                            <item.icon className={`w-8 h-8 ${item.color} mb-4`} />
+                                            <p className="text-gray-500 text-xs font-black uppercase tracking-widest">{item.label}</p>
+                                            <p className="text-3xl font-black text-white mt-1">{item.value}</p>
+                                            {item.desc && <p className="text-[10px] text-gray-600 font-bold mt-1">{item.desc}</p>}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
 
                             <div className="grid lg:grid-cols-3 gap-6">
-                                <div className="lg:col-span-2 bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8">
-                                    <h3 className="font-black text-xl mb-6 flex items-center gap-2"><Activity className="w-5 h-5 text-yellow-400" /> Bids Received (Last 7 Days)</h3>
+                                <div className="lg:col-span-2 bg-zinc-900 border border-white/10 rounded-3xl p-6 sm:p-8 text-left">
+                                    <h3 className="font-black text-xl mb-6 flex items-center gap-2"><Activity className="w-5 h-5 text-yellow-400" /> Platform Engagement</h3>
                                     <div className="h-64 flex items-end justify-between gap-2 px-2">
-                                        {(analytics?.performance || [0, 0, 0, 0, 0, 0, 0]).map((h, i) => {
-                                            const daysAgo = 6 - i;
-                                            const label = daysAgo === 0 ? 'Today' : `D-${daysAgo}`;
-                                            return (
-                                                <div key={i} className="flex-1 space-y-2 group">
-                                                    <div className="relative h-full flex items-end">
-                                                        <motion.div
-                                                            initial={{ height: 0 }} animate={{ height: `${Math.max(h, 5)}%` }}
-                                                            className="w-full bg-gradient-to-t from-yellow-400/20 to-yellow-400 rounded-lg group-hover:to-yellow-300 transition-all cursor-pointer relative"
-                                                        >
-                                                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-yellow-400 text-black text-[10px] px-1.5 py-0.5 rounded font-black opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                                                                {h > 5 ? h + '%' : '0'}
-                                                            </div>
-                                                        </motion.div>
-                                                    </div>
-                                                    <p className="text-center text-[10px] text-gray-600 font-bold">{label}</p>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                    <p className="text-center text-xs text-gray-500 mt-6 font-medium italic">Showing platform engagement score relative to your listings over last 7 days.</p>
-                                </div>
-
-                                <div className="space-y-6">
-                                    {/* Seller Level Card */}
-                                    <div className="bg-gradient-to-br from-yellow-500/10 to-amber-500/5 backdrop-blur-xl border border-yellow-500/20 rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-[0_10px_30px_-15px_rgba(250,204,21,0.3)]">
-                                        <div className="absolute -top-10 -right-10 text-yellow-500/10">
-                                            <Trophy className="w-40 h-40" />
-                                        </div>
-                                        <div className="relative z-10">
-                                            <div className="flex items-center gap-3 mb-4">
-                                                <div className="bg-yellow-400 text-black w-10 h-10 rounded-xl flex items-center justify-center font-black text-xl shadow-lg">
-                                                    {analytics?.sellerLevel?.level || 1}
-                                                </div>
-                                                <div>
-                                                    <h3 className="font-black text-white text-lg">Seller Level {analytics?.sellerLevel?.level || 1}</h3>
-                                                    <p className="text-xs font-bold text-yellow-400 uppercase tracking-widest">Premium Status</p>
-                                                </div>
-                                            </div>
-                                            <div className="mt-8">
-                                                <div className="flex justify-between text-xs font-bold mb-2">
-                                                    <span className="text-gray-400">Current</span>
-                                                    <span className="text-gray-400">Level {(analytics?.sellerLevel?.level || 1) + 1} (₹{(analytics?.sellerLevel?.nextTier || 10000).toLocaleString()})</span>
-                                                </div>
-                                                <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden shadow-inner border border-white/5">
+                                        {(analytics?.performance || [0, 0, 0, 0, 0, 0, 0]).map((h, i) => (
+                                            <div key={i} className="flex-1 space-y-2 group">
+                                                <div className="relative h-full flex items-end">
                                                     <motion.div
-                                                        initial={{ width: 0 }} animate={{ width: `${analytics?.sellerLevel?.progress || 0}%` }}
-                                                        className="h-full bg-gradient-to-r from-yellow-500 to-yellow-300"
+                                                        initial={{ height: 0 }} animate={{ height: `${Math.max(h, 5)}%` }}
+                                                        className="w-full bg-gradient-to-t from-yellow-400/20 to-yellow-400 rounded-lg group-hover:to-yellow-300 transition-all cursor-pointer relative"
                                                     />
                                                 </div>
-                                                <p className="text-[10px] text-gray-500 font-bold mt-3 text-center">
-                                                    {analytics?.sellerLevel?.progress || 0}% towards next rank
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Audience Interest */}
-                                    <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8">
-                                        <h3 className="font-black text-xl mb-6">Audience Interest</h3>
-                                        <div className="space-y-6">
-                                            <div className="p-4 bg-zinc-950/60 rounded-2xl border border-white/5">
-                                                <div className="flex justify-between mb-2">
-                                                    <span className="text-sm font-bold text-gray-400">Winning Bids</span>
-                                                    <span className="text-sm font-black text-yellow-400">{myListings.filter(a => a.status === 'PAID' || a.status === 'SHIPPED').length}</span>
-                                                </div>
-                                                <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                                                    <div className="h-full bg-yellow-400" style={{ width: '65%' }} />
-                                                </div>
-                                            </div>
-                                            <div className="p-4 bg-zinc-950/60 rounded-2xl border border-white/5">
-                                                <div className="flex justify-between mb-2">
-                                                    <span className="text-sm font-bold text-gray-400">Total Views</span>
-                                                    <span className="text-sm font-black text-blue-400">1.2K</span>
-                                                </div>
-                                                <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                                                    <div className="h-full bg-blue-400" style={{ width: '80%' }} />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* ── Orders ────────────────────────────────── */}
-                    {activeTab === 'orders' && (
-                        <div className="space-y-6">
-                            <h2 className="text-2xl font-black flex items-center"><Trophy className="w-6 h-6 mr-3 text-yellow-400" /> Winner's Circle</h2>
-
-                            <div className="space-y-8">
-                                {/* Won Orders */}
-                                <div>
-                                    <h3 className="text-lg font-bold text-gray-400 mb-4 px-2 uppercase tracking-widest text-xs">Items You Won</h3>
-                                    <div className="space-y-4">
-                                        {wonOrders.length === 0 ? (
-                                            <div className="text-center py-12 bg-zinc-950/40 rounded-[2rem] border border-white/5">
-                                                <p className="text-gray-500 font-medium italic">No won auctions yet.</p>
-                                            </div>
-                                        ) : wonOrders.map(order => (
-                                            <div key={order.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col hover:border-yellow-400/30 transition-all gap-4">
-                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                                    <div className="flex items-center gap-5">
-                                                        <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-zinc-800 shadow-md flex-shrink-0">
-                                                            <Image src={order.imageUrls[0] || ''} alt="" fill className="object-cover" sizes="80px" />
-                                                        </div>
-                                                        <div>
-                                                            <h3 className="font-bold text-white text-lg tracking-tight mb-1">{order.title}</h3>
-                                                            <p className="text-gray-500 text-xs font-medium mb-3">Seller: {order.seller.fullName}</p>
-                                                            <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border shadow-sm ${statusColor[order.status] || 'text-gray-400'}`}>{order.status}</span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-4">
-                                                        <p className="text-2xl font-black text-white">₹{Number(order.currentHighestBid).toLocaleString()}</p>
-                                                        <Link href={`/orders/${order.id}`} className="text-xs font-bold text-black bg-yellow-400 hover:bg-yellow-300 px-6 py-2.5 rounded-xl transition-colors shadow-lg">
-                                                            Track Order
-                                                        </Link>
-                                                    </div>
-                                                </div>
-                                                {order.escrowPayment && <EscrowTimeline escrowPayment={order.escrowPayment} role="buyer" />}
+                                                <p className="text-center text-[10px] text-gray-600 font-bold">{6 - i === 0 ? 'Today' : `D-${6 - i}`}</p>
                                             </div>
                                         ))}
                                     </div>
+                                    <p className="text-center text-xs text-gray-500 mt-6 font-medium italic">Showing platform engagement score relative to your listings.</p>
                                 </div>
 
-                                {/* Sold Orders */}
-                                <div>
-                                    <h3 className="text-lg font-bold text-gray-400 mb-4 px-2 uppercase tracking-widest text-xs">Items You Sold</h3>
-                                    <div className="space-y-4">
-                                        {soldOrders.length === 0 ? (
-                                            <div className="text-center py-12 bg-zinc-950/40 rounded-[2rem] border border-white/5">
-                                                <p className="text-gray-500 font-medium italic">No items sold yet.</p>
+                                <div className="bg-gradient-to-br from-yellow-500/10 to-amber-500/5 border border-yellow-500/20 rounded-3xl p-8 relative overflow-hidden shadow-2xl text-left">
+                                    <div className="absolute -top-10 -right-10 text-yellow-500/10">
+                                        <Trophy className="w-40 h-40" />
+                                    </div>
+                                    <h3 className="font-black text-white text-xl mb-1">Seller Rank</h3>
+                                    <p className="text-xs font-bold text-yellow-400 uppercase tracking-widest mb-8">Premium Status</p>
+                                    <div className="flex items-center gap-4 mb-6">
+                                        <div className="bg-yellow-400 text-black w-14 h-14 rounded-2xl flex items-center justify-center font-black text-2xl shadow-xl">
+                                            {analytics?.sellerLevel?.level || 1}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-white font-black text-lg">Level {analytics?.sellerLevel?.level || 1}</p>
+                                            <p className="text-gray-500 text-[10px] font-black">{analytics?.sellerLevel?.progress || 0}% to Rank {(analytics?.sellerLevel?.level || 1) + 1}</p>
+                                        </div>
+                                    </div>
+                                    <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
+                                        <div className="h-full bg-yellow-400" style={{ width: `${analytics?.sellerLevel?.progress || 0}%` }} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="pt-8 border-t border-white/5">
+                                <h3 className="text-xl font-black mb-6 flex items-center gap-2 text-white">
+                                    <Sparkles className="w-5 h-5 text-yellow-400" /> Platform Hype Feed
+                                </h3>
+                                <div className="grid md:grid-cols-2 gap-3">
+                                    {hypeFeed.slice(0, 6).map((item: any) => (
+                                        <div key={item.id} className="bg-zinc-900 border border-white/10 p-4 rounded-3xl flex items-center gap-4 hover:border-white/20 transition-all text-left">
+                                            <div className="w-10 h-10 rounded-full overflow-hidden bg-zinc-800 border border-yellow-400/20">
+                                                {item.userAvatar ? <Image src={item.userAvatar} alt="" width={40} height={40} /> : <div className="w-full h-full flex items-center justify-center bg-gray-900"><UserCircle2 className="w-6 h-6 text-gray-700" /></div>}
                                             </div>
-                                        ) : soldOrders.map(order => {
-                                            const winner = order.bids.find((b: any) => b.isWinning)?.bidder;
-                                            return (
-                                                <div key={order.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col hover:border-green-400/30 transition-all gap-4">
-                                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                                        <div className="flex items-center gap-5">
-                                                            <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-zinc-800 shadow-md flex-shrink-0">
-                                                                <Image src={order.imageUrls[0] || ''} alt="" fill className="object-cover" sizes="80px" />
-                                                            </div>
-                                                            <div>
-                                                                <h3 className="font-bold text-white text-lg tracking-tight mb-1">{order.title}</h3>
-                                                                <p className="text-gray-500 text-xs font-medium mb-3">Buyer: {winner?.fullName || 'Winner'}</p>
-                                                                <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border shadow-sm ${statusColor[order.status] || 'text-gray-400'}`}>{order.status}</span>
-                                                            </div>
-                                                        </div>
-                                                        <div className="text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-4">
-                                                            <p className="text-2xl font-black text-white">₹{Number(order.currentHighestBid).toLocaleString()}</p>
-                                                            <Link href={`/orders/${order.id}`} className="text-xs font-bold text-white bg-white/10 hover:bg-white/20 px-6 py-2.5 rounded-xl transition-colors shadow-sm">
-                                                                Manage Sale
-                                                            </Link>
-                                                        </div>
-                                                    </div>
-                                                    {order.escrowPayment && <EscrowTimeline escrowPayment={order.escrowPayment} role="seller" />}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-bold text-white truncate"><span className="text-yellow-400">{item.userName}</span> {item.action} <span className="text-blue-400">{item.target}</span></p>
+                                                <p className="text-[10px] text-gray-600 font-black uppercase tracking-wider flex items-center gap-1.5 mt-0.5">
+                                                    {item.type === 'BID' ? <TrendingUp className="w-3 h-3 text-green-500" /> : <Star className="w-3 h-3 text-yellow-500" />}
+                                                    {item.type} {item.type !== 'FOLLOW' && `· ₹${Number(item.amount).toLocaleString()}`}
+                                                </p>
+                                            </div>
+                                            <Link href={`/auctions/${item.targetId}`} className="p-2 hover:bg-white/5 rounded-lg transition-colors group">
+                                                <ArrowRight className="w-4 h-4 text-gray-500 group-hover:text-yellow-400" />
+                                            </Link>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* ── Listings ─────────────────────────────── */}
-                    {activeTab === 'listings' && (
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-2xl font-black flex items-center"><Package className="w-6 h-6 mr-3 text-yellow-400" /> My Listings</h2>
-                                <Link href="/create-auction"
-                                    className="flex items-center gap-2 px-6 py-3 bg-white text-black font-black rounded-xl hover:bg-gray-200 transition-colors shadow-lg">
-                                    <Plus className="w-4 h-4" /> New Auction
-                                </Link>
-                            </div>
-                            {myListings.length === 0 ? (
-                                <div className="text-center py-20 bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl shadow-inner">
-                                    <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
-                                        <Package className="w-8 h-8 text-white" />
+
+
+                {/* ── Account (Profile + Verify + Notifs) ────────────────────────── */}
+                {activeTab === 'account' && (
+                    <div className="space-y-16 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        {/* Profile Info & Payouts Recap */}
+                        <div className="grid md:grid-cols-2 gap-6">
+                            <div className="bg-zinc-900 border border-white/10 rounded-3xl p-8">
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="w-16 h-16 rounded-2xl overflow-hidden bg-zinc-800 border border-white/5">
+                                        {user.avatarUrl ? <Image src={user.avatarUrl} alt="Avatar" width={64} height={64} /> : <UserCircle2 className="w-full h-full text-gray-700 p-2" />}
                                     </div>
-                                    <h3 className="text-2xl font-black text-white mb-2 tracking-tight">Got Rare Items?</h3>
-                                    <p className="text-gray-400 mb-6 max-w-sm mx-auto">Turn your collectibles into cash securely. Escrow handles the money, you handle the shipping.</p>
-                                    <Link href="/create-auction"
-                                        className="inline-flex items-center gap-2 bg-gradient-to-b from-yellow-400 to-yellow-500 text-zinc-950 px-6 py-3 border border-yellow-300 rounded-xl font-black hover:-translate-y-1 transition-all duration-300 shadow-[0_10px_20px_-10px_rgba(250,204,21,0.5)]">
-                                        Create Your First Auction <ArrowRight className="w-4 h-4" />
-                                    </Link>
-                                </div>
-                            ) : myListings.map(auction => (
-                                <div key={auction.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:border-white/20 hover:shadow-[0_15px_30px_-15px_rgba(0,0,0,0.8)] transition-all duration-300 gap-4">
-                                    <div className="flex items-center gap-5">
-                                        <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-zinc-800 shadow-md">
-                                            <Image src={auction.imageUrls[0] || ''} alt="" fill className="object-cover" sizes="80px" />
-                                        </div>
-                                        <div>
-                                            <h3 className="font-bold text-white text-lg tracking-tight mb-1">{auction.title}</h3>
-                                            <p className="text-gray-500 text-xs font-medium mb-3">{auction._count?.bids || 0} active bids · Ends {new Date(auction.endTime).toLocaleDateString()}</p>
-                                            <span className={`text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-md border inline-block shadow-sm ${statusColor[auction.status] || ''}`}>{auction.status}</span>
-                                        </div>
-                                    </div>
-                                    <div className="text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t border-white/5 sm:border-0 pt-4 sm:pt-0 mt-2 sm:mt-0">
-                                        <div>
-                                            <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Highest Bid</p>
-                                            <p className="text-2xl font-black text-white">₹{Number(auction.currentHighestBid).toLocaleString()}</p>
-                                        </div>
-                                        <Link href={`/auctions/${auction.id}`} className="text-xs font-bold text-black bg-yellow-400 hover:bg-yellow-300 px-4 py-2 rounded-lg flex items-center justify-end gap-2 mt-2 sm:mt-3 transition-colors shadow-sm">
-                                            Manage <ArrowRight className="w-3 h-3" />
-                                        </Link>
+                                    <div>
+                                        <h3 className="font-black text-xl text-white">{user.fullName}</h3>
+                                        <p className="text-gray-500 text-sm font-bold">{user.email}</p>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    )}
+                                <div className="space-y-3">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-500 font-bold">Member Since</span>
+                                        <span className="text-white font-black">{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-500 font-bold">Total Sales</span>
+                                        <span className="text-green-400 font-black">₹{(analytics?.totalSales || 0).toLocaleString()}</span>
+                                    </div>
+                                </div>
+                            </div>
 
-                    {/* ── Hype Feed ────────────────────────────── */}
-                    {activeTab === 'feed' && (
-                        <div className="space-y-6">
-                            <h2 className="text-2xl font-black flex items-center gap-3">
-                                <Sparkles className="w-6 h-6 text-yellow-400" /> Live Social Hype
-                            </h2>
-                            <div className="space-y-4">
-                                {fetchingFeed ? (
-                                    <div className="flex justify-center py-10"><Loader2 className="animate-spin text-yellow-400" /></div>
-                                ) : hypeFeed.length === 0 ? (
-                                    <div className="text-center py-20 bg-zinc-900/40 rounded-3xl border border-white/10">
-                                        <p className="text-gray-500">No recent hype events. Be the first to bid!</p>
-                                    </div>
-                                ) : hypeFeed.map((item: any) => (
-                                    <div key={item.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 p-5 rounded-3xl flex items-center gap-4 hover:border-white/20 transition-all">
-                                        <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-yellow-400/20 bg-zinc-800">
-                                            {item.userAvatar ? <Image src={item.userAvatar} alt="" width={48} height={48} /> : <div className="w-full h-full flex items-center justify-center"><UserCircle2 className="w-7 h-7 text-gray-600" /></div>}
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-sm font-bold text-white flex items-center flex-wrap gap-x-1">
-                                                <Link href={`/u/${item.userId}`} className="text-yellow-400 hover:text-yellow-300 hover:underline transition-all">
-                                                    {item.userName}
-                                                </Link>
-                                                {item.userBadge && item.userBadge !== 'NOVICE' && (
-                                                    <span className="text-[10px] bg-amber-500/10 text-amber-500 border border-amber-500/20 px-1.5 py-0.5 rounded-sm flex items-center">
-                                                        <Trophy className="w-3 h-3 mr-1" /> {item.userBadge}
-                                                    </span>
-                                                )}
-                                                <span>{item.action}</span>
-                                                <span className="text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded font-black whitespace-nowrap">
-                                                    {item.target}
-                                                </span>
-                                            </p>
-                                            <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mt-1.5 flex items-center gap-2">
-                                                {item.type === 'BID' ? <TrendingUp className="w-3 h-3 text-green-400" /> : item.type === 'WIN' ? <Star className="w-3 h-3 text-yellow-400" /> : <UserCheck className="w-3 h-3 text-blue-400" />}
-                                                {item.type} {item.type !== 'FOLLOW' && `· ₹${Number(item.amount).toLocaleString()}`} · {new Date(item.timestamp).toLocaleTimeString()}
-                                            </p>
-                                        </div>
-                                        {item.type !== 'FOLLOW' && (
-                                            <Link href={`/auctions/${item.targetId}`} className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-white transition-all shadow-sm">View</Link>
-                                        )}
-                                    </div>
-                                ))}
+                            <div className="bg-gradient-to-br from-zinc-900 to-black border border-white/10 rounded-3xl p-8 flex flex-col justify-center">
+                                <span className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-2">Account Actions</span>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button onClick={() => logout()} className="flex items-center justify-center gap-2 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold rounded-xl transition-all border border-red-500/20">
+                                        <LogOut className="w-4 h-4" /> Sign Out
+                                    </button>
+                                    <button onClick={() => router.push('/settings')} className="flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 text-white font-bold rounded-xl transition-all border border-white/10">
+                                         Settings
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    )}
 
-                    {/* ── Notifications ────────────────────────── */}
-                    {activeTab === 'notifs' && (
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between mb-6">
+                        {/* Notifications Section */}
+                        <div className="pt-8">
+                            <div className="flex items-center justify-between mb-8">
                                 <h2 className="text-2xl font-black flex items-center"><Bell className="w-6 h-6 mr-3 text-yellow-400" /> Notifications</h2>
                                 {unreadCount > 0 && (
-                                    <button onClick={markAllRead} className="text-sm font-bold text-gray-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl">
+                                    <button onClick={markAllRead} className="text-xs font-black text-yellow-400 hover:text-yellow-300 transition-colors uppercase tracking-widest">
                                         Mark all read
                                     </button>
                                 )}
                             </div>
-                            {notifications.length === 0 ? (
-                                <div className="text-center py-20 bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl shadow-inner">
-                                    <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
-                                        <Bell className="w-8 h-8 text-gray-500" />
+                            
+                            <div className="space-y-4">
+                                {notifications.length === 0 ? (
+                                    <div className="text-center py-20 bg-zinc-900 border border-white/10 rounded-3xl">
+                                        <Bell className="w-8 h-8 text-gray-500 mx-auto mb-4" />
+                                        <p className="text-gray-400 font-medium">You're all caught up!</p>
                                     </div>
-                                    <p className="text-gray-400 font-medium">You're all caught up! No new notifications.</p>
-                                </div>
-                            ) : notifications.map(n => (
-                                <div key={n.id} className={`border rounded-3xl p-5 transition-all duration-300 ${n.isRead ? 'bg-zinc-900/40 backdrop-blur-xl border-white/10 hover:border-white/20' : 'bg-gradient-to-r from-yellow-400/10 to-transparent border-yellow-400/30'}`}>
-                                    <div className="flex items-start gap-4">
-                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${n.isRead ? 'bg-white/5' : 'bg-yellow-400/20 shadow-[0_0_15px_rgba(250,204,21,0.2)]'}`}>
-                                            {n.type === 'AUCTION_WON' ? <Trophy className="w-6 h-6 text-yellow-400" /> :
-                                                n.type === 'OUTBID' ? <Bell className="w-6 h-6 text-orange-400" /> :
-                                                    n.type === 'PAYMENT_REQUIRED' ? <Wallet className="w-6 h-6 text-blue-400" /> :
-                                                        n.type === 'ITEM_SHIPPED' ? <Package className="w-6 h-6 text-purple-400" /> :
-                                                            n.type === 'DISPUTE_OPENED' ? <AlertTriangle className="w-6 h-6 text-red-400" /> :
-                                                                <Bell className="w-6 h-6 text-gray-400" />}
-                                        </div>
-                                        <div className="flex-1 min-w-0 pt-1">
-                                            <div className="flex items-start justify-between gap-4">
-                                                <p className={`font-black tracking-tight text-base ${n.isRead ? 'text-white' : 'text-yellow-400'}`}>{n.title}</p>
-                                                {!n.isRead && <span className="flex h-3 w-3 relative flex-shrink-0 mt-1">
-                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
-                                                </span>}
+                                ) : notifications.slice(0, 5).map(n => (
+                                    <div key={n.id} className={`border rounded-2xl p-5 transition-all ${n.isRead ? 'bg-zinc-900 border-white/5' : 'bg-yellow-400/5 border-yellow-400/20 shadow-[0_0_20px_rgba(250,204,21,0.05)]'}`}>
+                                        <div className="flex items-start gap-4">
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${n.isRead ? 'bg-white/5' : 'bg-yellow-400/20'}`}>
+                                                <Bell className={`w-5 h-5 ${n.isRead ? 'text-gray-500' : 'text-yellow-400'}`} />
                                             </div>
-                                            <p className={`text-sm mt-1 leading-relaxed ${n.isRead ? 'text-gray-400' : 'text-gray-300'}`}>{n.body}</p>
-                                            <p className="text-gray-600 text-[11px] font-bold uppercase tracking-wider mt-3">{new Date(n.createdAt).toLocaleString()}</p>
+                                            <div className="flex-1 min-w-0">
+                                                <p className={`font-black tracking-tight ${n.isRead ? 'text-white/80' : 'text-white'}`}>{n.title}</p>
+                                                <p className="text-sm text-gray-500 mt-1">{n.body}</p>
+                                                <p className="text-[10px] text-gray-600 font-bold uppercase mt-2">{new Date(n.createdAt).toLocaleString()}</p>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
-                    )}
 
-                    {/* ── Seller Verification ─────────────────────── */}
-                    {activeTab === 'verify' && (
-                        <div className="space-y-6">
-                            <h2 className="text-2xl font-black flex items-center"><BadgeCheck className="w-6 h-6 mr-3 text-yellow-400" /> Seller Verification</h2>
+                        {/* Seller Verification Section */}
+                        <div className="pt-16 border-t border-white/5">
+                            <h2 className="text-2xl font-black flex items-center mb-8"><BadgeCheck className="w-6 h-6 mr-3 text-yellow-400" /> Seller Verification</h2>
 
                             {/* Already verified */}
                             {user.verifiedStatus !== 'BASIC' && (
@@ -1194,197 +1022,68 @@ export default function DashboardPage() {
 
                             {/* Pending / Under Review */}
                             {user.verifiedStatus === 'BASIC' && verificationRequest && verificationRequest.status !== 'REJECTED' && (
-                                <div className={`border rounded-3xl p-8 text-center ${verificationRequest.status === 'UNDER_REVIEW'
-                                    ? 'bg-blue-500/5 border-blue-500/20'
-                                    : 'bg-orange-500/5 border-orange-500/20'
-                                    }`}>
+                                <div className={`border rounded-3xl p-8 text-center ${verificationRequest.status === 'UNDER_REVIEW' ? 'bg-blue-500/5 border-blue-500/20' : 'bg-orange-500/5 border-orange-500/20'}`}>
                                     <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/10 bg-white/5">
-                                        {verificationRequest.status === 'UNDER_REVIEW'
-                                            ? <Shield className="w-8 h-8 text-blue-400" />
-                                            : <Clock className="w-8 h-8 text-orange-400" />}
+                                        {verificationRequest.status === 'UNDER_REVIEW' ? <Shield className="w-8 h-8 text-blue-400" /> : <Clock className="w-8 h-8 text-orange-400" />}
                                     </div>
                                     <h3 className="text-2xl font-black text-white mb-2">
                                         {verificationRequest.status === 'UNDER_REVIEW' ? 'Under Admin Review' : 'Application Pending'}
                                     </h3>
-                                    <p className="text-gray-400 mb-4">Your application was submitted on {new Date(verificationRequest.createdAt).toLocaleDateString()}. Our team reviews within 24–48 hours.</p>
-                                    <div className="flex items-center justify-center gap-3 text-sm">
-                                        <span className={`px-4 py-2 rounded-full font-bold border ${verificationRequest.status === 'UNDER_REVIEW'
-                                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
-                                            : 'bg-orange-500/10 text-orange-400 border-orange-500/30'
-                                            }`}>{verificationRequest.status.replace('_', ' ')}</span>
-                                    </div>
+                                    <p className="text-gray-400 mb-4">Your application was submitted on {new Date(verificationRequest.createdAt).toLocaleDateString()}.</p>
+                                    <span className={`px-4 py-2 rounded-full font-bold border ${verificationRequest.status === 'UNDER_REVIEW' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' : 'bg-orange-500/10 text-orange-400 border-orange-500/30'}`}>
+                                        {verificationRequest.status.replace('_', ' ')}
+                                    </span>
                                 </div>
                             )}
 
-                            {/* Rejected - show reason then allow reapply */}
-                            {user.verifiedStatus === 'BASIC' && verificationRequest?.status === 'REJECTED' && (
-                                <div className="bg-red-500/5 border border-red-500/20 rounded-3xl p-6 mb-4">
-                                    <div className="flex items-start gap-4">
-                                        <XCircle className="w-8 h-8 text-red-400 flex-shrink-0" />
-                                        <div>
-                                            <h4 className="font-black text-white mb-1">Previous Application Rejected</h4>
-                                            <p className="text-red-300 text-sm">{verificationRequest.adminNotes || 'Your application did not meet our requirements.'}</p>
-                                            <p className="text-gray-500 text-xs mt-2">You can reapply with better documentation below.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Application Form */}
+                            {/* Rejected / New Application */}
                             {user.verifiedStatus === 'BASIC' && (!verificationRequest || verificationRequest.status === 'REJECTED') && (
-                                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8 space-y-6">
-                                    <div>
-                                        <h3 className="font-black text-xl text-white mb-1">Apply for Seller Verification</h3>
-                                        <p className="text-gray-400 text-sm">Complete this form to request seller access. Our admin team will review your documents within 24–48 hours.</p>
-                                    </div>
-
-                                    <div className="grid sm:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Full Legal Name *</label>
-                                            <input
-                                                type="text" placeholder="As shown on your ID"
-                                                value={verificationForm.fullLegalName}
-                                                onChange={e => setVerificationForm(p => ({ ...p, fullLegalName: e.target.value }))}
-                                                className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-yellow-400/50 transition-all"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Account Type *</label>
-                                            <select
-                                                value={verificationForm.businessType}
-                                                onChange={e => setVerificationForm(p => ({ ...p, businessType: e.target.value }))}
-                                                className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-yellow-400/50 transition-all"
-                                            >
-                                                <option value="individual">Individual Seller</option>
-                                                <option value="business">Registered Business</option>
-                                                <option value="dealer">Antique / Art Dealer</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">PAN Number</label>
-                                            <input
-                                                type="text" placeholder="ABCDE1234F"
-                                                value={verificationForm.panNumber}
-                                                onChange={e => setVerificationForm(p => ({ ...p, panNumber: e.target.value.toUpperCase() }))}
-                                                className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-yellow-400/50 transition-all font-mono"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Aadhaar Last 4 Digits</label>
-                                            <input
-                                                type="text" placeholder="XXXX" maxLength={4}
-                                                value={verificationForm.aadhaarLast4}
-                                                onChange={e => setVerificationForm(p => ({ ...p, aadhaarLast4: e.target.value.replace(/\D/g, '') }))}
-                                                className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-yellow-400/50 transition-all font-mono"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">What do you plan to sell? *</label>
-                                        <textarea
-                                            rows={3} placeholder="Describe the types of items you plan to list (e.g., vintage watches, rare books, artwork)…"
-                                            value={verificationForm.description}
-                                            onChange={e => setVerificationForm(p => ({ ...p, description: e.target.value }))}
-                                            className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-yellow-400/50 transition-all resize-none"
-                                        />
-                                    </div>
-
-                                    <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 sm:p-6">
-                                        <p className="text-blue-400 text-xs font-black uppercase tracking-widest mb-3 flex items-center gap-2"><Upload className="w-3.5 h-3.5" /> Document Upload Instructions</p>
-                                        <p className="text-gray-400 text-sm leading-relaxed mb-6">
-                                            Upload your ID proofs and asset ownership documents below. <strong className="text-blue-400">Selected files are automatically uploaded</strong> to our secure server.
-                                        </p>
-                                        <div className="grid sm:grid-cols-2 gap-8">
-                                            {/* ID Proofs */}
-                                            <div className="space-y-4">
-                                                <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">ID Proofs (Aadhaar / PAN / Passport)</label>
-                                                <div className="flex flex-wrap gap-2 mb-3">
-                                                    {verificationForm.documentUrls.split('\n').filter(Boolean).map((url, idx) => (
-                                                        <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-white/10 group">
-                                                            <Image src={url} alt="ID Proof" fill className="object-cover" />
-                                                            <button
-                                                                onClick={() => setVerificationForm(p => ({ ...p, documentUrls: p.documentUrls.split('\n').filter((_, i) => i !== idx).join('\n') }))}
-                                                                className="absolute inset-0 bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                                            >
-                                                                <X className="w-4 h-4 text-white" />
-                                                            </button>
-                                                        </div>
-                                                    ))}
-                                                    <label className="w-16 h-16 rounded-lg border-2 border-dashed border-white/10 flex items-center justify-center cursor-pointer hover:border-blue-400/50 hover:bg-white/5 transition-all">
-                                                        <Plus className="w-5 h-5 text-gray-500" />
-                                                        <input type="file" multiple accept="image/*" className="hidden" onChange={e => handleDocumentUpload(e, 'documentUrls')} />
-                                                    </label>
-                                                </div>
-                                                <p className="text-[10px] text-gray-500">Supported: JPG, PNG, PDF images</p>
-                                            </div>
-
-                                            {/* Asset Proofs */}
-                                            <div className="space-y-4">
-                                                <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Asset / Ownership Proofs</label>
-                                                <div className="flex flex-wrap gap-2 mb-3">
-                                                    {verificationForm.assetUrls.split('\n').filter(Boolean).map((url, idx) => (
-                                                        <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-white/10 group">
-                                                            <Image src={url} alt="Asset Proof" fill className="object-cover" />
-                                                            <button
-                                                                onClick={() => setVerificationForm(p => ({ ...p, assetUrls: p.assetUrls.split('\n').filter((_, i) => i !== idx).join('\n') }))}
-                                                                className="absolute inset-0 bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                                            >
-                                                                <X className="w-4 h-4 text-white" />
-                                                            </button>
-                                                        </div>
-                                                    ))}
-                                                    <label className="w-16 h-16 rounded-lg border-2 border-dashed border-white/10 flex items-center justify-center cursor-pointer hover:border-blue-400/50 hover:bg-white/5 transition-all">
-                                                        <Plus className="w-5 h-5 text-gray-500" />
-                                                        <input type="file" multiple accept="image/*" className="hidden" onChange={e => handleDocumentUpload(e, 'assetUrls')} />
-                                                    </label>
-                                                </div>
-                                                <p className="text-[10px] text-gray-500">Invoices, certificates, or physical location proofs</p>
+                                <div className="bg-zinc-900 border border-white/10 rounded-3xl p-8 space-y-8">
+                                    {verificationRequest?.status === 'REJECTED' && (
+                                        <div className="bg-red-500/10 border border-red-500/20 p-6 rounded-2xl flex items-start gap-4 mb-8 text-left">
+                                            <XCircle className="w-6 h-6 text-red-400 flex-shrink-0" />
+                                            <div>
+                                                <p className="text-white font-black">Previous Application Declined</p>
+                                                <p className="text-red-400/80 text-sm mt-1">{verificationRequest.adminNotes || "Requirements not met."}</p>
                                             </div>
                                         </div>
-                                    </div>
-
-                                    {verificationMsg && (
-                                        <p className={`text-sm font-bold px-4 py-3 rounded-xl border ${verificationMsg.type === 'success'
-                                            ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                                            : 'bg-red-500/10 text-red-400 border-red-500/20'
-                                            }`}>{verificationMsg.text}</p>
                                     )}
 
-                                    <button
-                                        onClick={handleSubmitVerification}
-                                        disabled={submittingVerification}
-                                        className="w-full py-4 bg-gradient-to-b from-yellow-400 to-yellow-500 text-zinc-950 font-black rounded-2xl hover:-translate-y-0.5 transition-all duration-300 shadow-[0_10px_20px_-10px_rgba(250,204,21,0.5)] disabled:opacity-50 disabled:hover:translate-y-0 flex items-center justify-center gap-2 text-base"
-                                    >
-                                        {submittingVerification
-                                            ? <><span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> Submitting…</>
-                                            : <><BadgeCheck className="w-5 h-5" /> Submit Verification Application</>
-                                        }
+                                    <div className="text-left">
+                                        <h3 className="font-black text-xl text-white mb-2">Apply for Seller Status</h3>
+                                        <p className="text-gray-500 text-sm">Unlock the ability to list items, participate as a seller, and grow your collection.</p>
+                                    </div>
+
+                                    <div className="grid sm:grid-cols-2 gap-6 text-left">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Full Legal Name</label>
+                                            <input type="text" placeholder="As on ID" value={verificationForm.fullLegalName} onChange={e => setVerificationForm(p => ({ ...p, fullLegalName: e.target.value }))} className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-yellow-400/50 outline-none transition-all" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Category</label>
+                                            <select value={verificationForm.businessType} onChange={e => setVerificationForm(p => ({ ...p, businessType: e.target.value }))} className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-yellow-400/50 outline-none transition-all">
+                                                <option value="individual">Individual</option>
+                                                <option value="dealer">Dealer</option>
+                                                <option value="artist">Artist/Creator</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="text-left space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">What do you plan to sell?</label>
+                                        <textarea rows={3} placeholder="Vintage watches, cards, art..." value={verificationForm.description} onChange={e => setVerificationForm(p => ({ ...p, description: e.target.value }))} className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-yellow-400/50 outline-none transition-all resize-none" />
+                                    </div>
+
+                                    <button onClick={handleSubmitVerification} disabled={submittingVerification} className="w-full py-4 bg-yellow-400 hover:bg-yellow-300 text-zinc-950 font-black rounded-2xl transition-all shadow-xl disabled:opacity-50">
+                                        {submittingVerification ? 'Submitting...' : 'Submit Verification Request'}
                                     </button>
                                 </div>
                             )}
-
-                            {/* Info cards */}
-                            <div className="grid sm:grid-cols-3 gap-4">
-                                {[
-                                    { icon: Shield, color: 'text-blue-400', title: 'Secure KYC', desc: 'Your documents are reviewed only by our verified admin team and are never shared.' },
-                                    { icon: Zap, color: 'text-yellow-400', title: '24-48 Hours', desc: 'Fast review process. Most applications are reviewed by the next business day.' },
-                                    { icon: Trophy, color: 'text-amber-400', title: 'Unlock Selling', desc: 'Once verified, you can list unlimited auctions and receive payouts directly to your bank.' }
-                                ].map((item, i) => (
-                                    <div key={i} className="bg-zinc-900/40 border border-white/10 rounded-2xl p-5">
-                                        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-3">
-                                            <item.icon className={`w-5 h-5 ${item.color}`} />
-                                        </div>
-                                        <p className="font-black text-white mb-1">{item.title}</p>
-                                        <p className="text-gray-500 text-xs leading-relaxed">{item.desc}</p>
-                                    </div>
-                                ))}
-                            </div>
                         </div>
-                    )}
-
-                </motion.div>
-            </AnimatePresence>
-        </div>
-    );
+                    </div>
+                )}
+            </motion.div>
+        </AnimatePresence>
+    </div>
+);
 }

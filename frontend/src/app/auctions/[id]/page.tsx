@@ -25,11 +25,12 @@ import Schema from '@/components/seo/Schema';
 // ── Helpers ────────────────────────────────────────────────────────
 function getMinIncrement(currentBid: number): number {
     const bid = Number(currentBid);
-    if (bid <= 1000) return Math.ceil((bid * 0.05) / 10) * 10 || 50;
-    if (bid <= 5000) return Math.ceil((bid * 0.03) / 10) * 10;
-    if (bid <= 20000) return Math.ceil((bid * 0.02) / 50) * 50;
-    if (bid <= 50000) return Math.ceil((bid * 0.015) / 100) * 100;
-    return Math.ceil((bid * 0.01) / 100) * 100;
+    if (bid < 1000) return 100;
+    if (bid < 5000) return 250;
+    if (bid < 10000) return 500;
+    if (bid < 50000) return 1000;
+    if (bid < 100000) return 2500;
+    return 5000;
 }
 
 function useCountdown(endTime: string | null) {
@@ -339,8 +340,13 @@ export default function LiveAuctionPage() {
         // Exact multiple rule
         if (currentBidAmt > 0) {
             const diff = bidAmount - currentBidAmt;
-            if (Math.round(diff) % Math.round(increment) !== 0) {
-                return setMessage({ type: 'error', text: `Bids must be in exact multiples of ₹${increment} above the current price.` });
+            const inc = Math.round(increment);
+            if (Math.round(diff) % inc !== 0) {
+                const recommended = currentBidAmt + inc;
+                return setMessage({ 
+                    type: 'error', 
+                    text: `Bids must be in exact multiples of ₹${inc} above the current price. Try ₹${recommended.toLocaleString()}` 
+                });
             }
         }
 
@@ -823,12 +829,33 @@ export default function LiveAuctionPage() {
                                 <>
                                     <div className="bg-zinc-900 border border-white/10 rounded-2xl p-4 mb-3 mt-4 flex items-center gap-3 focus-within:border-yellow-400/50 transition-all">
                                         <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center font-black text-white/50">₹</div>
-                                        <input type="number" value={bidAmount} onChange={e => setBidAmount(Math.round(Number(e.target.value)))} className="flex-1 bg-transparent text-3xl font-black text-white outline-none min-w-0" />
+                                        <input 
+                                            type="number" 
+                                            value={bidAmount} 
+                                            onChange={e => {
+                                                const val = Number(e.target.value);
+                                                setBidAmount(val);
+                                            }}
+                                            onBlur={() => {
+                                                // Snap to multiple on blur to ensure accuracy
+                                                const inc = Math.round(increment);
+                                                const diff = bidAmount - currentBidAmt;
+                                                if (diff > 0 && diff % inc !== 0) {
+                                                    const snapped = currentBidAmt + Math.ceil(diff / inc) * inc;
+                                                    setBidAmount(snapped);
+                                                }
+                                            }}
+                                            className="flex-1 bg-transparent text-3xl font-black text-white outline-none min-w-0" 
+                                        />
                                         <div className="text-[10px] font-black text-gray-500 bg-white/5 px-2 py-1.5 rounded-lg border border-white/5">≥ ₹{Math.round(minNext).toLocaleString()}</div>
                                     </div>
 
                                     <div className="grid grid-cols-3 gap-2 mb-3">
-                                        {[minNext, minNext + increment, minNext + increment * 5].map(amount => (
+                                        {[
+                                            Math.ceil(minNext / increment) * increment,
+                                            (Math.ceil(minNext / increment) + 1) * increment,
+                                            (Math.ceil(minNext / increment) + 5) * increment
+                                        ].map(amount => (
                                             <button key={amount} onClick={() => setBidAmount(Math.round(amount))} className="bg-zinc-800/40 border border-white/5 text-[11px] py-3 rounded-xl hover:bg-white/10 transition-all text-white/80 font-black">₹{Math.round(amount).toLocaleString()}</button>
                                         ))}
                                     </div>

@@ -15,6 +15,7 @@ export interface User {
     avatarUrl: string | null;
     phone: string | null;
     collectorBadge?: string;
+    createdAt?: string;
 }
 
 

@@ -34,7 +34,7 @@ function CountdownBadge({ endTime }: { endTime: string }) {
         return () => clearInterval(id);
     }, [endTime]);
     return (
-        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full transition-colors ${urgent ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-black/50 text-gray-300 border border-white/10'} backdrop-blur-sm`}>
+        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full transition-colors ${urgent ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-zinc-900 border border-white/10 text-gray-300'}`}>
             <Timer className="w-3 h-3" /> {time}
         </span>
     );
@@ -45,10 +45,9 @@ function AuctionCard({ auction, idx }: { auction: Auction; idx: number }) {
     return (
         <Link href={`/auctions/${auction.id}`}>
             <motion.article
-                initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.08, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 whileHover={{ y: -8, scale: 1.02 }}
-                className="group relative bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden cursor-pointer hover:border-yellow-400/40 hover:shadow-[0_20px_40px_-10px_rgba(250,204,21,0.2)] transition-all duration-500"
+                className="group relative bg-zinc-900 border border-white/10 rounded-3xl overflow-hidden cursor-pointer hover:border-yellow-400/40 hover:shadow-[0_20px_40px_-10px_rgba(250,204,21,0.2)] transition-all duration-500"
             >
                 {/* Image */}
                 <div className="relative aspect-[4/3] overflow-hidden bg-zinc-800/50">

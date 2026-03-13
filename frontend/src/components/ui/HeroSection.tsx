@@ -78,7 +78,7 @@ export default function HeroSection() {
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
 
-                            <div className="absolute top-4 left-4 bg-zinc-900/90 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest flex items-center shadow-2xl border border-white/10">
+                            <div className="absolute top-4 left-4 bg-zinc-900 border border-white/10 text-white px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest flex items-center shadow-2xl">
                                 <span className="w-2 h-2 rounded-full bg-red-500 mr-2 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
                                 LIVE NOW
                             </div>
@@ -95,7 +95,7 @@ export default function HeroSection() {
                                     </div>
                                 </div>
 
-                                <div className="w-full bg-white/10 backdrop-blur-md rounded-xl p-3 flex justify-between items-center border border-white/10">
+                                <div className="w-full bg-zinc-900/95 rounded-xl p-3 flex justify-between items-center border border-white/10">
                                     <div className="flex -space-x-2">
                                         <div className="relative w-8 h-8 rounded-full border-2 border-zinc-900 overflow-hidden">
                                             <Image src="https://i.pravatar.cc/100?img=1" fill alt="Bidder" className="object-cover" />

@@ -50,34 +50,23 @@ export default function CreateAuctionPage() {
         if (form.title && categories.length > 0) {
             const lowerTitle = form.title.toLowerCase();
             
-            const findAndSet = (catName: string) => {
-                const cat = categories.find(c => c.name === catName);
-                if (cat) setForm(prev => ({ ...prev, categoryId: cat.id.toString() }));
-                return !!cat;
+            const categoryKeywords: Record<string, string[]> = {
+                'Sneakers': ['shoe', 'sneaker', 'nike', 'jordan', 'adidas', 'yeezy', 'kicks', 'footwear', 'dunk', 'low', 'high', 'retro', 'max', 'force'],
+                'Electronics': ['phone', 'iphone', 'laptop', 'macbook', 'samsung', 'pro', 'tech', 'gadget', 'pixel', 'ipad', 'm1', 'm2', 'm3', 'console', 'ps5', 'xbox', 'nintendo', 'gpu', 'graphic', 'monitor'],
+                'Watches': ['rolex', 'omega', 'patek', 'casio', 'seiko', 'tissot', 'watch', 'chronograph', 'hublot', 'tag', 'heuer', 'audemars', 'vacheron', 'g-shock'],
+                'Vehicles': ['car', 'bike', 'motorcycle', 'scooter', 'ev', 'tesla', 'bmw', 'audi', 'mercedes', 'honda', 'toyota', 'yamaha', 'ducati', 'kawasaki', 'harley'],
+                'Fashion': ['dress', 'shirt', 'jacket', 'gucci', 'lv', 'fashion', 'prada', 'zara', 'h&m', 'handbag', 'belt', 'jewelry', 'diamond', 'gold', 'supreme', 'off-white'],
+                'Collectibles': ['card', 'pokémon', 'pokemon', 'comic', 'collectible', 'limited', 'signed', 'rare', 'psa', 'charizard', 'manga', 'figurine', 'action figure', 'hot wheels']
             };
 
-            if (['shoe', 'sneaker', 'nike', 'jordan', 'adidas', 'yeezy', 'kicks', 'footwear'].some(k => lowerTitle.includes(k))) {
-                if (findAndSet('Sneakers')) return;
-            }
-            
-            if (['phone', 'iphone', 'laptop', 'macbook', 'samsung', 'pro', 'tech', 'gadget', 'pixel', 'ipad', 'm1', 'm2', 'm3'].some(k => lowerTitle.includes(k))) {
-                 if (findAndSet('Electronics')) return;
-            }
-
-            if (['rolex', 'omega', 'patek', 'casio', 'seiko', 'tissot', 'watch', 'chronograph'].some(k => lowerTitle.includes(k))) {
-                 if (findAndSet('Watches')) return;
-            }
-
-            if (['car', 'bike', 'motorcycle', 'scooter', 'ev', 'tesla', 'bmw', 'audi', 'mercedes', 'honda', 'toyota'].some(k => lowerTitle.includes(k))) {
-                 if (findAndSet('Vehicles')) return;
-            }
-
-            if (['dress', 'shirt', 'jacket', 'gucci', 'lv', 'fashion', 'prada', 'zara', 'h&m'].some(k => lowerTitle.includes(k))) {
-                 if (findAndSet('Fashion')) return;
-            }
-
-            if (['card', 'pokémon', 'pokemon', 'comic', 'collectible', 'limited', 'signed'].some(k => lowerTitle.includes(k))) {
-                 if (findAndSet('Collectibles')) return;
+            for (const [catName, keywords] of Object.entries(categoryKeywords)) {
+                if (keywords.some(k => lowerTitle.includes(k))) {
+                    const cat = categories.find(c => c.name === catName);
+                    if (cat) {
+                        setForm(prev => ({ ...prev, categoryId: cat.id.toString() }));
+                        return; // Stop at first match
+                    }
+                }
             }
         }
     }, [form.title, categories]);
@@ -314,18 +303,37 @@ export default function CreateAuctionPage() {
                                 <h2 className="text-2xl font-bold flex items-center gap-2"><DollarSign className="w-6 h-6 text-yellow-400" /> Pricing & Schedule</h2>
 
                                 <div className="grid sm:grid-cols-2 gap-4">
-                                    <div>
                                         <label className={LABEL}>Starting Price (₹) *</label>
-                                        <input type="number" min="1" value={form.startingPrice} onChange={e => update('startingPrice', e.target.value)}
+                                        <input type="number" min="1" value={form.startingPrice} onChange={e => {
+                                            update('startingPrice', e.target.value);
+                                            // Auto-calc increment
+                                            const val = Number(e.target.value);
+                                            let inc = '100';
+                                            if (val >= 1000) inc = '250';
+                                            if (val >= 5000) inc = '500';
+                                            if (val >= 10000) inc = '1000';
+                                            update('bidIncrement', inc);
+                                        }}
                                             placeholder="500" className={INPUT} />
                                     </div>
-                                    <div>
+                                    <div className="relative">
                                         <label className={LABEL}>Buy It Now Price (₹) <span className="text-gray-600 normal-case font-normal">(optional)</span></label>
-                                        <input type="number" min="1" value={form.buyItNowPrice} onChange={e => update('buyItNowPrice', e.target.value)}
-                                            placeholder="Instant buy price" className={INPUT} />
+                                        <div className="relative">
+                                            <input type="number" min="1" value={form.buyItNowPrice} onChange={e => update('buyItNowPrice', e.target.value)}
+                                                placeholder="Instant buy price" className={INPUT} />
+                                            {form.startingPrice && Number(form.startingPrice) > 0 && !form.buyItNowPrice && (
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => update('buyItNowPrice', (Math.ceil(Number(form.startingPrice) * 1.5 / 50) * 50).toString())}
+                                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-black bg-white/10 hover:bg-yellow-400 hover:text-black text-gray-400 px-3 py-1.5 rounded-lg uppercase tracking-widest transition-all border border-white/5"
+                                                >
+                                                    Suggest
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                     <div>
-                                        <label className={LABEL}>Suggested Price / MSRP (₹) <span className="text-gray-600 normal-case font-normal">(optional)</span></label>
+                                        <label className={LABEL}>MSRP / Retail Price (₹) <span className="text-gray-600 normal-case font-normal">(optional)</span></label>
                                         <input type="number" min="1" value={form.retailPrice} onChange={e => update('retailPrice', e.target.value)}
                                             placeholder="Retail Price" className={INPUT} />
                                     </div>
@@ -334,12 +342,11 @@ export default function CreateAuctionPage() {
                                         <input type="number" min="1" value={form.reservePrice} onChange={e => update('reservePrice', e.target.value)}
                                             placeholder="Hidden minimum price" className={INPUT} />
                                     </div>
-
                                     <div>
                                         <label className={LABEL}>Bid Increment (₹)</label>
                                         <input type="number" min="1" value={form.bidIncrement} onChange={e => update('bidIncrement', e.target.value)}
                                             placeholder="100" className={INPUT} />
-                                        <p className="text-gray-600 text-xs mt-1.5">Minimum raise per bid</p>
+                                        <p className="text-gray-600 text-[10px] font-medium uppercase tracking-wider mt-2">Bids must be multiples of this value</p>
                                     </div>
                                     <div>
                                         <label className={LABEL}>Shipping Cost (₹)</label>
@@ -479,46 +486,46 @@ export default function CreateAuctionPage() {
                                 </div>
                             </div>
                         )}
-                                <div className="flex items-center justify-between mt-8 pt-6 border-t border-white/10">
-                                    <button onClick={() => setStep(s => Math.max(s - 1, 1))} disabled={step === 1}
-                                        className="px-6 py-3 bg-white/5 border border-white/10 text-gray-400 rounded-xl font-semibold hover:text-white hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
-                                        Back
-                                    </button>
 
-                                    {step < 4 ? (
-                                        <button onClick={() => {
-                                            if (step === 1 && (!form.title || !form.description || !form.categoryId)) return setError('Please complete all required fields.');
-                                            if (step === 3) {
-                                                if (form.isImmediate) {
-                                                    if (form.durationValue === 'manual' && !form.endTime) return setError('Please set an end time.');
-                                                    if (form.durationValue !== 'manual') {
-                                                        const end = new Date();
-                                                        end.setMinutes(end.getMinutes() + Number(form.durationValue));
-                                                        setForm(p => ({ ...p, endTime: end.toISOString() }));
-                                                    }
-                                                } else {
-                                                    if (!form.startTime || !form.endTime) return setError('Start and end times are required.');
-                                                }
+                        <div className="flex items-center justify-between mt-8 pt-6 border-t border-white/10">
+                            <button onClick={() => setStep(s => Math.max(s - 1, 1))} disabled={step === 1}
+                                className="px-6 py-3 bg-white/5 border border-white/10 text-gray-400 rounded-xl font-semibold hover:text-white hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                                Back
+                            </button>
+
+                            {step < 4 ? (
+                                <button onClick={() => {
+                                    if (step === 1 && (!form.title || !form.description || !form.categoryId)) return setError('Please complete all required fields.');
+                                    if (step === 3) {
+                                        if (form.isImmediate) {
+                                            if (form.durationValue === 'manual' && !form.endTime) return setError('Please set an end time.');
+                                            if (form.durationValue !== 'manual') {
+                                                const end = new Date();
+                                                end.setMinutes(end.getMinutes() + Number(form.durationValue));
+                                                setForm(p => ({ ...p, endTime: end.toISOString() }));
                                             }
-                                            setError(''); setStep(s => s + 1);
-                                        }}
-                                            className="px-8 py-3 bg-yellow-400 text-black font-bold rounded-xl hover:bg-yellow-300 transition-colors hover:scale-105">
-                                            Continue →
-                                        </button>
-                                    ) : (
-                                        <button onClick={handleSubmit} disabled={loading || !form.isConfirmed}
-                                            className="px-8 py-3 bg-yellow-400 text-black font-bold rounded-xl hover:bg-yellow-300 transition-colors hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-[0_0_30px_rgba(250,204,21,0.3)]">
-                                            {loading ? <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <Zap className="w-5 h-5" />}
-                                            {loading ? 'Publishing…' : 'Publish Auction'}
-                                        </button>
-                                    )}
-                                </div>
-                            </motion.div>
-                        )}
-
-                </div>
+                                        } else {
+                                            if (!form.startTime || !form.endTime) return setError('Start and end times are required.');
+                                        }
+                                    }
+                                    setError(''); setStep(s => s + 1);
+                                }}
+                                    className="px-8 py-3 bg-yellow-400 text-black font-bold rounded-xl hover:bg-yellow-300 transition-colors hover:scale-105">
+                                    Continue →
+                                </button>
+                            ) : (
+                                <button onClick={handleSubmit} disabled={loading || !form.isConfirmed}
+                                    className="px-8 py-3 bg-yellow-400 text-black font-bold rounded-xl hover:bg-yellow-300 transition-colors hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-[0_0_30px_rgba(250,204,21,0.3)]">
+                                    {loading ? <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <Zap className="w-5 h-5" />}
+                                    {loading ? 'Publishing…' : 'Publish Auction'}
+                                </button>
+                            )}
+                        </div>
+                    </motion.div>
+                )}
             </div>
         </div>
+    </div>
     );
 }
 

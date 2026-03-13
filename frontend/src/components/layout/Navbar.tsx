@@ -86,8 +86,7 @@ export default function Navbar() {
 
     return (
         <motion.header
-            initial={{ y: -100 }} animate={{ y: 0 }}
-            className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 will-change-transform ${scrolled ? 'bg-zinc-950/90 sm:backdrop-blur-md border-b border-white/10 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.8)] py-1' : 'bg-transparent py-4'}`}
+            className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 will-change-transform ${scrolled ? 'bg-zinc-950/95 sm:backdrop-blur-md border-b border-white/10 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.8)] py-1' : 'bg-transparent py-4'}`}
         >
             <div className="container mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
 
@@ -154,7 +153,7 @@ export default function Navbar() {
                                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                             animate={{ opacity: 1, y: 0, scale: 1 }}
                                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            className="absolute right-0 mt-4 w-80 md:w-96 bg-zinc-900/95 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl z-20 overflow-hidden"
+                                            className="absolute right-0 mt-4 w-80 md:w-96 bg-zinc-900 border border-white/10 rounded-3xl shadow-2xl z-20 overflow-hidden"
                                         >
                                             <div className="p-5 border-b border-white/5 flex items-center justify-between">
                                                 <h3 className="font-black text-white">Notifications</h3>
@@ -272,7 +271,7 @@ export default function Navbar() {
                     <>
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] md:hidden"
+                            className="fixed inset-0 bg-black/70 z-[60] md:hidden"
                             onClick={() => setMenuOpen(false)}
                         />
                         <motion.div
@@ -313,12 +312,6 @@ export default function Navbar() {
                                     {navLinks.map((link, idx) => {
                                         const Icon = link.icon;
                                         return (
-                                            <motion.div
-                                                key={link.href}
-                                                initial={{ opacity: 0, x: 20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ delay: idx * 0.05, type: 'spring', stiffness: 300 }}
-                                            >
                                                 <Link
                                                     href={link.href}
                                                     onClick={() => { setMenuOpen(false); if ('badge' in link) setUnreadMessages(0); }}
@@ -340,7 +333,6 @@ export default function Navbar() {
                                                         </motion.span>
                                                     )}
                                                 </Link>
-                                            </motion.div>
                                         );
                                     })}
                                 </nav>
