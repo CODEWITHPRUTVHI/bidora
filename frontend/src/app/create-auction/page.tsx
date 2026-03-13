@@ -302,7 +302,8 @@ export default function CreateAuctionPage() {
                             <div className="space-y-6">
                                 <h2 className="text-2xl font-bold flex items-center gap-2"><DollarSign className="w-6 h-6 text-yellow-400" /> Pricing & Schedule</h2>
 
-                                <div className="grid sm:grid-cols-2 gap-4">
+                                <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
+                                    <div>
                                         <label className={LABEL}>Starting Price (₹) *</label>
                                         <input type="number" min="1" value={form.startingPrice} onChange={e => {
                                             update('startingPrice', e.target.value);
@@ -355,7 +356,7 @@ export default function CreateAuctionPage() {
                                     </div>
                                 </div>
 
-                                <div className="space-y-4">
+                                <div className="space-y-6 pt-4 border-t border-white/5">
                                     <div>
                                         <label className={LABEL}>Start Option</label>
                                         <div className="flex gap-2 p-1 bg-white/5 border border-white/10 rounded-2xl w-max">
@@ -429,6 +430,7 @@ export default function CreateAuctionPage() {
                                 </div>
                             </div>
                         )}
+
 
                         {/* ── Step 4: Review ─────────────────────────── */}
                         {step === 4 && (
